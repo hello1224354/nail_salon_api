@@ -1,0 +1,7 @@
+{
+  "dependencies": {
+    "mysql2": "^3.24.2",
+    "reflect-metadata": "^0.2.2",
+    "typeorm": "^1.1.0"
+  }
+}
