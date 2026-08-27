@@ -1,6 +1,7 @@
 import { DataSource } from "typeorm";
 import { Service } from "../modules/services/service.entity";
 import { Staff } from "../modules/staffs/staffs.entity";
+import { Customer } from "../modules/customers/customers.entity";
 
 export const AppDataSource = new DataSource({
     type: "mysql",
@@ -11,7 +12,7 @@ export const AppDataSource = new DataSource({
     database: "nail_salon_db",
     synchronize: true,
     logging: true,
-    entities: [Service, Staff],
+    entities: [Service, Staff, Customer],
     subscribers: [],
     migrations: [],
 });
