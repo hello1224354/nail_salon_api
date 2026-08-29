@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import * as serviceService from "./services.service";
 import { AppError } from "../../common/errors";
+import { parseCreateServiceDto, parseUpdateServiceDto } from "./services.dto";
 
 export const getAllServices = async (req: Request, res: Response) => {
     const data = await serviceService.getAllServices();
@@ -26,7 +27,7 @@ export const getService = async (req: Request, res: Response) => {
 };
 
 export const createService = async (req: Request, res: Response) => {
-    const data = await serviceService.createService(req.body);
+    const data = await serviceService.createService(parseCreateServiceDto(req.body));
 
     return res.status(201).json({
         success: {
@@ -37,7 +38,7 @@ export const createService = async (req: Request, res: Response) => {
 };
 
 export const updateService = async (req: Request, res: Response) => {
-    const data = await serviceService.updateService(req.params.id as string, req.body);
+    const data = await serviceService.updateService(req.params.id as string, parseUpdateServiceDto(req.body));
     if (!data) throw new AppError("Service not found", 404, "SERVICE_NOT_FOUND");
 
     return res.status(200).json({
