@@ -10,10 +10,7 @@ export class Staff {
     name: string;
 
     @Column({ type: "varchar", nullable: true })
-    phone: string;
-
-    @Column({ type: "varchar", nullable: true })
-    avatar: string;
+    phone: string | null;
 
     @Column({ type: "int" })
     branch_id: number;

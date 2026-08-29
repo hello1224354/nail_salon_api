@@ -1,24 +1,30 @@
 import { AppDataSource } from "../../config/database";
 import { Staff } from "./staffs.entity";
 
-const staffService = AppDataSource.getRepository(Staff);
+const staffRepo = AppDataSource.getRepository(Staff);
 
 export const getAllStaffs = async () => {
-    return await staffService.find();
-}
+    return await staffRepo.find();
+};
 
 export const getStaff = async (id: string) => {
-    return await staffService.findOneBy({ id });
-}
-
-export const updateStaff = async (id: string, data: Partial<Staff>) => {
-    return await staffService.update(id, data);
-}
-
-export const deleteStaff = async (id: string) => {
-    return await staffService.delete(id);
-}
+    return await staffRepo.findOneBy({ id });
+};
 
 export const createStaff = async (data: Partial<Staff>) => {
-    return await staffService.save(data);
-}
+    const newStaff = staffRepo.create(data);
+    return await staffRepo.save(newStaff);
+};
+
+export const updateStaff = async (id: string, data: Partial<Staff>) => {
+    const staff = await getStaff(id);
+    if (!staff) return null;
+    staffRepo.merge(staff, data);
+    return await staffRepo.save(staff);
+};
+
+export const deleteStaff = async (id: string) => {
+    const staff = await getStaff(id);
+    if (!staff) return null;
+    return await staffRepo.remove(staff);
+};
