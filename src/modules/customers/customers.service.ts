@@ -1,25 +1,30 @@
 import { AppDataSource } from "../../config/database";
 import { Customer } from "./customers.entity";
 
-const customerService = AppDataSource.getRepository(Customer);
+const customerRepo = AppDataSource.getRepository(Customer);
 
 export const getAllCustomers = async () => {
-    return await customerService.find();
-}
+    return await customerRepo.find();
+};
 
 export const getCustomer = async (id: string) => {
-    return await customerService.findOneBy({ id });
-}
-
-export const updateCustomer = async (id: string, data: Partial<Customer>) => {
-    return await customerService.update(id, data);
-}
-
-export const deleteCustomer = async (id: string) => {
-    return await customerService.delete(id);
-}
+    return await customerRepo.findOneBy({ id });
+};
 
 export const createCustomer = async (data: Partial<Customer>) => {
-    return await customerService.save(data);
-}
+    const newCustomer = customerRepo.create(data);
+    return await customerRepo.save(newCustomer);
+};
 
+export const updateCustomer = async (id: string, data: Partial<Customer>) => {
+    const customer = await getCustomer(id);
+    if (!customer) return null;
+    customerRepo.merge(customer, data);
+    return await customerRepo.save(customer);
+};
+
+export const deleteCustomer = async (id: string) => {
+    const customer = await getCustomer(id);
+    if (!customer) return null;
+    return await customerRepo.remove(customer);
+};
