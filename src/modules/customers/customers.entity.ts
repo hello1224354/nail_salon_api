@@ -13,7 +13,7 @@ export class Customer {
     phone: string;
 
     @Column({ type: "varchar", nullable: true })
-    email: string;
+    email: string | null;
 
     @CreateDateColumn()
     created_at: Date;
