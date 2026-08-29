@@ -8,7 +8,8 @@ export const getAllServices = async () => {
 };
 
 export const createService = async (data: Partial<Service>) => {
-    return await serviceRepo.insert(data);
+    const newService = serviceRepo.create(data);
+    return await serviceRepo.save(newService);
 };
 
 export const getService = async (id: string) => {
@@ -16,9 +17,14 @@ export const getService = async (id: string) => {
 };
 
 export const updateService = async (id: string, data: Partial<Service>) => {
-    return await serviceRepo.update(id, data);
+    const service = await getService(id);
+    if (!service) return null;
+    serviceRepo.merge(service, data);
+    return await serviceRepo.save(service);
 };
 
 export const deleteService = async (id: string) => {
-    return await serviceRepo.delete(id);
+    const service = await getService(id);
+    if (!service) return null;
+    return await serviceRepo.remove(service);
 };
