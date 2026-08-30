@@ -1,5 +1,6 @@
 import { AppDataSource } from "../../config/database";
 import { Service } from "./service.entity";
+import { In } from "typeorm";
 
 const serviceRepo = AppDataSource.getRepository(Service);
 
@@ -14,6 +15,12 @@ export const createService = async (data: Partial<Service>) => {
 
 export const getService = async (id: string) => {
     return await serviceRepo.findOneBy({ id });
+};
+
+export const getServicesByIds = async (ids: string[]) => {
+    return await serviceRepo.findBy({
+        id: In(ids),
+    });
 };
 
 export const updateService = async (id: string, data: Partial<Service>) => {

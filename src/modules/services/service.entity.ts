@@ -1,4 +1,6 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToMany } from "typeorm";
+import { Appointment } from "../appointments/appointments.entity";
+
 
 @Entity("services")
 export class Service {
@@ -22,4 +24,7 @@ export class Service {
 
     @UpdateDateColumn()
     updated_at: Date;
+
+    @ManyToMany(() => Appointment, (appointment) => appointment.services, { onDelete: "RESTRICT" })
+    appointments: Appointment[];
 }
