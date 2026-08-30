@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, ManyToMany, JoinTable } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, ManyToMany, JoinTable, Index } from "typeorm";
 import { Customer } from "../customers/customers.entity";
 import { Staff } from "../staffs/staffs.entity";
 import { Service } from "../services/service.entity";
@@ -10,6 +10,8 @@ export enum AppointmentStatus {
     CANCELLED = "cancelled"
 }
 
+@Index("IDX_appointments_customer_start", ["customer_id", "start_time"])
+@Index("IDX_appointments_staff_start", ["staff_id", "start_time"])
 @Entity("appointments")
 export class Appointment {
     @PrimaryGeneratedColumn("uuid")
@@ -18,18 +20,18 @@ export class Appointment {
     @Column({ type: "uuid" })
     customer_id: string;
 
-    @ManyToOne(() => Customer, (customer) => customer.appointments, { onDelete: "CASCADE" })
+    @ManyToOne(() => Customer, (customer) => customer.appointments, { onDelete: "RESTRICT" })
     @JoinColumn({ name: "customer_id" })
     customer: Customer;
 
     @Column({ type: "uuid", nullable: true })
-    staff_id: string;
+    staff_id: string | null;
 
-    @ManyToOne(() => Staff, (staff) => staff.appointments, { onDelete: "SET NULL" })
+    @ManyToOne(() => Staff, (staff) => staff.appointments, { onDelete: "RESTRICT" })
     @JoinColumn({ name: "staff_id" })
-    staff: Staff;
+    staff: Staff | null;
 
-    @ManyToMany(() => Service, { cascade: true })
+    @ManyToMany(() => Service, (service) => service.appointments)
     @JoinTable({
         name: "appointment_services",
         joinColumn: { name: "appointment_id", referencedColumnName: "id" },
@@ -40,7 +42,7 @@ export class Appointment {
     @Column({ type: "datetime" })
     start_time: Date;
 
-    @Column({ type: "datetime", nullable: true })
+    @Column({ type: "datetime" })
     end_time: Date;
 
     @Column({
