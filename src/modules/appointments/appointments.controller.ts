@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import * as appointmentService from "./appointments.service";
 import { parseCreateAppointmentDto } from "./appointments.dto";
+import { AppError } from "../../common/errors";
 
 export const createAppointment = async (req: Request, res: Response) => {
     const data = await appointmentService.createAppointment(parseCreateAppointmentDto(req.body));
@@ -8,6 +9,30 @@ export const createAppointment = async (req: Request, res: Response) => {
     return res.status(201).json({
         success: {
             message: "Create new appointment successfully",
+            data,
+        }
+    });
+};
+
+export const getAllAppointments = async (req: Request, res: Response) => {
+    const data = await appointmentService.getAllAppointments();
+
+    return res.status(200).json({
+        success: {
+            message: "Get all appointments successfully",
+            data,
+        }
+    });
+};
+
+export const getAppointmentById = async (req: Request, res: Response) => {
+    const data = await appointmentService.getAppointment(req.params.id as string);
+
+    if (!data) throw new AppError("Appointment not found", 404, "APPOINTMENT_NOT_FOUND");
+
+    return res.status(200).json({
+        success: {
+            message: `Get appointment ${req.params.id} successfully`,
             data,
         }
     });

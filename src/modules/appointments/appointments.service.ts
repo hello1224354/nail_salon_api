@@ -7,6 +7,7 @@ import * as customerService from "../customers/customers.service";
 import * as staffService from "../staffs/staffs.service";
 import * as serviceService from "../services/services.service";
 import { In, LessThan, MoreThan } from "typeorm";
+import { Customer } from "../customers/customers.entity";
 
 const appointmentRepo = AppDataSource.getRepository(Appointment);
 
@@ -64,4 +65,30 @@ export const createAppointment = async (data: CreateAppointmentDto) => {
     });
 
     return await appointmentRepo.save(newAppointment);
+};
+
+export const getAllAppointments = async () => {
+    return await appointmentRepo.find({
+        relations: {
+            customer: true,
+            staff: true,
+            services: true,
+        },
+        order: {
+            start_time: "ASC",
+        }
+    });
+};
+
+export const getAppointment = async (id: string) => {
+    return await appointmentRepo.findOne({
+        where: {
+            id: id,
+        },
+        relations: {
+            customer: true,
+            staff: true,
+            services: true,
+        },
+    });
 };
