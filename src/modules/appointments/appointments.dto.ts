@@ -15,12 +15,74 @@ export interface UpdateAppointmentDto {
     status?: AppointmentStatus;
 }
 
+export interface GetAppointmentsQueryDto {
+    staff_id?: string;
+    status?: AppointmentStatus;
+    from?: Date;
+    to?: Date;
+    page: number;
+    limit: number;
+}
+
 function isUuid(value: string): boolean {
     return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 }
 
 function hasTimezone(value: string): boolean {
     return /(?:Z|[+-]\d{2}:\d{2})$/i.test(value.trim());
+}
+
+export function parseGetAppointmentsQuery(query: unknown): GetAppointmentsQueryDto {
+    if (query === null || typeof query !== "object" || Array.isArray(query)) throw new AppError("Query must be an object", 400, "VALIDATION_ERROR");
+
+    const data = query as Record<string, unknown>;
+
+    if (data.staff_id !== undefined && (typeof data.staff_id !== "string" || !isUuid(data.staff_id))) throw new AppError("Staff_id must be a valid UUID", 400, "VALIDATION_ERROR");
+
+    if (data.status !== undefined && typeof data.status !== "string") throw new AppError("Status must be a string", 400, "VALIDATION_ERROR");
+
+    const status = typeof data.status === "string" ? data.status.toUpperCase() : undefined;
+
+    if (status !== undefined && !(status in AppointmentStatus)) throw new AppError("Status must be pending, confirmed, completed, or cancelled", 400, "VALIDATION_ERROR");
+
+    if (data.from !== undefined && (typeof data.from !== "string" || data.from.trim().length === 0)) throw new AppError("From must be a non-empty string", 400, "VALIDATION_ERROR");
+
+    const from = data.from !== undefined ? new Date(data.from as string) : undefined;
+
+    if (from !== undefined && Number.isNaN(from.getTime())) throw new AppError("From must be a valid date", 400, "VALIDATION_ERROR");
+
+    if (data.from !== undefined && typeof data.from === "string" && !hasTimezone(data.from)) throw new AppError("From must include a timezone", 400, "VALIDATION_ERROR");
+
+    if (data.to !== undefined && (typeof data.to !== "string" || data.to.trim().length === 0)) throw new AppError("To must be a non-empty string", 400, "VALIDATION_ERROR");
+
+    const to = data.to !== undefined ? new Date(data.to as string) : undefined;
+
+    if (to !== undefined && Number.isNaN(to.getTime())) throw new AppError("To must be a valid date", 400, "VALIDATION_ERROR");
+
+    if (data.to !== undefined && typeof data.to === "string" && !hasTimezone(data.to)) throw new AppError("To must include a timezone", 400, "VALIDATION_ERROR");
+
+    if (from !== undefined && to !== undefined && from.getTime() >= to.getTime()) throw new AppError("From must be earlier than to", 400, "VALIDATION_ERROR");
+
+    if (data.page !== undefined && typeof data.page !== "string") throw new AppError("Page must be a positive integer", 400, "VALIDATION_ERROR");
+
+    const page = data.page === undefined ? 1 : Number(data.page);
+
+    if (!Number.isInteger(page) || page < 1) throw new AppError("Page must be a positive integer", 400, "VALIDATION_ERROR");
+
+    if (data.limit !== undefined && typeof data.limit !== "string") throw new AppError("Limit must be an integer", 400, "VALIDATION_ERROR");
+
+    const limit = data.limit === undefined ? 5 : Number(data.limit);
+
+    if (!Number.isInteger(limit) || limit < 1) throw new AppError("Limit must be a positive integer", 400, "VALIDATION_ERROR");
+
+    return {
+        staff_id: data.staff_id as string | undefined,
+        status: status === undefined ? undefined : AppointmentStatus[status as keyof typeof AppointmentStatus],
+        from,
+        to,
+        page,
+        limit,
+    };
 }
 
 export function parseCreateAppointmentDto(body: unknown): CreateAppointmentDto {
