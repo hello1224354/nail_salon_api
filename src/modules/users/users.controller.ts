@@ -47,3 +47,12 @@ export const getMe = async (req: Request, res: Response) => {
         }
     });
 };
+
+export const adminTest = async (req: Request, res: Response) => {
+    return res.status(200).json({
+        success: {
+            message: "Admin access granted",
+            data: req.user,
+        }
+    });
+};
