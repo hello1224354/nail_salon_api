@@ -31,6 +31,14 @@ function asBool(name: string, fallback: boolean): boolean {
     else throw new Error("Invalid boolean");
 }
 
+function asRequiredString(name: string): string {
+    const raw = process.env[name];
+
+    if (raw === undefined || raw.trim().length === 0) throw new Error(`${name} is required`);
+
+    return raw.trim();
+}
+
 export const env = {
     PORT: asInt("PORT", 3000),
     DB_HOST: process.env.DB_HOST ?? "localhost",
@@ -40,4 +48,6 @@ export const env = {
     DB_NAME: process.env.DB_NAME ?? "nail_salon_db",
     DB_SYNCHRONIZE: asBool("DB_SYNCHRONIZE", true),
     DB_LOGGING: asBool("DB_LOGGING", true),
+    JWT_SECRET: asRequiredString("JWT_SECRET"),
+    JWT_EXPIRES_IN_SECONDS: asInt("JWT_EXPIRES_IN_SECONDS", 3600),
 };
