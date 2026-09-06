@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import * as appointmentService from "./appointments.service";
-import { parseCreateAppointmentDto, parseUpdateAppointmentDto } from "./appointments.dto";
+import { parseCreateAppointmentDto, parseGetAppointmentsQuery, parseUpdateAppointmentDto } from "./appointments.dto";
 import { AppError } from "../../common/errors";
 
 export const createAppointment = async (req: Request, res: Response) => {
@@ -15,7 +15,7 @@ export const createAppointment = async (req: Request, res: Response) => {
 };
 
 export const getAllAppointments = async (req: Request, res: Response) => {
-    const data = await appointmentService.getAllAppointments();
+    const data = await appointmentService.getAllAppointments(parseGetAppointmentsQuery(req.query));
 
     return res.status(200).json({
         success: {

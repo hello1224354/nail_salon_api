@@ -1,7 +1,7 @@
 import { AppDataSource } from "../../config/database";
 import { AppError } from "../../common/errors";
 import { Appointment, AppointmentStatus } from "./appointments.entity";
-import { CreateAppointmentDto, UpdateAppointmentDto } from "./appointments.dto";
+import { CreateAppointmentDto, GetAppointmentsQueryDto, UpdateAppointmentDto } from "./appointments.dto";
 import { Staff } from "../staffs/staffs.entity";
 import * as customerService from "../customers/customers.service";
 import * as staffService from "../staffs/staffs.service";
@@ -66,17 +66,48 @@ export const createAppointment = async (data: CreateAppointmentDto) => {
     return await appointmentRepo.save(newAppointment);
 };
 
-export const getAllAppointments = async () => {
-    return await appointmentRepo.find({
-        relations: {
-            customer: true,
-            staff: true,
-            services: true,
-        },
-        order: {
-            start_time: "ASC",
-        }
-    });
+export const getAllAppointments = async (query: GetAppointmentsQueryDto) => {
+    const queryBuilder = appointmentRepo.createQueryBuilder("appointment").leftJoinAndSelect("appointment.customer", "customer").leftJoinAndSelect("appointment.staff", "staff").leftJoinAndSelect("appointment.services", "services");
+
+    if (query.staff_id !== undefined) {
+        queryBuilder.andWhere("appointment.staff_id = :staff_id", {
+            staff_id: query.staff_id,
+        });
+    }
+
+    if (query.status !== undefined) {
+        queryBuilder.andWhere("appointment.status = :status", {
+            status: query.status,
+        });
+    }
+
+    if (query.from !== undefined) {
+        queryBuilder.andWhere("appointment.start_time >= :start_time_from", {
+            start_time_from: query.from,
+        });
+    }
+
+    if (query.to !== undefined) {
+        queryBuilder.andWhere("appointment.start_time < :start_time_to", {
+            start_time_to: query.to,
+        });
+    }
+
+    queryBuilder.orderBy("appointment.start_time", "ASC");
+
+    queryBuilder.skip((query.page - 1) * query.limit);
+
+    queryBuilder.take(query.limit);
+
+    const [appointments, total] = await queryBuilder.getManyAndCount();
+
+    return {
+        appointments,
+        total,
+        page: query.page,
+        limit: query.limit,
+        total_pages: Math.ceil(total / query.limit),
+    };
 };
 
 export const getAppointment = async (id: string) => {
