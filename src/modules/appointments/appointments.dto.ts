@@ -19,6 +19,10 @@ function isUuid(value: string): boolean {
     return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 }
 
+function hasTimezone(value: string): boolean {
+    return /(?:Z|[+-]\d{2}:\d{2})$/i.test(value.trim());
+}
+
 export function parseCreateAppointmentDto(body: unknown): CreateAppointmentDto {
     if (body === null || typeof body !== "object" || Array.isArray(body)) throw new AppError("Request body must be an object", 400, "VALIDATION_ERROR");
 
@@ -41,6 +45,8 @@ export function parseCreateAppointmentDto(body: unknown): CreateAppointmentDto {
     const startTime = new Date(data.start_time);
 
     if (Number.isNaN(startTime.getTime())) throw new AppError("Start_time must be a valid date", 400, "VALIDATION_ERROR");
+
+    if (!hasTimezone(data.start_time)) throw new AppError("Start_time must include a timezone", 400, "VALIDATION_ERROR");
 
     return {
         customer_id: data.customer_id,
@@ -72,6 +78,8 @@ export function parseUpdateAppointmentDto(body: unknown): UpdateAppointmentDto {
     const startTime = data.start_time !== undefined ? new Date(data.start_time as string) : undefined;
 
     if (startTime !== undefined && Number.isNaN(startTime.getTime())) throw new AppError("Start_time must be a valid date", 400, "VALIDATION_ERROR");
+
+    if (data.start_time !== undefined && typeof data.start_time === "string" && !hasTimezone(data.start_time)) throw new AppError("Start_time must include a timezone", 400, "VALIDATION_ERROR");
 
     if (data.status !== undefined && typeof data.status !== "string") throw new AppError("Status must be a string", 400, "VALIDATION_ERROR");
 

@@ -15,4 +15,5 @@ export const AppDataSource = new DataSource({
     synchronize: env.DB_SYNCHRONIZE,
     logging: env.DB_LOGGING,
     entities: [Service, Staff, Customer, Appointment],
+    timezone: "Z",
 });
