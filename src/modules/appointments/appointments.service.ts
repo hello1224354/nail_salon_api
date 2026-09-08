@@ -3,17 +3,36 @@ import { AppError } from "../../common/errors";
 import { Appointment, AppointmentStatus } from "./appointments.entity";
 import { CreateAppointmentDto, GetAppointmentsQueryDto, UpdateAppointmentDto } from "./appointments.dto";
 import { Staff } from "../staffs/staffs.entity";
-import * as customerService from "../customers/customers.service";
 import * as staffService from "../staffs/staffs.service";
 import * as serviceService from "../services/services.service";
 import { In, LessThan, MoreThan, Not } from "typeorm";
+import { UserRole } from "../users/users.entity";
+import * as userService from "../users/users.service";
 
 const appointmentRepo = AppDataSource.getRepository(Appointment);
 
-export const createAppointment = async (data: CreateAppointmentDto) => {
-    const customer = await customerService.getCustomer(data.customer_id);
+export const createAppointment = async (actorId: string, actorRole: UserRole, data: CreateAppointmentDto) => {
+    let ownerId: string;
 
-    if (!customer) throw new AppError("Customer not found", 404, "CUSTOMER_NOT_FOUND");
+    if (actorRole === UserRole.CUSTOMER) {
+        if (data.user_id !== undefined) throw new AppError("Customers cannot specify user_id", 403, "FORBIDDEN");
+
+        ownerId = actorId;
+    } else if (actorRole === UserRole.ADMIN) {
+        if (data.user_id === undefined) throw new AppError("User_id is required when admin creates an appointment", 400, "VALIDATION_ERROR");
+
+        const targetUser = await userService.getUser(data.user_id);
+
+        if (!targetUser) throw new AppError("User not found", 404, "USER_NOT_FOUND");
+
+        if (targetUser.role !== UserRole.CUSTOMER) throw new AppError("Appointment owner must be a customer", 400, "INVALID_APPOINTMENT_OWNER");
+
+        if (!targetUser.is_active) throw new AppError("User account is inactive", 400, "USER_INACTIVE");
+
+        ownerId = data.user_id;
+    } else {
+        throw new AppError("You do not have permission to perform this action", 403, "FORBIDDEN");
+    }
 
     let staff: Staff | null = null;
 
@@ -53,21 +72,25 @@ export const createAppointment = async (data: CreateAppointmentDto) => {
     }
 
     const newAppointment = appointmentRepo.create({
-       customer_id: customer.id,
-       customer: customer,
-       staff_id: staff?.id ?? null,
-       staff: staff,
-       services: services,
-       start_time: data.start_time,
-       end_time: endTime,
-       status: AppointmentStatus.PENDING,
+        user_id: ownerId,
+        staff_id: staff?.id ?? null,
+        services: services,
+        start_time: data.start_time,
+        end_time: endTime,
+        status: AppointmentStatus.PENDING,
     });
 
     return await appointmentRepo.save(newAppointment);
 };
 
-export const getAllAppointments = async (query: GetAppointmentsQueryDto) => {
-    const queryBuilder = appointmentRepo.createQueryBuilder("appointment").leftJoinAndSelect("appointment.customer", "customer").leftJoinAndSelect("appointment.staff", "staff").leftJoinAndSelect("appointment.services", "services");
+export const getAllAppointments = async (userId: string, role: UserRole, query: GetAppointmentsQueryDto) => {
+    const queryBuilder = appointmentRepo.createQueryBuilder("appointment").leftJoinAndSelect("appointment.staff", "staff").leftJoinAndSelect("appointment.services", "services");
+
+    if (role === UserRole.CUSTOMER) {
+        queryBuilder.andWhere("appointment.user_id = :user_id", {
+            user_id: userId,
+        });
+    }
 
     if (query.staff_id !== undefined) {
         queryBuilder.andWhere("appointment.staff_id = :staff_id", {
@@ -110,23 +133,37 @@ export const getAllAppointments = async (query: GetAppointmentsQueryDto) => {
     };
 };
 
-export const getAppointment = async (id: string) => {
+export const getAppointment = async (id: string, userId: string, role: UserRole) => {
+    if (role === UserRole.CUSTOMER) {
+        return await appointmentRepo.findOne({
+            where: {
+                id: id,
+                user_id: userId,
+            },
+            relations: {
+                staff: true,
+                services: true,
+            },
+        });
+    }
+
     return await appointmentRepo.findOne({
         where: {
             id: id,
         },
         relations: {
-            customer: true,
             staff: true,
             services: true,
         },
     });
 };
 
-export const updateAppointment = async (id: string, data: UpdateAppointmentDto) => {
-    const appointment = await getAppointment(id);
+export const updateAppointment = async (id: string, userId: string, role: UserRole, data: UpdateAppointmentDto) => {
+    const appointment = await getAppointment(id, userId, role);
 
     if (!appointment) return null;
+
+    if (role === UserRole.CUSTOMER && data.status !== undefined && data.status !== AppointmentStatus.CANCELLED) throw new AppError("Customers can only cancel appointments", 403, "FORBIDDEN");
 
     if ((appointment.status === AppointmentStatus.COMPLETED || appointment.status === AppointmentStatus.CANCELLED) && (data.staff_id !== undefined || data.service_ids !== undefined || data.start_time !== undefined)) throw new AppError("Completed or cancelled appointment cannot be modified", 409, "APPOINTMENT_NOT_EDITABLE");
 

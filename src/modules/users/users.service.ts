@@ -55,3 +55,9 @@ export const loginUser = async (data: LoginUserDto) => {
         accessToken,
     };
 };
+
+export const getUser = async (id: string) => {
+    return await userRepo.findOneBy({
+        id: id,
+    });
+};
