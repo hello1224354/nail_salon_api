@@ -1,13 +1,27 @@
 import { AppError } from "../../common/errors";
 
 export interface RegisterUserDto {
-    email: string;
+    full_name: string;
+    phone: string;
+    email: string | null;
     password: string;
 }
 
 export interface LoginUserDto {
-    email: string;
+    phone: string;
     password: string;
+}
+
+function normalizePhone(value: string): string {
+    const phone = value.replace(/[\s.-]/g, "");
+
+    if (phone.startsWith("+84")) return phone;
+
+    if (phone.startsWith("84")) return `+${phone}`;
+
+    if (phone.startsWith("0")) return `+84${phone.slice(1)}`;
+
+    return phone;
 }
 
 export function parseRegisterUserDto(body: unknown): RegisterUserDto {
@@ -15,17 +29,33 @@ export function parseRegisterUserDto(body: unknown): RegisterUserDto {
 
     const data = body as Record<string, unknown>;
 
-    if (data.email === undefined || typeof data.email !== "string" || data.email.trim().length === 0) throw new AppError("Email must be a non-empty string", 400, "VALIDATION_ERROR");
+    if (typeof data.full_name !== "string" || data.full_name.trim().length === 0) throw new AppError("Full_name must be a non-empty string", 400, "VALIDATION_ERROR");
 
-    const email = data.email.trim().toLowerCase();
+    if (typeof data.phone !== "string" || data.phone.trim().length === 0) throw new AppError("Phone must be a non-empty string", 400, "VALIDATION_ERROR");
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new AppError("Email must be valid", 400, "VALIDATION_ERROR");
+    const fullName = data.full_name.trim();
+
+    const phone = normalizePhone(data.phone);
+
+    if (!/^\+84\d{9}$/.test(phone)) throw new AppError("Phone must be a valid Vietnamese phone number", 400, "VALIDATION_ERROR");
+
+    let email: string | null = null;
+
+    if (data.email !== undefined && data.email !== null) {
+        if (typeof data.email !== "string" || data.email.trim().length === 0) throw new AppError("Email must be a non-empty string", 400, "VALIDATION_ERROR");
+
+        email = data.email.trim().toLowerCase();
+
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new AppError("Email must be valid", 400, "VALIDATION_ERROR");
+    }
 
     if (typeof data.password !== "string") throw new AppError("Password must be a string", 400, "VALIDATION_ERROR");
 
     if (data.password.length < 8) throw new AppError("Password must be at least 8 characters", 400, "VALIDATION_ERROR");
 
     return {
+        full_name: fullName,
+        phone,
         email,
         password: data.password,
     };
@@ -36,16 +66,16 @@ export function parseLoginUserDto(body: unknown): LoginUserDto {
 
     const data = body as Record<string, unknown>;
 
-    if (typeof data.email !== "string" || data.email.trim().length === 0) throw new AppError("Email must be a non-empty string", 400, "VALIDATION_ERROR");
+    if (typeof data.phone !== "string" || data.phone.trim().length === 0) throw new AppError("Phone must be a non-empty string", 400, "VALIDATION_ERROR");
 
-    const email = data.email.trim().toLowerCase();
+    const phone = normalizePhone(data.phone);
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) throw new AppError("Email must be valid", 400, "VALIDATION_ERROR");
+    if (!/^\+84\d{9}$/.test(phone)) throw new AppError("Phone must be a valid Vietnamese phone number", 400, "VALIDATION_ERROR");
 
     if (typeof data.password !== "string" || data.password.length === 0) throw new AppError("Password must be a non-empty string", 400, "VALIDATION_ERROR");
 
     return {
-        email,
+        phone,
         password: data.password,
     };
 }
