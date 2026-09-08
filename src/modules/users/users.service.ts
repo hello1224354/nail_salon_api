@@ -9,15 +9,25 @@ import { env } from "../../config/env";
 const userRepo = AppDataSource.getRepository(User);
 
 export const registerUser = async (data: RegisterUserDto) => {
-    const user = await userRepo.findOneBy({
-        email: data.email,
+    const existingPhone = await userRepo.findOneBy({
+        phone: data.phone,
     });
 
-    if (user) throw new AppError("Email is already registered", 409, "EMAIL_ALREADY_EXISTS");
+    if (existingPhone) throw new AppError("Phone is already registered", 409, "PHONE_ALREADY_EXISTS");
+
+    if (data.email !== null) {
+        const existingEmail = await userRepo.findOneBy({
+            email: data.email,
+        });
+
+        if (existingEmail) throw new AppError("Email is already registered", 409, "EMAIL_ALREADY_EXISTS");
+    }
 
     const passwordHash = await bcrypt.hash(data.password, 12);
 
     const newUser = userRepo.create({
+        full_name: data.full_name,
+        phone: data.phone,
         email: data.email,
         password_hash: passwordHash,
         role: UserRole.CUSTOMER,
@@ -28,16 +38,16 @@ export const registerUser = async (data: RegisterUserDto) => {
 
 export const loginUser = async (data: LoginUserDto) => {
     const user = await userRepo.findOneBy({
-        email: data.email,
-    })
+        phone: data.phone,
+    });
 
-    if (!user) throw new AppError("Invalid email or password", 401, "INVALID_CREDENTIALS");
+    if (!user) throw new AppError("Invalid phone or password", 401, "INVALID_CREDENTIALS");
 
     if (!user.is_active) throw new AppError("User account is inactive", 403, "USER_INACTIVE");
 
     const passwordMatches = await bcrypt.compare(data.password, user.password_hash);
 
-    if (!passwordMatches) throw new AppError("Invalid email or password", 401, "INVALID_CREDENTIALS");
+    if (!passwordMatches) throw new AppError("Invalid phone or password", 401, "INVALID_CREDENTIALS");
 
     const accessToken = jwt.sign(
         {
