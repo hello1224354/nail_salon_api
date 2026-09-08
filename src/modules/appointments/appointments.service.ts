@@ -163,7 +163,7 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
 
     if (!appointment) return null;
 
-    if (role === UserRole.CUSTOMER && data.status !== undefined && data.status !== AppointmentStatus.CANCELLED) throw new AppError("Customers can only cancel appointments", 403, "FORBIDDEN");
+    if (role === UserRole.CUSTOMER) throw new AppError("Customers cannot update appointments", 403, "FORBIDDEN");
 
     if ((appointment.status === AppointmentStatus.COMPLETED || appointment.status === AppointmentStatus.CANCELLED) && (data.staff_id !== undefined || data.service_ids !== undefined || data.start_time !== undefined)) throw new AppError("Completed or cancelled appointment cannot be modified", 409, "APPOINTMENT_NOT_EDITABLE");
 
