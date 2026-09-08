@@ -2,7 +2,7 @@ import { AppError } from "../../common/errors";
 import { AppointmentStatus } from "./appointments.entity";
 
 export interface CreateAppointmentDto {
-    customer_id: string;
+    user_id?: string;
     staff_id?: string | null;
     service_ids: string[];
     start_time: Date;
@@ -90,7 +90,7 @@ export function parseCreateAppointmentDto(body: unknown): CreateAppointmentDto {
 
     const data = body as Record<string, unknown>;
 
-    if (typeof data.customer_id !== "string" || !isUuid(data.customer_id)) throw new AppError("Customer_id must be a valid UUID", 400, "VALIDATION_ERROR");
+    if (data.user_id !== undefined && (typeof data.user_id !== "string" || !isUuid(data.user_id))) throw new AppError("User_id must be a valid UUID", 400, "VALIDATION_ERROR");
 
     if (data.staff_id !== undefined && data.staff_id !== null && (typeof data.staff_id !== "string" || !isUuid(data.staff_id))) throw new AppError("Staff_id must be a valid UUID or null", 400, "VALIDATION_ERROR");
 
@@ -111,7 +111,7 @@ export function parseCreateAppointmentDto(body: unknown): CreateAppointmentDto {
     if (!hasTimezone(data.start_time)) throw new AppError("Start_time must include a timezone", 400, "VALIDATION_ERROR");
 
     return {
-        customer_id: data.customer_id,
+        user_id: data.user_id as string | undefined,
         staff_id: data.staff_id as string | null | undefined,
         service_ids: data.service_ids as string[],
         start_time: startTime,

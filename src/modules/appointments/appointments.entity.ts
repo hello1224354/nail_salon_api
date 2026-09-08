@@ -1,5 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, ManyToMany, JoinTable, Index } from "typeorm";
-import { Customer } from "../customers/customers.entity";
+import { User } from "../users/users.entity";
 import { Staff } from "../staffs/staffs.entity";
 import { Service } from "../services/service.entity";
 
@@ -10,7 +10,7 @@ export enum AppointmentStatus {
     CANCELLED = "cancelled"
 }
 
-@Index("IDX_appointments_customer_start", ["customer_id", "start_time"])
+@Index("IDX_appointments_user_start", ["user_id", "start_time"])
 @Index("IDX_appointments_staff_start", ["staff_id", "start_time"])
 @Entity("appointments")
 export class Appointment {
@@ -18,11 +18,11 @@ export class Appointment {
     id: string;
 
     @Column({ type: "uuid" })
-    customer_id: string;
+    user_id: string;
 
-    @ManyToOne(() => Customer, (customer) => customer.appointments, { onDelete: "RESTRICT" })
-    @JoinColumn({ name: "customer_id" })
-    customer: Customer;
+    @ManyToOne(() => User, { onDelete: "RESTRICT" })
+    @JoinColumn({ name: "user_id" })
+    user: User;
 
     @Column({ type: "uuid", nullable: true })
     staff_id: string | null;
