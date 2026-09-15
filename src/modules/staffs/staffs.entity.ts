@@ -1,22 +1,18 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from "typeorm";
+import { Entity, PrimaryColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, OneToOne, JoinColumn } from "typeorm";
 import { Appointment } from "../appointments/appointments.entity";
+import { User } from "../users/users.entity";
 
 @Entity("staffs")
 export class Staff {
-    @PrimaryGeneratedColumn("uuid")
-    id: string;
+    @PrimaryColumn("uuid")
+    user_id: string;
 
-    @Column({ type: "varchar" })
-    name: string;
-
-    @Column({ type: "varchar", nullable: true })
-    phone: string | null;
+    @OneToOne(() => User, { onDelete: "RESTRICT" })
+    @JoinColumn({ name: "user_id" })
+    user: User;
 
     @Column({ type: "int" })
     branch_id: number;
-
-    @Column({ type: "boolean", default: true })
-    is_active: boolean;
 
     @CreateDateColumn()
     created_at: Date;

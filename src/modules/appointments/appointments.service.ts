@@ -41,7 +41,9 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
 
         if (!staff) throw new AppError("Staff not found", 404, "STAFF_NOT_FOUND");
 
-        if (!staff.is_active) throw new AppError("Staff is inactive", 400, "STAFF_INACTIVE");
+        if (!staff.user.is_active) throw new AppError("Staff is inactive", 400, "STAFF_INACTIVE");
+
+        if (staff.user.role !== UserRole.STAFF) throw new AppError("User is not a staff member", 400, "INVALID_STAFF_ACCOUNT");
     }
 
     const services = await serviceService.getServicesByIds(data.service_ids);
@@ -62,7 +64,7 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
 
     if (staff) {
         const overlapAppointment = await appointmentRepo.findOneBy({
-            staff_id: staff.id,
+            staff_id: staff.user_id,
             status: In([AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED]),
             start_time: LessThan(endTime),
             end_time: MoreThan(data.start_time),
@@ -73,7 +75,7 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
 
     const newAppointment = appointmentRepo.create({
         user_id: ownerId,
-        staff_id: staff?.id ?? null,
+        staff_id: staff?.user_id ?? null,
         services: services,
         start_time: data.start_time,
         end_time: endTime,
@@ -92,9 +94,23 @@ export const getAllAppointments = async (userId: string, role: UserRole, query: 
         });
     }
 
+    if (role === UserRole.STAFF) {
+        const staff = await staffService.getStaff(userId);
+
+        if (!staff) throw new AppError("Staff profile not found", 404, "STAFF_NOT_FOUND");
+
+        if (!staff.user.is_active) throw new AppError("Staff is inactive", 403, "FORBIDDEN");
+
+        if (staff.user.role !== UserRole.STAFF) throw new AppError("User is not a staff member", 403, "FORBIDDEN");
+
+        queryBuilder.andWhere("appointment.staff_id = :actor_staff_id", {
+            actor_staff_id: staff.user_id,
+        });
+    }
+
     if (query.staff_id !== undefined) {
-        queryBuilder.andWhere("appointment.staff_id = :staff_id", {
-            staff_id: query.staff_id,
+        queryBuilder.andWhere("appointment.staff_id = :filter_staff_id", {
+            filter_staff_id: query.staff_id,
         });
     }
 
@@ -180,7 +196,9 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
 
             if (!staffChecker) throw new AppError("Staff not found", 404, "STAFF_NOT_FOUND");
 
-            if (!staffChecker.is_active) throw new AppError("Staff is inactive", 400, "STAFF_INACTIVE");
+            if (!staffChecker.user.is_active) throw new AppError("Staff is inactive", 400, "STAFF_INACTIVE");
+
+            if (staffChecker.user.role !== UserRole.STAFF) throw new AppError("User is not a staff member", 400, "INVALID_STAFF_ACCOUNT");
 
             staff = staffChecker;
         }
@@ -225,7 +243,7 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
     if (staff && (status === AppointmentStatus.PENDING || status === AppointmentStatus.CONFIRMED)) {
         const overlapAppointment = await appointmentRepo.findOneBy({
             id: Not(appointment.id),
-            staff_id: staff.id,
+            staff_id: staff.user_id,
             status: In([AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED]),
             start_time: LessThan(endTime),
             end_time: MoreThan(startTime),
@@ -234,7 +252,7 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
         if (overlapAppointment) throw new AppError("Staff already has an appointment during this time", 409, "APPOINTMENT_CONFLICT");
     }
 
-    appointment.staff_id = staff?.id ?? null;
+    appointment.staff_id = staff?.user_id ?? null;
     appointment.staff = staff;
     appointment.services = services;
     appointment.start_time = startTime;

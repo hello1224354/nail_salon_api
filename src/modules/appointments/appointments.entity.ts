@@ -28,7 +28,7 @@ export class Appointment {
     staff_id: string | null;
 
     @ManyToOne(() => Staff, (staff) => staff.appointments, { onDelete: "RESTRICT" })
-    @JoinColumn({ name: "staff_id" })
+    @JoinColumn({ name: "staff_id", referencedColumnName: "user_id" })
     staff: Staff | null;
 
     @ManyToMany(() => Service, (service) => service.appointments)
