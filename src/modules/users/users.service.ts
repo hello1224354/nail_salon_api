@@ -5,18 +5,21 @@ import { User, UserRole } from "./users.entity";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { env } from "../../config/env";
+import { EntityManager } from "typeorm";
 
 const userRepo = AppDataSource.getRepository(User);
 
-export const registerUser = async (data: RegisterUserDto) => {
-    const existingPhone = await userRepo.findOneBy({
+export const createUser = async (data: RegisterUserDto, role: UserRole, manager?: EntityManager) => {
+    const repo = manager ? manager.getRepository(User) : userRepo;
+
+    const existingPhone = await repo.findOneBy({
         phone: data.phone,
     });
 
     if (existingPhone) throw new AppError("Phone is already registered", 409, "PHONE_ALREADY_EXISTS");
 
     if (data.email !== null) {
-        const existingEmail = await userRepo.findOneBy({
+        const existingEmail = await repo.findOneBy({
             email: data.email,
         });
 
@@ -25,15 +28,19 @@ export const registerUser = async (data: RegisterUserDto) => {
 
     const passwordHash = await bcrypt.hash(data.password, 12);
 
-    const newUser = userRepo.create({
+    const newUser = repo.create({
         full_name: data.full_name,
         phone: data.phone,
         email: data.email,
         password_hash: passwordHash,
-        role: UserRole.CUSTOMER,
+        role: role,
     });
 
-    return await userRepo.save(newUser);
+    return await repo.save(newUser);
+};
+
+export const registerUser = async (data: RegisterUserDto) => {
+    return await createUser(data, UserRole.CUSTOMER);
 };
 
 export const loginUser = async (data: LoginUserDto) => {
