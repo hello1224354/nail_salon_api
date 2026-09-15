@@ -163,6 +163,19 @@ export const getAppointment = async (id: string, userId: string, role: UserRole)
         });
     }
 
+    if (role === UserRole.STAFF) {
+        return await appointmentRepo.findOne({
+            where: {
+                id: id,
+                staff_id: userId,
+            },
+            relations: {
+                staff: true,
+                services: true,
+            },
+        });
+    }
+
     return await appointmentRepo.findOne({
         where: {
             id: id,
@@ -180,6 +193,16 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
     if (!appointment) return null;
 
     if (role === UserRole.CUSTOMER) throw new AppError("Customers cannot update appointments", 403, "FORBIDDEN");
+
+    if (role === UserRole.STAFF) {
+        if (data.staff_id !== undefined) throw new AppError("Staff cannot change appointment staff", 403, "FORBIDDEN");
+
+        if (data.service_ids !== undefined) throw new AppError("Staff cannot change appointment services", 403, "FORBIDDEN");
+
+        if (data.start_time !== undefined) throw new AppError("Staff cannot change appointment start time", 403, "FORBIDDEN");
+
+        if (data.status !== undefined) throw new AppError("Staff cannot change appointment status yet", 403, "FORBIDDEN");
+    }
 
     if ((appointment.status === AppointmentStatus.COMPLETED || appointment.status === AppointmentStatus.CANCELLED) && (data.staff_id !== undefined || data.service_ids !== undefined || data.start_time !== undefined)) throw new AppError("Completed or cancelled appointment cannot be modified", 409, "APPOINTMENT_NOT_EDITABLE");
 
