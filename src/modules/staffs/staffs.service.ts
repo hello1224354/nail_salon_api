@@ -21,12 +21,6 @@ export const getStaff = async (userId: string) => {
     });
 };
 
-export const getStaffByUserId = async (userId: string) => {
-    return await staffRepo.findOneBy({
-        user_id: userId,
-    });
-};
-
 export const createStaff = async (data: CreateStaffDto) => {
     return await AppDataSource.transaction(async (manager) => {
         const user = await userService.createUser(
