@@ -6,6 +6,7 @@ import { AppointmentService } from "./appointment-services.entity";
 export enum AppointmentStatus {
     PENDING = "pending",
     CONFIRMED = "confirmed",
+    IN_PROGRESS = "in_progress",
     COMPLETED = "completed",
     CANCELLED = "cancelled"
 }
@@ -24,12 +25,12 @@ export class Appointment {
     @JoinColumn({ name: "user_id" })
     user: User;
 
-    @Column({ type: "uuid", nullable: true })
-    staff_id: string | null;
+    @Column({ type: "uuid" })
+    staff_id: string;
 
     @ManyToOne(() => Staff, (staff) => staff.appointments, { onDelete: "RESTRICT" })
     @JoinColumn({ name: "staff_id", referencedColumnName: "user_id" })
-    staff: Staff | null;
+    staff: Staff;
 
     @OneToMany(() => AppointmentService, (appointmentService) => appointmentService.appointment)
     appointment_services: AppointmentService[];
@@ -39,6 +40,12 @@ export class Appointment {
 
     @Column({ type: "datetime" })
     end_time: Date;
+
+    @Column({ type: "datetime", precision: 3, nullable: true })
+    actual_started_at: Date | null;
+
+    @Column({ type: "datetime", precision: 3, nullable: true })
+    actual_completed_at: Date | null;
 
     @Column({
         type: "enum",
