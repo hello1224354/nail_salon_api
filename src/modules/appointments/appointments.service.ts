@@ -2,7 +2,6 @@ import { AppDataSource } from "../../config/database";
 import { AppError } from "../../common/errors";
 import { Appointment, AppointmentStatus } from "./appointments.entity";
 import { CreateAppointmentDto, GetAppointmentsQueryDto, UpdateAppointmentDto } from "./appointments.dto";
-import { Staff } from "../staffs/staffs.entity";
 import * as staffService from "../staffs/staffs.service";
 import * as serviceService from "../services/services.service";
 import { In, LessThan, MoreThan, Not } from "typeorm";
@@ -35,17 +34,13 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
         throw new AppError("You do not have permission to perform this action", 403, "FORBIDDEN");
     }
 
-    let staff: Staff | null = null;
+    const staff = await staffService.getStaff(data.staff_id);
 
-    if (data.staff_id) {
-        staff = await staffService.getStaff(data.staff_id);
+    if (!staff) throw new AppError("Staff not found", 404, "STAFF_NOT_FOUND");
 
-        if (!staff) throw new AppError("Staff not found", 404, "STAFF_NOT_FOUND");
+    if (!staff.user.is_active) throw new AppError("Staff is inactive", 400, "STAFF_INACTIVE");
 
-        if (!staff.user.is_active) throw new AppError("Staff is inactive", 400, "STAFF_INACTIVE");
-
-        if (staff.user.role !== UserRole.STAFF) throw new AppError("User is not a staff member", 400, "INVALID_STAFF_ACCOUNT");
-    }
+    if (staff.user.role !== UserRole.STAFF) throw new AppError("User is not a staff member", 400, "INVALID_STAFF_ACCOUNT");
 
     const services = await serviceService.getServicesByIds(data.service_ids);
 
@@ -63,16 +58,18 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
 
     endTime = new Date(data.start_time.getTime() + totalDurationMinutes * 60 * 1000);
 
-    if (staff) {
-        const overlapAppointment = await appointmentRepo.findOneBy({
-            staff_id: staff.user_id,
-            status: In([AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED]),
-            start_time: LessThan(endTime),
-            end_time: MoreThan(data.start_time),
-        });
+    const overlapAppointment = await appointmentRepo.findOneBy({
+        staff_id: staff.user_id,
+        status: In([
+            AppointmentStatus.PENDING,
+            AppointmentStatus.CONFIRMED,
+            AppointmentStatus.IN_PROGRESS,
+        ]),
+        start_time: LessThan(endTime),
+        end_time: MoreThan(data.start_time),
+    });
 
-        if (overlapAppointment) throw new AppError("Staff already has an appointment during this time", 409, "APPOINTMENT_CONFLICT");
-    }
+    if (overlapAppointment) throw new AppError("Staff already has an appointment during this time", 409, "APPOINTMENT_CONFLICT");
 
     return await AppDataSource.transaction(async (manager) => {
         const transactionAppointmentRepo = manager.getRepository(Appointment);
@@ -80,7 +77,7 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
 
         const newAppointment = transactionAppointmentRepo.create({
             user_id: ownerId,
-            staff_id: staff?.user_id ?? null,
+            staff_id: staff.user_id,
             start_time: data.start_time,
             end_time: endTime,
             status: AppointmentStatus.PENDING,
@@ -222,31 +219,29 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
 
         if (data.start_time !== undefined) throw new AppError("Staff cannot change appointment start time", 403, "FORBIDDEN");
 
-        if (data.status !== undefined) throw new AppError("Staff cannot change appointment status yet", 403, "FORBIDDEN");
+        if (data.status !== undefined && data.status !== AppointmentStatus.IN_PROGRESS && data.status !== AppointmentStatus.COMPLETED) throw new AppError("Staff can only start or complete assigned appointments", 403, "FORBIDDEN");
     }
 
-    if ((appointment.status === AppointmentStatus.COMPLETED || appointment.status === AppointmentStatus.CANCELLED) && (data.staff_id !== undefined || data.service_ids !== undefined || data.start_time !== undefined)) throw new AppError("Completed or cancelled appointment cannot be modified", 409, "APPOINTMENT_NOT_EDITABLE");
+    if ((appointment.status === AppointmentStatus.IN_PROGRESS || appointment.status === AppointmentStatus.COMPLETED || appointment.status === AppointmentStatus.CANCELLED) && (data.staff_id !== undefined || data.service_ids !== undefined || data.start_time !== undefined)) throw new AppError("In-progress, completed, or cancelled appointment cannot be modified", 409, "APPOINTMENT_NOT_EDITABLE");
 
     let staff = appointment.staff;
     let appointmentServices = appointment.appointment_services;
     let startTime = appointment.start_time;
     let endTime = appointment.end_time;
     let status = appointment.status;
+    let actualStartedAt = appointment.actual_started_at;
+    let actualCompletedAt = appointment.actual_completed_at;
 
     if (data.staff_id !== undefined) {
-        if (data.staff_id === null) {
-            staff = null;
-        } else {
-            const staffChecker = await staffService.getStaff(data.staff_id);
+        const staffChecker = await staffService.getStaff(data.staff_id);
 
-            if (!staffChecker) throw new AppError("Staff not found", 404, "STAFF_NOT_FOUND");
+        if (!staffChecker) throw new AppError("Staff not found", 404, "STAFF_NOT_FOUND");
 
-            if (!staffChecker.user.is_active) throw new AppError("Staff is inactive", 400, "STAFF_INACTIVE");
+        if (!staffChecker.user.is_active) throw new AppError("Staff is inactive", 400, "STAFF_INACTIVE");
 
-            if (staffChecker.user.role !== UserRole.STAFF) throw new AppError("User is not a staff member", 400, "INVALID_STAFF_ACCOUNT");
+        if (staffChecker.user.role !== UserRole.STAFF) throw new AppError("User is not a staff member", 400, "INVALID_STAFF_ACCOUNT");
 
-            staff = staffChecker;
-        }
+        staff = staffChecker;
     }
 
     if (data.service_ids !== undefined) {
@@ -268,14 +263,36 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
     }
 
     if (data.status !== undefined) {
-        if (status === AppointmentStatus.CANCELLED || status === AppointmentStatus.COMPLETED) throw new AppError("Invalid appointment status transition", 409, "INVALID_STATUS_TRANSITION");
+        if (status === AppointmentStatus.COMPLETED || status === AppointmentStatus.CANCELLED) throw new AppError("Invalid appointment status transition", 409, "INVALID_STATUS_TRANSITION");
 
         if (status === AppointmentStatus.PENDING) {
             if (data.status !== AppointmentStatus.CONFIRMED && data.status !== AppointmentStatus.CANCELLED) throw new AppError("Invalid appointment status transition", 409, "INVALID_STATUS_TRANSITION");
         }
 
         if (status === AppointmentStatus.CONFIRMED) {
+            if (data.status !== AppointmentStatus.IN_PROGRESS && data.status !== AppointmentStatus.CANCELLED) throw new AppError("Invalid appointment status transition", 409, "INVALID_STATUS_TRANSITION");
+        }
+
+        if (status === AppointmentStatus.IN_PROGRESS) {
             if (data.status !== AppointmentStatus.COMPLETED && data.status !== AppointmentStatus.CANCELLED) throw new AppError("Invalid appointment status transition", 409, "INVALID_STATUS_TRANSITION");
+        }
+
+        if (status === AppointmentStatus.PENDING && data.status === AppointmentStatus.CONFIRMED) {
+            const staffChecker = await staffService.getStaff(staff.user_id);
+
+            if (!staffChecker) throw new AppError("Staff not found", 404, "STAFF_NOT_FOUND");
+
+            if (!staffChecker.user.is_active) throw new AppError("Staff is inactive", 409, "STAFF_INACTIVE");
+
+            if (staffChecker.user.role !== UserRole.STAFF) throw new AppError("User is not a staff member", 409, "INVALID_STAFF_ACCOUNT");
+        }
+
+        if (status === AppointmentStatus.CONFIRMED && data.status === AppointmentStatus.IN_PROGRESS) {
+            actualStartedAt = new Date();
+        }
+
+        if (status === AppointmentStatus.IN_PROGRESS && data.status === AppointmentStatus.COMPLETED) {
+            actualCompletedAt = new Date();
         }
 
         status = data.status;
@@ -295,11 +312,15 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
         endTime = new Date(startTime.getTime() + totalDurationMinutes * 60 * 1000);
     }
 
-    if (staff && (status === AppointmentStatus.PENDING || status === AppointmentStatus.CONFIRMED)) {
+    if (status === AppointmentStatus.PENDING || status === AppointmentStatus.CONFIRMED) {
         const overlapAppointment = await appointmentRepo.findOneBy({
             id: Not(appointment.id),
             staff_id: staff.user_id,
-            status: In([AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED]),
+            status: In([
+                AppointmentStatus.PENDING,
+                AppointmentStatus.CONFIRMED,
+                AppointmentStatus.IN_PROGRESS,
+            ]),
             start_time: LessThan(endTime),
             end_time: MoreThan(startTime),
         });
@@ -311,11 +332,13 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
         const transactionAppointmentRepo = manager.getRepository(Appointment);
         const appointmentServiceRepo = manager.getRepository(AppointmentService);
 
-        appointment.staff_id = staff?.user_id ?? null;
+        appointment.staff_id = staff.user_id;
         appointment.staff = staff;
         appointment.start_time = startTime;
         appointment.end_time = endTime;
         appointment.status = status;
+        appointment.actual_started_at = actualStartedAt;
+        appointment.actual_completed_at = actualCompletedAt;
 
         const savedAppointment = await transactionAppointmentRepo.save(appointment);
 

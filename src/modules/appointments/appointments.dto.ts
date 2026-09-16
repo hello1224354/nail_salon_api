@@ -3,13 +3,13 @@ import { AppointmentStatus } from "./appointments.entity";
 
 export interface CreateAppointmentDto {
     user_id?: string;
-    staff_id?: string | null;
+    staff_id: string;
     service_ids: string[];
     start_time: Date;
 }
 
 export interface UpdateAppointmentDto {
-    staff_id?: string | null;
+    staff_id?: string;
     service_ids?: string[];
     start_time?: Date;
     status?: AppointmentStatus;
@@ -43,7 +43,7 @@ export function parseGetAppointmentsQuery(query: unknown): GetAppointmentsQueryD
 
     const status = typeof data.status === "string" ? data.status.toUpperCase() : undefined;
 
-    if (status !== undefined && !(status in AppointmentStatus)) throw new AppError("Status must be pending, confirmed, completed, or cancelled", 400, "VALIDATION_ERROR");
+    if (status !== undefined && !(status in AppointmentStatus)) throw new AppError("Status must be pending, confirmed, in_progress, completed, or cancelled", 400, "VALIDATION_ERROR");
 
     if (data.from !== undefined && (typeof data.from !== "string" || data.from.trim().length === 0)) throw new AppError("From must be a non-empty string", 400, "VALIDATION_ERROR");
 
@@ -92,7 +92,7 @@ export function parseCreateAppointmentDto(body: unknown): CreateAppointmentDto {
 
     if (data.user_id !== undefined && (typeof data.user_id !== "string" || !isUuid(data.user_id))) throw new AppError("User_id must be a valid UUID", 400, "VALIDATION_ERROR");
 
-    if (data.staff_id !== undefined && data.staff_id !== null && (typeof data.staff_id !== "string" || !isUuid(data.staff_id))) throw new AppError("Staff_id must be a valid UUID or null", 400, "VALIDATION_ERROR");
+    if (typeof data.staff_id !== "string" || !isUuid(data.staff_id)) throw new AppError("Staff_id must be a valid UUID", 400, "VALIDATION_ERROR");
 
     if (!Array.isArray(data.service_ids)) throw new AppError("Service_ids must be an array", 400, "VALIDATION_ERROR");
 
@@ -112,7 +112,7 @@ export function parseCreateAppointmentDto(body: unknown): CreateAppointmentDto {
 
     return {
         user_id: data.user_id as string | undefined,
-        staff_id: data.staff_id as string | null | undefined,
+        staff_id: data.staff_id as string,
         service_ids: data.service_ids as string[],
         start_time: startTime,
     };
@@ -123,9 +123,13 @@ export function parseUpdateAppointmentDto(body: unknown): UpdateAppointmentDto {
 
     const data = body as Record<string, unknown>;
 
+    const hasScheduleChanges = data.staff_id !== undefined || data.service_ids !== undefined || data.start_time !== undefined;
+
+    if (data.status !== undefined && hasScheduleChanges) throw new AppError("Status cannot be updated together with appointment details", 400, "VALIDATION_ERROR");
+
     if (data.staff_id === undefined && data.service_ids === undefined && data.start_time === undefined && data.status === undefined) throw new AppError("At least one field must be provided", 400, "VALIDATION_ERROR");
 
-    if (data.staff_id !== undefined && data.staff_id !== null && (typeof data.staff_id !== "string" || !isUuid(data.staff_id))) throw new AppError("Staff_id must be a valid UUID or null", 400, "VALIDATION_ERROR");
+    if (data.staff_id !== undefined && (typeof data.staff_id !== "string" || !isUuid(data.staff_id))) throw new AppError("Staff_id must be a valid UUID", 400, "VALIDATION_ERROR");
 
     if (data.service_ids !== undefined && !Array.isArray(data.service_ids)) throw new AppError("Service_ids must be an array", 400, "VALIDATION_ERROR");
 
@@ -147,10 +151,10 @@ export function parseUpdateAppointmentDto(body: unknown): UpdateAppointmentDto {
 
     const status = typeof data.status === "string" ? data.status.toUpperCase() : undefined;
 
-    if (status !== undefined && !(status in AppointmentStatus)) throw new AppError("Status must be pending, confirmed, completed, or cancelled", 400, "VALIDATION_ERROR");
+    if (status !== undefined && !(status in AppointmentStatus)) throw new AppError("Status must be pending, confirmed, in_progress, completed, or cancelled", 400, "VALIDATION_ERROR");
 
     return {
-        staff_id: data.staff_id as string | null | undefined,
+        staff_id: data.staff_id as string | undefined,
         service_ids: data.service_ids as string[] | undefined,
         start_time: startTime,
         status: status === undefined ? undefined : AppointmentStatus[status as keyof typeof AppointmentStatus],
