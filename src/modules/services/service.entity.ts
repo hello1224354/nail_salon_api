@@ -1,6 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToMany } from "typeorm";
-import { Appointment } from "../appointments/appointments.entity";
-
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from "typeorm";
+import { AppointmentService } from "../appointments/appointment-services.entity";
 
 @Entity("services")
 export class Service {
@@ -25,6 +24,6 @@ export class Service {
     @UpdateDateColumn()
     updated_at: Date;
 
-    @ManyToMany(() => Appointment, (appointment) => appointment.services, { onDelete: "RESTRICT" })
-    appointments: Appointment[];
+    @OneToMany(() => AppointmentService, (appointmentService) => appointmentService.service)
+    appointment_services: AppointmentService[];
 }
