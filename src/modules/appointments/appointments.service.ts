@@ -8,6 +8,7 @@ import * as serviceService from "../services/services.service";
 import { In, LessThan, MoreThan, Not } from "typeorm";
 import { UserRole } from "../users/users.entity";
 import * as userService from "../users/users.service";
+import { AppointmentService } from "./appointment-services.entity";
 
 const appointmentRepo = AppDataSource.getRepository(Appointment);
 
@@ -73,20 +74,40 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
         if (overlapAppointment) throw new AppError("Staff already has an appointment during this time", 409, "APPOINTMENT_CONFLICT");
     }
 
-    const newAppointment = appointmentRepo.create({
-        user_id: ownerId,
-        staff_id: staff?.user_id ?? null,
-        services: services,
-        start_time: data.start_time,
-        end_time: endTime,
-        status: AppointmentStatus.PENDING,
-    });
+    return await AppDataSource.transaction(async (manager) => {
+        const transactionAppointmentRepo = manager.getRepository(Appointment);
+        const appointmentServiceRepo = manager.getRepository(AppointmentService);
 
-    return await appointmentRepo.save(newAppointment);
+        const newAppointment = transactionAppointmentRepo.create({
+            user_id: ownerId,
+            staff_id: staff?.user_id ?? null,
+            start_time: data.start_time,
+            end_time: endTime,
+            status: AppointmentStatus.PENDING,
+        });
+
+        const savedAppointment = await transactionAppointmentRepo.save(newAppointment);
+
+        const appointmentServices = services.map((service) => {
+            return appointmentServiceRepo.create({
+                appointment_id: savedAppointment.id,
+                service_id: service.id,
+                service_name: service.name,
+                price: service.price,
+                duration_minutes: service.duration_minutes,
+            });
+        });
+
+        const savedAppointmentServices = await appointmentServiceRepo.save(appointmentServices);
+
+        savedAppointment.appointment_services = savedAppointmentServices;
+
+        return savedAppointment;
+    });
 };
 
 export const getAllAppointments = async (userId: string, role: UserRole, query: GetAppointmentsQueryDto) => {
-    const queryBuilder = appointmentRepo.createQueryBuilder("appointment").leftJoinAndSelect("appointment.staff", "staff").leftJoinAndSelect("appointment.services", "services");
+    const queryBuilder = appointmentRepo.createQueryBuilder("appointment").leftJoinAndSelect("appointment.staff", "staff").leftJoinAndSelect("appointment.appointment_services", "appointment_services");
 
     if (role === UserRole.CUSTOMER) {
         queryBuilder.andWhere("appointment.user_id = :user_id", {
@@ -158,7 +179,7 @@ export const getAppointment = async (id: string, userId: string, role: UserRole)
             },
             relations: {
                 staff: true,
-                services: true,
+                appointment_services: true,
             },
         });
     }
@@ -171,7 +192,7 @@ export const getAppointment = async (id: string, userId: string, role: UserRole)
             },
             relations: {
                 staff: true,
-                services: true,
+                appointment_services: true,
             },
         });
     }
@@ -182,7 +203,7 @@ export const getAppointment = async (id: string, userId: string, role: UserRole)
         },
         relations: {
             staff: true,
-            services: true,
+            appointment_services: true,
         },
     });
 };
@@ -207,8 +228,9 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
     if ((appointment.status === AppointmentStatus.COMPLETED || appointment.status === AppointmentStatus.CANCELLED) && (data.staff_id !== undefined || data.service_ids !== undefined || data.start_time !== undefined)) throw new AppError("Completed or cancelled appointment cannot be modified", 409, "APPOINTMENT_NOT_EDITABLE");
 
     let staff = appointment.staff;
-    let services = appointment.services;
+    let appointmentServices = appointment.appointment_services;
     let startTime = appointment.start_time;
+    let endTime = appointment.end_time;
     let status = appointment.status;
 
     if (data.staff_id !== undefined) {
@@ -234,7 +256,15 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
 
         if (!servicesChecker.every(service => service.is_active)) throw new AppError("One or more services are inactive", 400, "SERVICE_INACTIVE");
 
-        services = servicesChecker;
+        appointmentServices = servicesChecker.map((service) => {
+            return {
+                appointment_id: appointment.id,
+                service_id: service.id,
+                service_name: service.name,
+                price: service.price,
+                duration_minutes: service.duration_minutes,
+            } as AppointmentService;
+        });
     }
 
     if (data.status !== undefined) {
@@ -255,13 +285,15 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
         startTime = data.start_time;
     }
 
-    let totalDurationMinutes = 0;
+    if (data.service_ids !== undefined || data.start_time !== undefined) {
+        let totalDurationMinutes = 0;
 
-    services.forEach((service) => {
-        totalDurationMinutes += service.duration_minutes;
-    });
+        appointmentServices.forEach((appointmentService) => {
+            totalDurationMinutes += appointmentService.duration_minutes;
+        });
 
-    const endTime = new Date(startTime.getTime() + totalDurationMinutes * 60 * 1000);
+        endTime = new Date(startTime.getTime() + totalDurationMinutes * 60 * 1000);
+    }
 
     if (staff && (status === AppointmentStatus.PENDING || status === AppointmentStatus.CONFIRMED)) {
         const overlapAppointment = await appointmentRepo.findOneBy({
@@ -275,12 +307,38 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
         if (overlapAppointment) throw new AppError("Staff already has an appointment during this time", 409, "APPOINTMENT_CONFLICT");
     }
 
-    appointment.staff_id = staff?.user_id ?? null;
-    appointment.staff = staff;
-    appointment.services = services;
-    appointment.start_time = startTime;
-    appointment.end_time = endTime;
-    appointment.status = status;
+    return await AppDataSource.transaction(async (manager) => {
+        const transactionAppointmentRepo = manager.getRepository(Appointment);
+        const appointmentServiceRepo = manager.getRepository(AppointmentService);
 
-    return await appointmentRepo.save(appointment);
+        appointment.staff_id = staff?.user_id ?? null;
+        appointment.staff = staff;
+        appointment.start_time = startTime;
+        appointment.end_time = endTime;
+        appointment.status = status;
+
+        const savedAppointment = await transactionAppointmentRepo.save(appointment);
+
+        if (data.service_ids !== undefined) {
+            await appointmentServiceRepo.delete({
+                appointment_id: appointment.id,
+            });
+
+            const newAppointmentServices = appointmentServices.map((appointmentService) => {
+                return appointmentServiceRepo.create({
+                    appointment_id: appointment.id,
+                    service_id: appointmentService.service_id,
+                    service_name: appointmentService.service_name,
+                    price: appointmentService.price,
+                    duration_minutes: appointmentService.duration_minutes,
+                });
+            });
+
+            savedAppointment.appointment_services = await appointmentServiceRepo.save(newAppointmentServices);
+        } else {
+            savedAppointment.appointment_services = appointmentServices;
+        }
+
+        return savedAppointment;
+    });
 };

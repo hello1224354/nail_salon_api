@@ -1,7 +1,7 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, ManyToMany, JoinTable, Index } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, OneToMany, Index } from "typeorm";
 import { User } from "../users/users.entity";
 import { Staff } from "../staffs/staffs.entity";
-import { Service } from "../services/service.entity";
+import { AppointmentService } from "./appointment-services.entity";
 
 export enum AppointmentStatus {
     PENDING = "pending",
@@ -31,13 +31,8 @@ export class Appointment {
     @JoinColumn({ name: "staff_id", referencedColumnName: "user_id" })
     staff: Staff | null;
 
-    @ManyToMany(() => Service, (service) => service.appointments)
-    @JoinTable({
-        name: "appointment_services",
-        joinColumn: { name: "appointment_id", referencedColumnName: "id" },
-        inverseJoinColumn: { name: "service_id", referencedColumnName: "id" }
-    })
-    services: Service[];
+    @OneToMany(() => AppointmentService, (appointmentService) => appointmentService.appointment)
+    appointment_services: AppointmentService[];
 
     @Column({ type: "datetime" })
     start_time: Date;
