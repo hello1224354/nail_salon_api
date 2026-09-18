@@ -1,13 +1,30 @@
 import { AppDataSource } from "../../config/database";
 import { Staff } from "./staffs.entity";
-import { CreateStaffDto } from "./staffs.dto";
+import { CreateStaffDto, GetStaffsQueryDto } from "./staffs.dto";
 import * as userService from "../users/users.service";
 import { UserRole } from "../users/users.entity";
 
 const staffRepo = AppDataSource.getRepository(Staff);
 
-export const getAllStaffs = async () => {
-    return await staffRepo.find();
+export const getAllStaffs = async (query: GetStaffsQueryDto) => {
+    const [staffs, total] = await staffRepo.findAndCount({
+        relations: {
+            user: true,
+        },
+        order: {
+            created_at: "ASC",
+        },
+        skip: (query.page - 1) * query.limit,
+        take: query.limit,
+    });
+
+    return {
+        staffs,
+        total,
+        page: query.page,
+        limit: query.limit,
+        total_pages: Math.ceil(total / query.limit),
+    };
 };
 
 export const getStaff = async (userId: string) => {

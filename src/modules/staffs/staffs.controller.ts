@@ -1,10 +1,10 @@
 import { Request, Response } from "express";
 import * as staffService from "./staffs.service";
 import { AppError } from "../../common/errors";
-import { parseCreateStaffDto, parseUpdateStaffDto } from "./staffs.dto";
+import { parseCreateStaffDto, parseGetStaffsQuery, parseUpdateStaffDto } from "./staffs.dto";
 
 export const getAllStaffs = async (req: Request, res: Response) => {
-    const data = await staffService.getAllStaffs();
+    const data = await staffService.getAllStaffs(parseGetStaffsQuery(req.query));
 
     return res.status(200).json({
         success: {

@@ -1,11 +1,26 @@
 import { AppDataSource } from "../../config/database";
 import { Service } from "./service.entity";
 import { In } from "typeorm";
+import { GetServicesQueryDto } from "./services.dto";
 
 const serviceRepo = AppDataSource.getRepository(Service);
 
-export const getAllServices = async () => {
-    return await serviceRepo.find();
+export const getAllServices = async (query: GetServicesQueryDto) => {
+    const [services, total] = await serviceRepo.findAndCount({
+        order: {
+            created_at: "DESC",
+        },
+        skip: (query.page - 1) * query.limit,
+        take: query.limit,
+    });
+
+    return {
+        services,
+        total,
+        page: query.page,
+        limit: query.limit,
+        total_pages: Math.ceil(total / query.limit),
+    };
 };
 
 export const createService = async (data: Partial<Service>) => {
