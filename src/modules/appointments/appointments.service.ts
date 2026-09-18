@@ -11,6 +11,40 @@ import { AppointmentService } from "./appointment-services.entity";
 
 const appointmentRepo = AppDataSource.getRepository(Appointment);
 
+const CUSTOMER_MIN_BOOKING_LEAD_TIME_MS = 3 * 60 * 60 * 1000;
+const CUSTOMER_MAX_BOOKING_HORIZON_MS = 14 * 24 * 60 * 60 * 1000;
+const BUSINESS_TIMEZONE = "Asia/Ho_Chi_Minh";
+const BUSINESS_OPEN_MINUTE = 9 * 60;
+const BUSINESS_CLOSE_MINUTE = 21 * 60;
+const APPOINTMENT_BUFFER_MS = 15 * 60 * 1000;
+
+function getBusinessDateTime(date: Date) {
+    const parts = new Intl.DateTimeFormat("vi-VN", {
+        timeZone: BUSINESS_TIMEZONE,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hourCycle: "h23",
+    }).formatToParts(date);
+
+    const getPart = (type: Intl.DateTimeFormatPartTypes) => {
+        return parts.find((part) => part.type === type)?.value ?? "";
+    };
+
+    const year = getPart("year");
+    const month = getPart("month");
+    const day = getPart("day");
+    const hour = Number(getPart("hour"));
+    const minute = Number(getPart("minute"));
+
+    return {
+        date: `${year}-${month}-${day}`,
+        minuteOfDay: hour * 60 + minute,
+    };
+}
+
 export const createAppointment = async (actorId: string, actorRole: UserRole, data: CreateAppointmentDto) => {
     let ownerId: string;
 
@@ -18,14 +52,19 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
         if (data.user_id !== undefined) throw new AppError("Customers cannot specify user_id", 403, "FORBIDDEN");
 
         ownerId = actorId;
+
+        const now = Date.now();
+        const startTime = data.start_time.getTime();
+
+        if (startTime < now + CUSTOMER_MIN_BOOKING_LEAD_TIME_MS) throw new AppError("Customers must book at least 3 hours in advance", 400, "VALIDATION_ERROR");
+
+        if (startTime > now + CUSTOMER_MAX_BOOKING_HORIZON_MS) throw new AppError("Customers cannot book more than 14 days in advance", 400, "VALIDATION_ERROR");
     } else if (actorRole === UserRole.ADMIN) {
         if (data.user_id === undefined) throw new AppError("User_id is required when admin creates an appointment", 400, "VALIDATION_ERROR");
 
         const targetUser = await userService.getUser(data.user_id);
 
         if (!targetUser) throw new AppError("User not found", 404, "USER_NOT_FOUND");
-
-        if (targetUser.role !== UserRole.CUSTOMER) throw new AppError("Appointment owner must be a customer", 400, "INVALID_APPOINTMENT_OWNER");
 
         if (!targetUser.is_active) throw new AppError("User account is inactive", 400, "USER_INACTIVE");
 
@@ -58,6 +97,20 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
 
     endTime = new Date(data.start_time.getTime() + totalDurationMinutes * 60 * 1000);
 
+    const bufferedStartTime = new Date(data.start_time.getTime() - APPOINTMENT_BUFFER_MS);
+    const bufferedEndTime = new Date(endTime.getTime() + APPOINTMENT_BUFFER_MS);
+
+    if (actorRole === UserRole.CUSTOMER) {
+        const businessStart = getBusinessDateTime(data.start_time);
+        const businessEnd = getBusinessDateTime(endTime);
+
+        if (businessStart.minuteOfDay % 15 !== 0 || data.start_time.getUTCSeconds() !== 0 || data.start_time.getUTCMilliseconds() !== 0) throw new AppError("Appointment start time must be on a 15-minute interval", 400, "INVALID_APPOINTMENT_TIME");
+
+        if (businessStart.minuteOfDay < BUSINESS_OPEN_MINUTE) throw new AppError("Appointment must start at or after 09:00", 400, "OUTSIDE_BUSINESS_HOURS");
+
+        if (businessEnd.minuteOfDay > BUSINESS_CLOSE_MINUTE) throw new AppError("Appointment must end by 21:00", 400, "OUTSIDE_BUSINESS_HOURS");
+    }
+
     const overlapAppointment = await appointmentRepo.findOneBy({
         staff_id: staff.user_id,
         status: In([
@@ -65,8 +118,8 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
             AppointmentStatus.CONFIRMED,
             AppointmentStatus.IN_PROGRESS,
         ]),
-        start_time: LessThan(endTime),
-        end_time: MoreThan(data.start_time),
+        start_time: LessThan(bufferedEndTime),
+        end_time: MoreThan(bufferedStartTime),
     });
 
     if (overlapAppointment) throw new AppError("Staff already has an appointment during this time", 409, "APPOINTMENT_CONFLICT");
@@ -312,6 +365,9 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
         endTime = new Date(startTime.getTime() + totalDurationMinutes * 60 * 1000);
     }
 
+    const bufferedStartTime = new Date(startTime.getTime() - APPOINTMENT_BUFFER_MS);
+    const bufferedEndTime = new Date(endTime.getTime() + APPOINTMENT_BUFFER_MS);
+
     if (status === AppointmentStatus.PENDING || status === AppointmentStatus.CONFIRMED) {
         const overlapAppointment = await appointmentRepo.findOneBy({
             id: Not(appointment.id),
@@ -321,8 +377,8 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
                 AppointmentStatus.CONFIRMED,
                 AppointmentStatus.IN_PROGRESS,
             ]),
-            start_time: LessThan(endTime),
-            end_time: MoreThan(startTime),
+            start_time: LessThan(bufferedEndTime),
+            end_time: MoreThan(bufferedStartTime),
         });
 
         if (overlapAppointment) throw new AppError("Staff already has an appointment during this time", 409, "APPOINTMENT_CONFLICT");
