@@ -17,6 +17,7 @@ const BUSINESS_TIMEZONE = "Asia/Ho_Chi_Minh";
 const BUSINESS_OPEN_MINUTE = 9 * 60;
 const BUSINESS_CLOSE_MINUTE = 21 * 60;
 const APPOINTMENT_BUFFER_MS = 15 * 60 * 1000;
+const CUSTOMER_MAX_PENDING_APPOINTMENTS = 3;
 
 function getBusinessDateTime(date: Date) {
     const parts = new Intl.DateTimeFormat("vi-VN", {
@@ -59,6 +60,13 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
         if (startTime < now + CUSTOMER_MIN_BOOKING_LEAD_TIME_MS) throw new AppError("Customers must book at least 3 hours in advance", 400, "VALIDATION_ERROR");
 
         if (startTime > now + CUSTOMER_MAX_BOOKING_HORIZON_MS) throw new AppError("Customers cannot book more than 14 days in advance", 400, "VALIDATION_ERROR");
+
+        const pendingAppointmentCount = await appointmentRepo.countBy({
+            user_id: ownerId,
+            status: AppointmentStatus.PENDING,
+        });
+
+        if (pendingAppointmentCount >= CUSTOMER_MAX_PENDING_APPOINTMENTS) throw new AppError("Customer cannot have more than 3 pending appointments", 429, "TOO_MANY_PENDING_APPOINTMENTS");
     } else if (actorRole === UserRole.ADMIN) {
         if (data.user_id === undefined) throw new AppError("User_id is required when admin creates an appointment", 400, "VALIDATION_ERROR");
 
@@ -123,6 +131,19 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
     });
 
     if (overlapAppointment) throw new AppError("Staff already has an appointment during this time", 409, "APPOINTMENT_CONFLICT");
+
+    const customerOverlapAppointment = await appointmentRepo.findOneBy({
+        user_id: ownerId,
+        status: In([
+            AppointmentStatus.PENDING,
+            AppointmentStatus.CONFIRMED,
+            AppointmentStatus.IN_PROGRESS,
+        ]),
+        start_time: LessThan(endTime),
+        end_time: MoreThan(data.start_time),
+    });
+
+    if (customerOverlapAppointment) throw new AppError("Customer already has an appointment during this time", 409, "CUSTOMER_APPOINTMENT_CONFLICT");
 
     return await AppDataSource.transaction(async (manager) => {
         const transactionAppointmentRepo = manager.getRepository(Appointment);

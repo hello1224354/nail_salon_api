@@ -1,10 +1,10 @@
 import { Request, Response } from "express";
 import * as serviceService from "./services.service";
 import { AppError } from "../../common/errors";
-import { parseCreateServiceDto, parseUpdateServiceDto } from "./services.dto";
+import { parseCreateServiceDto, parseGetServicesQuery, parseUpdateServiceDto } from "./services.dto";
 
 export const getAllServices = async (req: Request, res: Response) => {
-    const data = await serviceService.getAllServices();
+    const data = await serviceService.getAllServices(parseGetServicesQuery(req.query));
     return res.status(200).json({
         success: {
             message: "Get all services successfully",

@@ -13,6 +13,47 @@ export interface UpdateStaffDto {
     branch_id?: number;
 }
 
+export interface GetStaffsQueryDto {
+    page: number;
+    limit: number;
+}
+
+const DEFAULT_PAGE = 1;
+const DEFAULT_LIMIT = 5;
+const MAX_LIMIT = 100;
+
+function parsePositiveIntegerQuery(value: unknown, fieldName: string, defaultValue: number): number {
+    if (value === undefined) return defaultValue;
+
+    if (typeof value !== "string" || !/^\d+$/.test(value)) throw new AppError(`${fieldName} must be a positive integer`, 400, "VALIDATION_ERROR");
+
+    const parsed = Number(value);
+
+    if (!Number.isSafeInteger(parsed) || parsed < 1) throw new AppError(`${fieldName} must be a positive safe integer`, 400, "VALIDATION_ERROR");
+
+    return parsed;
+}
+
+export function parseGetStaffsQuery(query: unknown): GetStaffsQueryDto {
+    if (query === null || typeof query !== "object" || Array.isArray(query)) throw new AppError("Query must be an object", 400, "VALIDATION_ERROR");
+
+    const data = query as Record<string, unknown>;
+
+    const page = parsePositiveIntegerQuery(data.page, "Page", DEFAULT_PAGE);
+    const limit = parsePositiveIntegerQuery(data.limit, "Limit", DEFAULT_LIMIT);
+
+    if (limit > MAX_LIMIT) throw new AppError(`Limit must not exceed ${MAX_LIMIT}`, 400, "VALIDATION_ERROR");
+
+    const offset = (page - 1) * limit;
+
+    if (!Number.isSafeInteger(offset)) throw new AppError("Pagination offset is too large", 400, "VALIDATION_ERROR");
+
+    return {
+        page,
+        limit,
+    };
+}
+
 export function parseCreateStaffDto(body: unknown): CreateStaffDto {
     if (body === null || typeof body !== "object" || Array.isArray(body)) throw new AppError("Request body must be an object", 400, "VALIDATION_ERROR");
 
