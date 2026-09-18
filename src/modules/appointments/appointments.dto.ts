@@ -24,12 +24,86 @@ export interface GetAppointmentsQueryDto {
     limit: number;
 }
 
+const DEFAULT_PAGE = 1;
+const DEFAULT_LIMIT = 5;
+const MAX_LIMIT = 100;
+
 function isUuid(value: string): boolean {
     return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 }
 
 function hasTimezone(value: string): boolean {
     return /(?:Z|[+-]\d{2}:\d{2})$/i.test(value.trim());
+}
+
+function isValidIsoDateTime(value: string): boolean {
+    const match = value.trim().match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,3}))?)?(Z|[+-](\d{2}):(\d{2}))$/i);
+
+    if (!match) return false;
+
+    const year = Number(match[1]);
+    const month = Number(match[2]);
+    const day = Number(match[3]);
+    const hour = Number(match[4]);
+    const minute = Number(match[5]);
+    const second = match[6] === undefined ? 0 : Number(match[6]);
+    const timezone = match[8];
+    const offsetHour = match[9] === undefined ? 0 : Number(match[9]);
+    const offsetMinute = match[10] === undefined ? 0 : Number(match[10]);
+
+    if (month < 1 || month > 12) return false;
+    if (hour < 0 || hour > 23) return false;
+    if (minute < 0 || minute > 59) return false;
+    if (second < 0 || second > 59) return false;
+
+    const isLeapYear = year % 400 === 0 || (year % 4 === 0 && year % 100 !== 0);
+
+    const daysInMonth = [
+        31,
+        isLeapYear ? 29 : 28,
+        31,
+        30,
+        31,
+        30,
+        31,
+        31,
+        30,
+        31,
+        30,
+        31,
+    ];
+
+    if (day < 1 || day > daysInMonth[month - 1]) return false;
+
+    if (timezone.toUpperCase() !== "Z") {
+        if (offsetHour > 14) return false;
+        if (offsetMinute > 59) return false;
+        if (offsetHour === 14 && offsetMinute !== 0) return false;
+    }
+
+    return !Number.isNaN(new Date(value.trim()).getTime());
+}
+
+function parseDateTime(value: unknown, fieldName: string): Date {
+    if (typeof value !== "string" || value.trim().length === 0) throw new AppError(`${fieldName} must be a non-empty string`, 400, "VALIDATION_ERROR");
+
+    if (!hasTimezone(value)) throw new AppError(`${fieldName} must include a timezone`, 400, "VALIDATION_ERROR");
+
+    if (!isValidIsoDateTime(value)) throw new AppError(`${fieldName} must be a valid ISO datetime`, 400, "VALIDATION_ERROR");
+
+    return new Date(value.trim());
+}
+
+function parsePositiveIntegerQuery(value: unknown, fieldName: string, defaultValue: number): number {
+    if (value === undefined) return defaultValue;
+
+    if (typeof value !== "string" || !/^\d+$/.test(value)) throw new AppError(`${fieldName} must be a positive integer`, 400, "VALIDATION_ERROR");
+
+    const parsed = Number(value);
+
+    if (!Number.isSafeInteger(parsed) || parsed < 1) throw new AppError(`${fieldName} must be a positive safe integer`, 400, "VALIDATION_ERROR");
+
+    return parsed;
 }
 
 export function parseGetAppointmentsQuery(query: unknown): GetAppointmentsQueryDto {
@@ -45,35 +119,19 @@ export function parseGetAppointmentsQuery(query: unknown): GetAppointmentsQueryD
 
     if (status !== undefined && !(status in AppointmentStatus)) throw new AppError("Status must be pending, confirmed, in_progress, completed, or cancelled", 400, "VALIDATION_ERROR");
 
-    if (data.from !== undefined && (typeof data.from !== "string" || data.from.trim().length === 0)) throw new AppError("From must be a non-empty string", 400, "VALIDATION_ERROR");
-
-    const from = data.from !== undefined ? new Date(data.from as string) : undefined;
-
-    if (from !== undefined && Number.isNaN(from.getTime())) throw new AppError("From must be a valid date", 400, "VALIDATION_ERROR");
-
-    if (data.from !== undefined && typeof data.from === "string" && !hasTimezone(data.from)) throw new AppError("From must include a timezone", 400, "VALIDATION_ERROR");
-
-    if (data.to !== undefined && (typeof data.to !== "string" || data.to.trim().length === 0)) throw new AppError("To must be a non-empty string", 400, "VALIDATION_ERROR");
-
-    const to = data.to !== undefined ? new Date(data.to as string) : undefined;
-
-    if (to !== undefined && Number.isNaN(to.getTime())) throw new AppError("To must be a valid date", 400, "VALIDATION_ERROR");
-
-    if (data.to !== undefined && typeof data.to === "string" && !hasTimezone(data.to)) throw new AppError("To must include a timezone", 400, "VALIDATION_ERROR");
+    const from = data.from === undefined ? undefined : parseDateTime(data.from, "From");
+    const to = data.to === undefined ? undefined : parseDateTime(data.to, "To");
 
     if (from !== undefined && to !== undefined && from.getTime() >= to.getTime()) throw new AppError("From must be earlier than to", 400, "VALIDATION_ERROR");
 
-    if (data.page !== undefined && typeof data.page !== "string") throw new AppError("Page must be a positive integer", 400, "VALIDATION_ERROR");
+    const page = parsePositiveIntegerQuery(data.page, "Page", DEFAULT_PAGE);
+    const limit = parsePositiveIntegerQuery(data.limit, "Limit", DEFAULT_LIMIT);
 
-    const page = data.page === undefined ? 1 : Number(data.page);
+    if (limit > MAX_LIMIT) throw new AppError(`Limit must not exceed ${MAX_LIMIT}`, 400, "VALIDATION_ERROR");
 
-    if (!Number.isInteger(page) || page < 1) throw new AppError("Page must be a positive integer", 400, "VALIDATION_ERROR");
+    const offset = (page - 1) * limit;
 
-    if (data.limit !== undefined && typeof data.limit !== "string") throw new AppError("Limit must be an integer", 400, "VALIDATION_ERROR");
-
-    const limit = data.limit === undefined ? 5 : Number(data.limit);
-
-    if (!Number.isInteger(limit) || limit < 1) throw new AppError("Limit must be a positive integer", 400, "VALIDATION_ERROR");
+    if (!Number.isSafeInteger(offset)) throw new AppError("Pagination offset is too large", 400, "VALIDATION_ERROR");
 
     return {
         staff_id: data.staff_id as string | undefined,
@@ -102,17 +160,13 @@ export function parseCreateAppointmentDto(body: unknown): CreateAppointmentDto {
 
     if (new Set(data.service_ids).size !== data.service_ids.length) throw new AppError("Service_ids must not contain duplicates", 400, "VALIDATION_ERROR");
 
-    if (typeof data.start_time !== "string" || data.start_time.trim().length === 0) throw new AppError("Start_time must be a non-empty string", 400, "VALIDATION_ERROR");
+    const startTime = parseDateTime(data.start_time, "Start_time");
 
-    const startTime = new Date(data.start_time);
-
-    if (Number.isNaN(startTime.getTime())) throw new AppError("Start_time must be a valid date", 400, "VALIDATION_ERROR");
-
-    if (!hasTimezone(data.start_time)) throw new AppError("Start_time must include a timezone", 400, "VALIDATION_ERROR");
+    if (startTime.getTime() <= Date.now()) throw new AppError("Start_time must be in the future", 400, "VALIDATION_ERROR");
 
     return {
         user_id: data.user_id as string | undefined,
-        staff_id: data.staff_id as string,
+        staff_id: data.staff_id,
         service_ids: data.service_ids as string[],
         start_time: startTime,
     };
@@ -139,13 +193,9 @@ export function parseUpdateAppointmentDto(body: unknown): UpdateAppointmentDto {
 
     if (Array.isArray(data.service_ids) && new Set(data.service_ids).size !== data.service_ids.length) throw new AppError("Service_ids must not contain duplicates", 400, "VALIDATION_ERROR");
 
-    if (data.start_time !== undefined && (typeof data.start_time !== "string" || data.start_time.trim().length === 0)) throw new AppError("Start_time must be a non-empty string", 400, "VALIDATION_ERROR");
+    const startTime = data.start_time === undefined ? undefined : parseDateTime(data.start_time, "Start_time");
 
-    const startTime = data.start_time !== undefined ? new Date(data.start_time as string) : undefined;
-
-    if (startTime !== undefined && Number.isNaN(startTime.getTime())) throw new AppError("Start_time must be a valid date", 400, "VALIDATION_ERROR");
-
-    if (data.start_time !== undefined && typeof data.start_time === "string" && !hasTimezone(data.start_time)) throw new AppError("Start_time must include a timezone", 400, "VALIDATION_ERROR");
+    if (startTime !== undefined && startTime.getTime() <= Date.now()) throw new AppError("Start_time must be in the future", 400, "VALIDATION_ERROR");
 
     if (data.status !== undefined && typeof data.status !== "string") throw new AppError("Status must be a string", 400, "VALIDATION_ERROR");
 
