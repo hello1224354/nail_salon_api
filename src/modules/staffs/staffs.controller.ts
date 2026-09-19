@@ -6,10 +6,20 @@ import { parseCreateStaffDto, parseGetStaffsQuery, parseUpdateStaffDto } from ".
 export const getAllStaffs = async (req: Request, res: Response) => {
     const data = await staffService.getAllStaffs(parseGetStaffsQuery(req.query));
 
+    const publicData = {
+        ...data,
+        staffs: data.staffs.map((staff) => {
+            return {
+                id: staff.user_id,
+                full_name: staff.user.full_name,
+            };
+        }),
+    };
+
     return res.status(200).json({
         success: {
             message: "Get all staffs successfully",
-            data,
+            data: publicData,
         }
     });
 };
@@ -30,10 +40,15 @@ export const getStaffById = async (req: Request, res: Response) => {
 
     if (!data) throw new AppError("Staff not found", 404, "STAFF_NOT_FOUND");
 
+    const publicData = {
+        id: data.user_id,
+        full_name: data.user.full_name,
+    };
+
     return res.status(200).json({
         success: {
             message: `Get staff ${req.params.id} successfully`,
-            data,
+            data: publicData,
         }
     });
 };

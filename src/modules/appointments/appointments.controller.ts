@@ -2,6 +2,13 @@ import { Request, Response } from "express";
 import * as appointmentService from "./appointments.service";
 import { parseCreateAppointmentDto, parseGetAppointmentsQuery, parseUpdateAppointmentDto } from "./appointments.dto";
 import { AppError } from "../../common/errors";
+import { Appointment } from "./appointments.entity";
+
+function toAppointmentResponse(appointment: Appointment) {
+    const { staff, ...data } = appointment;
+
+    return data;
+}
 
 export const createAppointment = async (req: Request, res: Response) => {
     if (!req.user) throw new AppError("Authentication required", 401, "AUTHENTICATION_REQUIRED");
@@ -24,7 +31,10 @@ export const getAllAppointments = async (req: Request, res: Response) => {
     return res.status(200).json({
         success: {
             message: "Get all appointments successfully",
-            data,
+            data: {
+                ...data,
+                appointments: data.appointments.map(toAppointmentResponse),
+            },
         }
     });
 };
@@ -39,7 +49,7 @@ export const getAppointmentById = async (req: Request, res: Response) => {
     return res.status(200).json({
         success: {
             message: `Get appointment ${req.params.id} successfully`,
-            data,
+            data: toAppointmentResponse(data),
         }
     });
 };
@@ -54,7 +64,7 @@ export const updateAppointment = async (req: Request, res: Response) => {
     return res.status(200).json({
         success: {
             message: `Update appointment ${req.params.id} successfully`,
-            data,
+            data: toAppointmentResponse(data),
         }
     });
 };

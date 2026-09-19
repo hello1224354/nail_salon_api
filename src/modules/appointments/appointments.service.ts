@@ -193,8 +193,6 @@ export const getAllAppointments = async (userId: string, role: UserRole, query: 
 
         if (!staff.user.is_active) throw new AppError("Staff is inactive", 403, "FORBIDDEN");
 
-        if (staff.user.role !== UserRole.STAFF) throw new AppError("User is not a staff member", 403, "FORBIDDEN");
-
         queryBuilder.andWhere("appointment.staff_id = :actor_staff_id", {
             actor_staff_id: staff.user_id,
         });
