@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import * as staffService from "./staffs.service";
 import { AppError } from "../../common/errors";
 import { parseCreateStaffDto, parseGetStaffsQuery, parseUpdateStaffDto } from "./staffs.dto";
+import { parseUuidParam } from "../../common/validators";
 
 export const getAllStaffs = async (req: Request, res: Response) => {
     const data = await staffService.getAllStaffs(parseGetStaffsQuery(req.query));
@@ -36,7 +37,9 @@ export const createStaff = async (req: Request, res: Response) => {
 };
 
 export const getStaffById = async (req: Request, res: Response) => {
-    const data = await staffService.getStaff(req.params.id as string);
+    const staffId = parseUuidParam(req.params.id, "Staff id");
+
+    const data = await staffService.getStaff(staffId);
 
     if (!data) throw new AppError("Staff not found", 404, "STAFF_NOT_FOUND");
 
@@ -54,7 +57,9 @@ export const getStaffById = async (req: Request, res: Response) => {
 };
 
 export const updateStaff = async (req: Request, res: Response) => {
-    const data = await staffService.updateStaff(req.params.id as string, parseUpdateStaffDto(req.body));
+    const staffId = parseUuidParam(req.params.id, "Staff id");
+
+    const data = await staffService.updateStaff(staffId, parseUpdateStaffDto(req.body));
 
     if (!data) throw new AppError("Staff not found", 404, "STAFF_NOT_FOUND");
 
@@ -67,7 +72,9 @@ export const updateStaff = async (req: Request, res: Response) => {
 };
 
 export const deleteStaff = async (req: Request, res: Response) => {
-    const data = await staffService.deleteStaff(req.params.id as string);
+    const staffId = parseUuidParam(req.params.id, "Staff id");
+
+    const data = await staffService.deleteStaff(staffId);
 
     if (!data) throw new AppError("Staff not found", 404, "STAFF_NOT_FOUND");
 

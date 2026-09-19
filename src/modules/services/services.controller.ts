@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import * as serviceService from "./services.service";
 import { AppError } from "../../common/errors";
 import { parseCreateServiceDto, parseGetServicesQuery, parseUpdateServiceDto } from "./services.dto";
+import { parseUuidParam } from "../../common/validators";
 
 export const getAllServices = async (req: Request, res: Response) => {
     const data = await serviceService.getAllServices(parseGetServicesQuery(req.query));
@@ -14,7 +15,9 @@ export const getAllServices = async (req: Request, res: Response) => {
 };
 
 export const getService = async (req: Request, res: Response) => {
-    const data = await serviceService.getService(req.params.id as string);
+    const serviceId = parseUuidParam(req.params.id, "Service id");
+
+    const data = await serviceService.getService(serviceId);
 
     if (!data) throw new AppError("Service not found", 404, "SERVICE_NOT_FOUND");
 
@@ -38,7 +41,10 @@ export const createService = async (req: Request, res: Response) => {
 };
 
 export const updateService = async (req: Request, res: Response) => {
-    const data = await serviceService.updateService(req.params.id as string, parseUpdateServiceDto(req.body));
+    const serviceId = parseUuidParam(req.params.id, "Service id");
+
+    const data = await serviceService.updateService(serviceId, parseUpdateServiceDto(req.body));
+
     if (!data) throw new AppError("Service not found", 404, "SERVICE_NOT_FOUND");
 
     return res.status(200).json({
@@ -50,7 +56,10 @@ export const updateService = async (req: Request, res: Response) => {
 };
 
 export const deleteService = async (req: Request, res: Response) => {
-    const data = await serviceService.deleteService(req.params.id as string);
+    const serviceId = parseUuidParam(req.params.id, "Service id");
+
+    const data = await serviceService.deleteService(serviceId);
+    
     if (!data) throw new AppError("Service not found", 404, "SERVICE_NOT_FOUND");
 
     return res.status(200).json({

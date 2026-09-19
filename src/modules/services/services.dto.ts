@@ -22,6 +22,7 @@ export interface GetServicesQueryDto {
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 5;
 const MAX_LIMIT = 100;
+const MAX_INT = 2_147_483_647;
 
 function parsePositiveIntegerQuery(value: unknown, fieldName: string, defaultValue: number): number {
     if (value === undefined) return defaultValue;
@@ -60,14 +61,14 @@ export function parseCreateServiceDto(body: unknown): CreateServiceDto {
 
     const data = body as Record<string, unknown>;
 
-    if (typeof data.name !== "string" || data.name.trim().length === 0) throw new AppError("Name must be a non-empty string", 400, "VALIDATION_ERROR");
-    if (typeof data.price !== "number" || !Number.isFinite(data.price) || data.price < 0) throw new AppError("Price must be a valid number", 400, "VALIDATION_ERROR");
-    if (!Number.isInteger(data.duration_minutes) || (data.duration_minutes as number) <= 0) throw new AppError("Duration must be a valid number", 400, "VALIDATION_ERROR");
+    if (typeof data.name !== "string" || data.name.trim().length === 0 || data.name.trim().length > 255) throw new AppError("Name must be between 1 and 255 characters", 400, "VALIDATION_ERROR");
+    if (!Number.isInteger(data.price) || (data.price as number) < 0 || (data.price as number) > MAX_INT) throw new AppError(`Price must be an integer between 0 and ${MAX_INT}`, 400, "VALIDATION_ERROR");
+    if (!Number.isInteger(data.duration_minutes) || (data.duration_minutes as number) <= 0 || (data.duration_minutes as number) > MAX_INT) throw new AppError(`Duration_minutes must be an integer between 1 and ${MAX_INT}`, 400, "VALIDATION_ERROR");
     if (data.is_active !== undefined && typeof data.is_active !== "boolean") throw new AppError("Is_active must be a boolean", 400, "VALIDATION_ERROR");
 
     return {
         name: data.name.trim(),
-        price: data.price,
+        price: data.price as number,
         duration_minutes: data.duration_minutes as number,
         is_active: data.is_active as boolean | undefined,
     };
@@ -78,9 +79,9 @@ export function parseUpdateServiceDto(body: unknown): UpdateServiceDto {
 
     const data = body as Record<string, unknown>;
 
-    if (data.name !== undefined && (typeof data.name !== "string" || data.name.trim().length === 0)) throw new AppError("Name must be a non-empty string", 400, "VALIDATION_ERROR");
-    if (data.price !== undefined && (typeof data.price !== "number" || !Number.isFinite(data.price) || data.price < 0)) throw new AppError("Price must be a valid number", 400, "VALIDATION_ERROR");
-    if (data.duration_minutes !== undefined && (!Number.isInteger(data.duration_minutes) || (data.duration_minutes as number) <= 0)) throw new AppError("Duration must be a valid number", 400, "VALIDATION_ERROR");
+    if (data.name !== undefined && (typeof data.name !== "string" || data.name.trim().length === 0 || data.name.trim().length > 255)) throw new AppError("Name must be between 1 and 255 characters", 400, "VALIDATION_ERROR");
+    if (data.price !== undefined && (!Number.isInteger(data.price) || (data.price as number) < 0 || (data.price as number) > MAX_INT)) throw new AppError(`Price must be an integer between 0 and ${MAX_INT}`, 400, "VALIDATION_ERROR");
+    if (data.duration_minutes !== undefined && (!Number.isInteger(data.duration_minutes) || (data.duration_minutes as number) <= 0 || (data.duration_minutes as number) > MAX_INT)) throw new AppError(`Duration_minutes must be an integer between 1 and ${MAX_INT}`, 400, "VALIDATION_ERROR");
     if (data.is_active !== undefined && typeof data.is_active !== "boolean") throw new AppError("Is_active must be a boolean", 400, "VALIDATION_ERROR");
 
     const result: UpdateServiceDto = {};
