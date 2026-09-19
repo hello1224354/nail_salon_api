@@ -66,7 +66,7 @@ export function parseCreateStaffDto(body: unknown): CreateStaffDto {
         password: data.password,
     });
 
-    if (!Number.isInteger(data.branch_id) || (data.branch_id as number) <= 0) throw new AppError("Branch_id must be a positive integer", 400, "VALIDATION_ERROR");
+    if (!Number.isInteger(data.branch_id) || (data.branch_id as number) <= 0 || (data.branch_id as number) > 2_147_483_647) throw new AppError("Branch_id must be an integer between 1 and 2147483647", 400, "VALIDATION_ERROR");
 
     return {
         full_name: userData.full_name,
@@ -82,7 +82,7 @@ export function parseUpdateStaffDto(body: unknown): UpdateStaffDto {
 
     const data = body as Record<string, unknown>;
 
-    if (data.branch_id !== undefined && (!Number.isInteger(data.branch_id) || (data.branch_id as number) <= 0)) throw new AppError("Branch_id must be a positive integer", 400, "VALIDATION_ERROR");
+    if (data.branch_id !== undefined && (!Number.isInteger(data.branch_id) || (data.branch_id as number) <= 0 || (data.branch_id as number) > 2_147_483_647)) throw new AppError("Branch_id must be an integer between 1 and 2147483647", 400, "VALIDATION_ERROR");
 
     const result: UpdateStaffDto = {};
 

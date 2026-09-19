@@ -29,7 +29,7 @@ export function parseRegisterUserDto(body: unknown): RegisterUserDto {
 
     const data = body as Record<string, unknown>;
 
-    if (typeof data.full_name !== "string" || data.full_name.trim().length === 0) throw new AppError("Full_name must be a non-empty string", 400, "VALIDATION_ERROR");
+    if (typeof data.full_name !== "string" || data.full_name.trim().length === 0 || data.full_name.trim().length > 255) throw new AppError("Full_name must be between 1 and 255 characters", 400, "VALIDATION_ERROR");
 
     if (typeof data.phone !== "string" || data.phone.trim().length === 0) throw new AppError("Phone must be a non-empty string", 400, "VALIDATION_ERROR");
 
@@ -42,7 +42,7 @@ export function parseRegisterUserDto(body: unknown): RegisterUserDto {
     let email: string | null = null;
 
     if (data.email !== undefined && data.email !== null) {
-        if (typeof data.email !== "string" || data.email.trim().length === 0) throw new AppError("Email must be a non-empty string", 400, "VALIDATION_ERROR");
+        if (typeof data.email !== "string" || data.email.trim().length === 0 || data.email.trim().length > 255) throw new AppError("Email must be between 1 and 255 characters", 400, "VALIDATION_ERROR");
 
         email = data.email.trim().toLowerCase();
 
