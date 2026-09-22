@@ -1,10 +1,18 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, ManyToOne, JoinColumn } from "typeorm";
 import { AppointmentService } from "../appointments/appointment-services.entity";
+import { Branch } from "../branches/branches.entity";
 
 @Entity("services")
 export class Service {
     @PrimaryGeneratedColumn("uuid")
     id: string;
+
+    @Column({ type: "int" })
+    branch_id: number;
+
+    @ManyToOne(() => Branch, { onDelete: "RESTRICT" })
+    @JoinColumn({ name: "branch_id" })
+    branch: Branch;
 
     @Column({ type: "varchar" })
     name: string;

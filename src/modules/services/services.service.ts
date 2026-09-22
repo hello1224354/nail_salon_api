@@ -1,12 +1,17 @@
 import { AppDataSource } from "../../config/database";
 import { Service } from "./service.entity";
 import { In } from "typeorm";
-import { GetServicesQueryDto } from "./services.dto";
+import { CreateServiceDto, GetServicesQueryDto } from "./services.dto";
+import { AppError } from "../../common/errors";
+import * as branchService from "../branches/branches.service";
 
 const serviceRepo = AppDataSource.getRepository(Service);
 
 export const getAllServices = async (query: GetServicesQueryDto) => {
     const [services, total] = await serviceRepo.findAndCount({
+        where: query.branch_id === undefined ? {} : {
+            branch_id: query.branch_id,
+        },
         order: {
             created_at: "DESC",
         },
@@ -23,8 +28,13 @@ export const getAllServices = async (query: GetServicesQueryDto) => {
     };
 };
 
-export const createService = async (data: Partial<Service>) => {
+export const createService = async (data: CreateServiceDto) => {
+    const branch = await branchService.getBranch(data.branch_id);
+
+    if (!branch) throw new AppError("Branch not found", 404, "BRANCH_NOT_FOUND");
+
     const newService = serviceRepo.create(data);
+
     return await serviceRepo.save(newService);
 };
 

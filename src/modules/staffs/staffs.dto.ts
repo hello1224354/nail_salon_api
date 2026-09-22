@@ -14,6 +14,7 @@ export interface UpdateStaffDto {
 }
 
 export interface GetStaffsQueryDto {
+    branch_id?: number;
     page: number;
     limit: number;
 }
@@ -38,6 +39,7 @@ export function parseGetStaffsQuery(query: unknown): GetStaffsQueryDto {
     if (query === null || typeof query !== "object" || Array.isArray(query)) throw new AppError("Query must be an object", 400, "VALIDATION_ERROR");
 
     const data = query as Record<string, unknown>;
+    const branchId = data.branch_id === undefined ? undefined : parsePositiveIntegerQuery(data.branch_id, "Branch_id", 1);
 
     const page = parsePositiveIntegerQuery(data.page, "Page", DEFAULT_PAGE);
     const limit = parsePositiveIntegerQuery(data.limit, "Limit", DEFAULT_LIMIT);
@@ -49,6 +51,7 @@ export function parseGetStaffsQuery(query: unknown): GetStaffsQueryDto {
     if (!Number.isSafeInteger(offset)) throw new AppError("Pagination offset is too large", 400, "VALIDATION_ERROR");
 
     return {
+        branch_id: branchId,
         page,
         limit,
     };

@@ -95,6 +95,8 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
 
     if (!services.every(service => service.is_active)) throw new AppError("One or more services are inactive", 400, "SERVICE_INACTIVE");
 
+    if (!services.every((service) => service.branch_id === staff.branch_id)) throw new AppError("All services must belong to the same branch as the staff", 400, "BRANCH_MISMATCH");
+
     let totalDurationMinutes = 0;
 
     services.forEach((service) => {
@@ -152,6 +154,7 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
         const newAppointment = transactionAppointmentRepo.create({
             user_id: ownerId,
             staff_id: staff.user_id,
+            branch_id: staff.branch_id,
             start_time: data.start_time,
             end_time: endTime,
             status: AppointmentStatus.PENDING,
@@ -201,6 +204,12 @@ export const getAllAppointments = async (userId: string, role: UserRole, query: 
     if (query.staff_id !== undefined) {
         queryBuilder.andWhere("appointment.staff_id = :filter_staff_id", {
             filter_staff_id: query.staff_id,
+        });
+    }
+
+    if (query.branch_id !== undefined) {
+        queryBuilder.andWhere("appointment.branch_id = :branch_id", {
+            branch_id: query.branch_id,
         });
     }
 
@@ -297,6 +306,7 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
     if ((appointment.status === AppointmentStatus.IN_PROGRESS || appointment.status === AppointmentStatus.COMPLETED || appointment.status === AppointmentStatus.CANCELLED) && (data.staff_id !== undefined || data.service_ids !== undefined || data.start_time !== undefined)) throw new AppError("In-progress, completed, or cancelled appointment cannot be modified", 409, "APPOINTMENT_NOT_EDITABLE");
 
     let staff = appointment.staff;
+    let branchId = appointment.branch_id;
     let appointmentServices = appointment.appointment_services;
     let startTime = appointment.start_time;
     let endTime = appointment.end_time;
@@ -314,7 +324,10 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
         if (staffChecker.user.role !== UserRole.STAFF) throw new AppError("User is not a staff member", 400, "INVALID_STAFF_ACCOUNT");
 
         staff = staffChecker;
+        branchId = staffChecker.branch_id;
     }
+
+    if (data.staff_id !== undefined && data.service_ids === undefined && branchId !== appointment.branch_id) throw new AppError("Existing services do not belong to the new staff branch", 400, "BRANCH_MISMATCH");
 
     if (data.service_ids !== undefined) {
         const servicesChecker = await serviceService.getServicesByIds(data.service_ids);
@@ -322,6 +335,8 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
         if (servicesChecker.length < data.service_ids.length) throw new AppError("One or more services were not found", 404, "SERVICE_NOT_FOUND");
 
         if (!servicesChecker.every(service => service.is_active)) throw new AppError("One or more services are inactive", 400, "SERVICE_INACTIVE");
+
+        if (!servicesChecker.every((service) => service.branch_id === staff.branch_id)) throw new AppError("All services must belong to the same branch as the staff", 400, "BRANCH_MISMATCH");
 
         appointmentServices = servicesChecker.map((service) => {
             return {
@@ -409,6 +424,7 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
 
         appointment.staff_id = staff.user_id;
         appointment.staff = staff;
+        appointment.branch_id = branchId;
         appointment.start_time = startTime;
         appointment.end_time = endTime;
         appointment.status = status;

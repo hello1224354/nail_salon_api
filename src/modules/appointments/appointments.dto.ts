@@ -16,6 +16,7 @@ export interface UpdateAppointmentDto {
 }
 
 export interface GetAppointmentsQueryDto {
+    branch_id?: number;
     staff_id?: string;
     status?: AppointmentStatus;
     from?: Date;
@@ -110,6 +111,7 @@ export function parseGetAppointmentsQuery(query: unknown): GetAppointmentsQueryD
     if (query === null || typeof query !== "object" || Array.isArray(query)) throw new AppError("Query must be an object", 400, "VALIDATION_ERROR");
 
     const data = query as Record<string, unknown>;
+    const branchId = data.branch_id === undefined ? undefined : parsePositiveIntegerQuery(data.branch_id, "Branch_id", 1);
 
     if (data.staff_id !== undefined && (typeof data.staff_id !== "string" || !isUuid(data.staff_id))) throw new AppError("Staff_id must be a valid UUID", 400, "VALIDATION_ERROR");
 
@@ -134,6 +136,7 @@ export function parseGetAppointmentsQuery(query: unknown): GetAppointmentsQueryD
     if (!Number.isSafeInteger(offset)) throw new AppError("Pagination offset is too large", 400, "VALIDATION_ERROR");
 
     return {
+        branch_id: branchId,
         staff_id: data.staff_id as string | undefined,
         status: status === undefined ? undefined : AppointmentStatus[status as keyof typeof AppointmentStatus],
         from,

@@ -2,6 +2,7 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateCol
 import { User } from "../users/users.entity";
 import { Staff } from "../staffs/staffs.entity";
 import { AppointmentService } from "./appointment-services.entity";
+import { Branch } from "../branches/branches.entity";
 
 export enum AppointmentStatus {
     PENDING = "pending",
@@ -31,6 +32,13 @@ export class Appointment {
     @ManyToOne(() => Staff, (staff) => staff.appointments, { onDelete: "RESTRICT" })
     @JoinColumn({ name: "staff_id", referencedColumnName: "user_id" })
     staff: Staff;
+
+    @Column({ type: "int" })
+    branch_id: number;
+
+    @ManyToOne(() => Branch, { onDelete: "RESTRICT" })
+    @JoinColumn({ name: "branch_id" })
+    branch: Branch;
 
     @OneToMany(() => AppointmentService, (appointmentService) => appointmentService.appointment)
     appointment_services: AppointmentService[];

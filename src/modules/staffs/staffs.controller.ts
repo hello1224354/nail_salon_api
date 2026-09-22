@@ -12,6 +12,7 @@ export const getAllStaffs = async (req: Request, res: Response) => {
         staffs: data.staffs.map((staff) => {
             return {
                 id: staff.user_id,
+                branch_id: staff.branch_id,
                 full_name: staff.user.full_name,
             };
         }),
@@ -45,6 +46,7 @@ export const getStaffById = async (req: Request, res: Response) => {
 
     const publicData = {
         id: data.user_id,
+        branch_id: data.branch_id,
         full_name: data.user.full_name,
     };
 

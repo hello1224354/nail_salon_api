@@ -1,22 +1,18 @@
 import { AppError } from "../../common/errors";
 
-export interface CreateServiceDto {
-    branch_id: number;
+export interface CreateBranchDto {
     name: string;
-    price: number;
-    duration_minutes: number;
+    address: string;
     is_active?: boolean;
 }
 
-export interface UpdateServiceDto {
+export interface UpdateBranchDto {
     name?: string;
-    price?: number;
-    duration_minutes?: number;
+    address?: string;
     is_active?: boolean;
 }
 
-export interface GetServicesQueryDto {
-    branch_id?: number;
+export interface GetBranchesQueryDto {
     page: number;
     limit: number;
 }
@@ -24,7 +20,6 @@ export interface GetServicesQueryDto {
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 5;
 const MAX_LIMIT = 100;
-const MAX_INT = 2_147_483_647;
 
 function parsePositiveIntegerQuery(value: unknown, fieldName: string, defaultValue: number): number {
     if (value === undefined) return defaultValue;
@@ -38,11 +33,10 @@ function parsePositiveIntegerQuery(value: unknown, fieldName: string, defaultVal
     return parsed;
 }
 
-export function parseGetServicesQuery(query: unknown): GetServicesQueryDto {
+export function parseGetBranchesQuery(query: unknown): GetBranchesQueryDto {
     if (query === null || typeof query !== "object" || Array.isArray(query)) throw new AppError("Query must be an object", 400, "VALIDATION_ERROR");
 
     const data = query as Record<string, unknown>;
-    const branchId = data.branch_id === undefined ? undefined : parsePositiveIntegerQuery(data.branch_id, "Branch_id", 1);
 
     const page = parsePositiveIntegerQuery(data.page, "Page", DEFAULT_PAGE);
     const limit = parsePositiveIntegerQuery(data.limit, "Limit", DEFAULT_LIMIT);
@@ -54,47 +48,44 @@ export function parseGetServicesQuery(query: unknown): GetServicesQueryDto {
     if (!Number.isSafeInteger(offset)) throw new AppError("Pagination offset is too large", 400, "VALIDATION_ERROR");
 
     return {
-        branch_id: branchId,
         page,
         limit,
     };
 }
 
-export function parseCreateServiceDto(body: unknown): CreateServiceDto {
+export function parseCreateBranchDto(body: unknown): CreateBranchDto {
     if (body === null || typeof body !== "object" || Array.isArray(body)) throw new AppError("Request body must be an object", 400, "VALIDATION_ERROR");
 
     const data = body as Record<string, unknown>;
 
-    if (!Number.isInteger(data.branch_id) || (data.branch_id as number) <= 0 || (data.branch_id as number) > MAX_INT) throw new AppError(`Branch_id must be an integer between 1 and ${MAX_INT}`, 400, "VALIDATION_ERROR");
     if (typeof data.name !== "string" || data.name.trim().length === 0 || data.name.trim().length > 255) throw new AppError("Name must be between 1 and 255 characters", 400, "VALIDATION_ERROR");
-    if (!Number.isInteger(data.price) || (data.price as number) < 0 || (data.price as number) > MAX_INT) throw new AppError(`Price must be an integer between 0 and ${MAX_INT}`, 400, "VALIDATION_ERROR");
-    if (!Number.isInteger(data.duration_minutes) || (data.duration_minutes as number) <= 0 || (data.duration_minutes as number) > MAX_INT) throw new AppError(`Duration_minutes must be an integer between 1 and ${MAX_INT}`, 400, "VALIDATION_ERROR");
+
+    if (typeof data.address !== "string" || data.address.trim().length === 0 || data.address.trim().length > 255) throw new AppError("Address must be between 1 and 255 characters", 400, "VALIDATION_ERROR");
+
     if (data.is_active !== undefined && typeof data.is_active !== "boolean") throw new AppError("Is_active must be a boolean", 400, "VALIDATION_ERROR");
 
     return {
-        branch_id: data.branch_id as number,
         name: data.name.trim(),
-        price: data.price as number,
-        duration_minutes: data.duration_minutes as number,
+        address: data.address.trim(),
         is_active: data.is_active as boolean | undefined,
     };
 }
 
-export function parseUpdateServiceDto(body: unknown): UpdateServiceDto {
+export function parseUpdateBranchDto(body: unknown): UpdateBranchDto {
     if (body === null || typeof body !== "object" || Array.isArray(body)) throw new AppError("Request body must be an object", 400, "VALIDATION_ERROR");
 
     const data = body as Record<string, unknown>;
 
     if (data.name !== undefined && (typeof data.name !== "string" || data.name.trim().length === 0 || data.name.trim().length > 255)) throw new AppError("Name must be between 1 and 255 characters", 400, "VALIDATION_ERROR");
-    if (data.price !== undefined && (!Number.isInteger(data.price) || (data.price as number) < 0 || (data.price as number) > MAX_INT)) throw new AppError(`Price must be an integer between 0 and ${MAX_INT}`, 400, "VALIDATION_ERROR");
-    if (data.duration_minutes !== undefined && (!Number.isInteger(data.duration_minutes) || (data.duration_minutes as number) <= 0 || (data.duration_minutes as number) > MAX_INT)) throw new AppError(`Duration_minutes must be an integer between 1 and ${MAX_INT}`, 400, "VALIDATION_ERROR");
+
+    if (data.address !== undefined && (typeof data.address !== "string" || data.address.trim().length === 0 || data.address.trim().length > 255)) throw new AppError("Address must be between 1 and 255 characters", 400, "VALIDATION_ERROR");
+
     if (data.is_active !== undefined && typeof data.is_active !== "boolean") throw new AppError("Is_active must be a boolean", 400, "VALIDATION_ERROR");
 
-    const result: UpdateServiceDto = {};
+    const result: UpdateBranchDto = {};
 
     if (data.name !== undefined) result.name = (data.name as string).trim();
-    if (data.price !== undefined) result.price = data.price as number;
-    if (data.duration_minutes !== undefined) result.duration_minutes = data.duration_minutes as number;
+    if (data.address !== undefined) result.address = (data.address as string).trim();
     if (data.is_active !== undefined) result.is_active = data.is_active as boolean;
 
     if (Object.keys(result).length === 0) throw new AppError("At least one field must be provided", 400, "VALIDATION_ERROR");
