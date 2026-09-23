@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import * as serviceService from "./services.service";
+import * as branchService from "../branches/branches.service";
 import { AppError } from "../../common/errors";
 import { parseCreateServiceDto, parseGetServicesQuery, parseUpdateServiceDto } from "./services.dto";
 import { parseUuidParam } from "../../common/validators";
@@ -19,7 +20,11 @@ export const getService = async (req: Request, res: Response) => {
 
     const data = await serviceService.getService(serviceId);
 
-    if (!data) throw new AppError("Service not found", 404, "SERVICE_NOT_FOUND");
+    if (!data || !data.is_active) throw new AppError("Service not found", 404, "SERVICE_NOT_FOUND");
+
+    const branch = await branchService.getBranch(data.branch_id);
+
+    if (!branch || !branch.is_active) throw new AppError("Service not found", 404, "SERVICE_NOT_FOUND");
 
     return res.status(200).json({
         success: {

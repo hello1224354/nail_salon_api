@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import * as staffService from "./staffs.service";
+import * as branchService from "../branches/branches.service";
 import { AppError } from "../../common/errors";
 import { parseCreateStaffDto, parseGetStaffsQuery, parseUpdateStaffDto } from "./staffs.dto";
 import { parseUuidParam } from "../../common/validators";
@@ -42,7 +43,11 @@ export const getStaffById = async (req: Request, res: Response) => {
 
     const data = await staffService.getStaff(staffId);
 
-    if (!data) throw new AppError("Staff not found", 404, "STAFF_NOT_FOUND");
+    if (!data || !data.user.is_active) throw new AppError("Staff not found", 404, "STAFF_NOT_FOUND");
+
+    const branch = await branchService.getBranch(data.branch_id);
+
+    if (!branch || !branch.is_active) throw new AppError("Staff not found", 404, "STAFF_NOT_FOUND");
 
     const publicData = {
         id: data.user_id,

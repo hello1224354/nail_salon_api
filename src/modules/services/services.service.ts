@@ -9,8 +9,17 @@ const serviceRepo = AppDataSource.getRepository(Service);
 
 export const getAllServices = async (query: GetServicesQueryDto) => {
     const [services, total] = await serviceRepo.findAndCount({
-        where: query.branch_id === undefined ? {} : {
+        where: query.branch_id === undefined ? {
+            is_active: true,
+            branch: {
+                is_active: true,
+            },
+        } : {
             branch_id: query.branch_id,
+            is_active: true,
+            branch: {
+                is_active: true,
+            },
         },
         order: {
             created_at: "DESC",
@@ -32,6 +41,8 @@ export const createService = async (data: CreateServiceDto) => {
     const branch = await branchService.getBranch(data.branch_id);
 
     if (!branch) throw new AppError("Branch not found", 404, "BRANCH_NOT_FOUND");
+
+    if (!branch.is_active) throw new AppError("Branch is inactive", 400, "BRANCH_INACTIVE");
 
     const newService = serviceRepo.create(data);
 
@@ -57,6 +68,10 @@ export const updateService = async (id: string, data: Partial<Service>) => {
 
 export const deleteService = async (id: string) => {
     const service = await getService(id);
+
     if (!service) return null;
-    return await serviceRepo.remove(service);
+
+    service.is_active = false;
+
+    return await serviceRepo.save(service);
 };

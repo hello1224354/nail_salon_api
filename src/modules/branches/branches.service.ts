@@ -6,6 +6,9 @@ const branchRepo = AppDataSource.getRepository(Branch);
 
 export const getAllBranches = async (query: GetBranchesQueryDto) => {
     const [branches, total] = await branchRepo.findAndCount({
+        where: {
+            is_active: true,
+        },
         order: {
             created_at: "ASC",
         },

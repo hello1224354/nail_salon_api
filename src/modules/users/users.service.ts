@@ -78,3 +78,13 @@ export const getUser = async (id: string) => {
         id: id,
     });
 };
+
+export const setUserActive = async (id: string, isActive: boolean) => {
+    const user = await getUser(id);
+
+    if (!user) return null;
+
+    user.is_active = isActive;
+
+    return await userRepo.save(user);
+};

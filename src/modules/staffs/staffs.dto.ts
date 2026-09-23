@@ -11,6 +11,7 @@ export interface CreateStaffDto {
 
 export interface UpdateStaffDto {
     branch_id?: number;
+    is_active?: boolean;
 }
 
 export interface GetStaffsQueryDto {
@@ -87,9 +88,13 @@ export function parseUpdateStaffDto(body: unknown): UpdateStaffDto {
 
     if (data.branch_id !== undefined && (!Number.isInteger(data.branch_id) || (data.branch_id as number) <= 0 || (data.branch_id as number) > 2_147_483_647)) throw new AppError("Branch_id must be an integer between 1 and 2147483647", 400, "VALIDATION_ERROR");
 
+    if (data.is_active !== undefined && typeof data.is_active !== "boolean") throw new AppError("Is_active must be a boolean", 400, "VALIDATION_ERROR");
+
     const result: UpdateStaffDto = {};
 
     if (data.branch_id !== undefined) result.branch_id = data.branch_id as number;
+
+    if (data.is_active !== undefined) result.is_active = data.is_active as boolean;
 
     if (Object.keys(result).length === 0) throw new AppError("At least one field must be provided", 400, "VALIDATION_ERROR");
 

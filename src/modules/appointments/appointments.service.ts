@@ -4,6 +4,7 @@ import { Appointment, AppointmentStatus } from "./appointments.entity";
 import { CreateAppointmentDto, GetAppointmentsQueryDto, UpdateAppointmentDto } from "./appointments.dto";
 import * as staffService from "../staffs/staffs.service";
 import * as serviceService from "../services/services.service";
+import * as branchService from "../branches/branches.service";
 import { In, LessThan, MoreThan, Not } from "typeorm";
 import { UserRole } from "../users/users.entity";
 import * as userService from "../users/users.service";
@@ -88,6 +89,12 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
     if (!staff.user.is_active) throw new AppError("Staff is inactive", 400, "STAFF_INACTIVE");
 
     if (staff.user.role !== UserRole.STAFF) throw new AppError("User is not a staff member", 400, "INVALID_STAFF_ACCOUNT");
+
+    const branch = await branchService.getBranch(staff.branch_id);
+
+    if (!branch) throw new AppError("Branch not found", 404, "BRANCH_NOT_FOUND");
+
+    if (!branch.is_active) throw new AppError("Branch is inactive", 400, "BRANCH_INACTIVE");
 
     const services = await serviceService.getServicesByIds(data.service_ids);
 
@@ -323,6 +330,12 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
 
         if (staffChecker.user.role !== UserRole.STAFF) throw new AppError("User is not a staff member", 400, "INVALID_STAFF_ACCOUNT");
 
+        const branch = await branchService.getBranch(staffChecker.branch_id);
+
+        if (!branch) throw new AppError("Branch not found", 404, "BRANCH_NOT_FOUND");
+
+        if (!branch.is_active) throw new AppError("Branch is inactive", 400, "BRANCH_INACTIVE");
+
         staff = staffChecker;
         branchId = staffChecker.branch_id;
     }
@@ -372,6 +385,12 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
             if (!staffChecker.user.is_active) throw new AppError("Staff is inactive", 409, "STAFF_INACTIVE");
 
             if (staffChecker.user.role !== UserRole.STAFF) throw new AppError("User is not a staff member", 409, "INVALID_STAFF_ACCOUNT");
+
+            const branch = await branchService.getBranch(branchId);
+
+            if (!branch) throw new AppError("Branch not found", 404, "BRANCH_NOT_FOUND");
+
+            if (!branch.is_active) throw new AppError("Branch is inactive", 409, "BRANCH_INACTIVE");
         }
 
         if (status === AppointmentStatus.CONFIRMED && data.status === AppointmentStatus.IN_PROGRESS) {

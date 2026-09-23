@@ -20,7 +20,7 @@ export const getBranch = async (req: Request, res: Response) => {
 
     const data = await branchService.getBranch(branchId);
 
-    if (!data) throw new AppError("Branch not found", 404, "BRANCH_NOT_FOUND");
+    if (!data || !data.is_active) throw new AppError("Branch not found", 404, "BRANCH_NOT_FOUND");
 
     return res.status(200).json({
         success: {
