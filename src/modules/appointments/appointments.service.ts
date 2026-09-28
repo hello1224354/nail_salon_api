@@ -6,7 +6,7 @@ import * as staffService from "../staffs/staffs.service";
 import * as serviceService from "../services/services.service";
 import * as branchService from "../branches/branches.service";
 import { EntityManager, In, LessThan, MoreThan, Not, QueryFailedError } from "typeorm";
-import { UserRole } from "../users/users.entity";
+import { User, UserRole } from "../users/users.entity";
 import * as userService from "../users/users.service";
 import { AppointmentService } from "./appointment-services.entity";
 import { StaffBookingSlot } from "./staff-booking-slots.entity";
@@ -225,13 +225,6 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
         if (startTime < now + CUSTOMER_MIN_BOOKING_LEAD_TIME_MS) throw new AppError("Customers must book at least 3 hours in advance", 400, "VALIDATION_ERROR");
 
         if (startTime > now + CUSTOMER_MAX_BOOKING_HORIZON_MS) throw new AppError("Customers cannot book more than 14 days in advance", 400, "VALIDATION_ERROR");
-
-        const pendingAppointmentCount = await appointmentRepo.countBy({
-            user_id: ownerId,
-            status: AppointmentStatus.PENDING,
-        });
-
-        if (pendingAppointmentCount >= CUSTOMER_MAX_PENDING_APPOINTMENTS) throw new AppError("Customer cannot have more than 3 pending appointments", 429, "TOO_MANY_PENDING_APPOINTMENTS");
         } else if (actorRole === UserRole.ADMIN) {
             if (data.user_id === undefined) throw new AppError("User_id is required when admin creates an appointment", 400, "VALIDATION_ERROR");
 
@@ -295,22 +288,45 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
         if (businessEndMinute > BUSINESS_CLOSE_MINUTE) throw new AppError(`Appointment must end by ${formatMinuteOfDay(BUSINESS_CLOSE_MINUTE)}`, 400, "OUTSIDE_BUSINESS_HOURS");
     }
 
-    const customerOverlapAppointment = await appointmentRepo.findOneBy({
-        user_id: ownerId,
-        status: In([
-            AppointmentStatus.PENDING,
-            AppointmentStatus.CONFIRMED,
-            AppointmentStatus.IN_PROGRESS,
-        ]),
-        start_time: LessThan(endTime),
-        end_time: MoreThan(data.start_time),
-    });
-
-    if (customerOverlapAppointment) throw new AppError("Customer already has an appointment during this time", 409, "CUSTOMER_APPOINTMENT_CONFLICT");
-
     return await AppDataSource.transaction(async (manager) => {
         const transactionAppointmentRepo = manager.getRepository(Appointment);
         const appointmentServiceRepo = manager.getRepository(AppointmentService);
+
+        const transactionUserRepo = manager.getRepository(User);
+
+        const owner = await transactionUserRepo.findOne({
+            where: {
+                id: ownerId,
+            },
+            lock: {
+                mode: "pessimistic_write",
+            },
+        });
+
+        if (!owner) throw new AppError("User not found", 404, "USER_NOT_FOUND");
+
+        if (actorRole === UserRole.CUSTOMER) {
+            const pendingAppointmentCount = await transactionAppointmentRepo.countBy({
+                user_id: ownerId,
+                status: AppointmentStatus.PENDING,
+            });
+
+            if (pendingAppointmentCount >= CUSTOMER_MAX_PENDING_APPOINTMENTS) throw new AppError("Customer cannot have more than 3 pending appointments", 429, "TOO_MANY_PENDING_APPOINTMENTS");
+        }
+
+        const customerOverlapAppointment = await transactionAppointmentRepo.findOneBy({
+            user_id: ownerId,
+            status: In([
+                AppointmentStatus.PENDING,
+                AppointmentStatus.CONFIRMED,
+                AppointmentStatus.IN_PROGRESS,
+            ]),
+            start_time: LessThan(endTime),
+            end_time: MoreThan(data.start_time),
+        });
+
+        if (customerOverlapAppointment) throw new AppError("Customer already has an appointment during this time", 409, "CUSTOMER_APPOINTMENT_CONFLICT");
+
         const slotStarts = getRequiredSlotStarts(data.start_time, endTime);
 
         for (const staff of candidateStaffs) {
