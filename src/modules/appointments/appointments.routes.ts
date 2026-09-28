@@ -8,6 +8,7 @@ import { bookingRateLimiter } from "../../common/middleware/rate-limit.middlewar
 const router = Router();
 
 router.get("/", authenticate, controller.getAllAppointments);
+router.get("/availability", authenticate, requireRole(UserRole.CUSTOMER), controller.getAvailability);
 router.post("/", authenticate, requireRole(UserRole.CUSTOMER, UserRole.ADMIN), bookingRateLimiter, controller.createAppointment);
 router.get("/:id", authenticate, controller.getAppointmentById);
 router.put("/:id", authenticate, requireRole(UserRole.STAFF, UserRole.ADMIN), controller.updateAppointment);

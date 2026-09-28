@@ -1,14 +1,15 @@
 import { AppDataSource } from "../../config/database";
 import { AppError } from "../../common/errors";
 import { Appointment, AppointmentStatus } from "./appointments.entity";
-import { CreateAppointmentDto, GetAppointmentsQueryDto, UpdateAppointmentDto } from "./appointments.dto";
+import { CreateAppointmentDto, GetAppointmentsQueryDto, GetAvailabilityQueryDto, UpdateAppointmentDto } from "./appointments.dto";
 import * as staffService from "../staffs/staffs.service";
 import * as serviceService from "../services/services.service";
 import * as branchService from "../branches/branches.service";
-import { In, LessThan, MoreThan, Not } from "typeorm";
+import { EntityManager, In, LessThan, MoreThan, Not, QueryFailedError } from "typeorm";
 import { UserRole } from "../users/users.entity";
 import * as userService from "../users/users.service";
 import { AppointmentService } from "./appointment-services.entity";
+import { StaffBookingSlot } from "./staff-booking-slots.entity";
 
 const appointmentRepo = AppDataSource.getRepository(Appointment);
 
@@ -17,15 +18,19 @@ const CUSTOMER_MAX_BOOKING_HORIZON_MS = 14 * 24 * 60 * 60 * 1000;
 const BUSINESS_TIMEZONE = "Asia/Ho_Chi_Minh";
 const BUSINESS_OPEN_MINUTE = 9 * 60;
 const BUSINESS_CLOSE_MINUTE = 21 * 60;
-const APPOINTMENT_BUFFER_MS = 15 * 60 * 1000;
 const CUSTOMER_MAX_PENDING_APPOINTMENTS = 3;
+const BOOKING_SLOT_MS = 15 * 60 * 1000;
 
-function getBusinessDateTime(date: Date) {
+function formatMinuteOfDay(minuteOfDay: number) {
+    const hour = Math.floor(minuteOfDay / 60);
+    const minute = minuteOfDay % 60;
+
+    return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
+
+function getBusinessMinuteOfDay(date: Date) {
     const parts = new Intl.DateTimeFormat("vi-VN", {
         timeZone: BUSINESS_TIMEZONE,
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
         hour: "2-digit",
         minute: "2-digit",
         hourCycle: "h23",
@@ -35,17 +40,176 @@ function getBusinessDateTime(date: Date) {
         return parts.find((part) => part.type === type)?.value ?? "";
     };
 
-    const year = getPart("year");
-    const month = getPart("month");
-    const day = getPart("day");
     const hour = Number(getPart("hour"));
     const minute = Number(getPart("minute"));
 
+    return hour * 60 + minute;
+}
+
+function getRequiredSlotStarts(startTime: Date, endTime: Date) {
+    const slotStarts: Date[] = [];
+
+    for (let slotStart = startTime.getTime(); slotStart < endTime.getTime(); slotStart += BOOKING_SLOT_MS) {
+        slotStarts.push(new Date(slotStart));
+    }
+
+    return slotStarts;
+}
+
+async function tryReserveStaffSlots(manager: EntityManager, staffId: string, slotStarts: Date[]) {
+    const staffBookingSlotRepo = manager.getRepository(StaffBookingSlot);
+
+    const slots = slotStarts.map((slotStart) => {
+        return staffBookingSlotRepo.create({
+            staff_id: staffId,
+            slot_start: slotStart,
+        });
+    });
+
+    try {
+        await staffBookingSlotRepo.insert(slots);
+        return true;
+    } catch (error) {
+        if (error instanceof QueryFailedError) {
+            const driverError = error.driverError as { code?: string };
+
+            if (driverError.code === "ER_DUP_ENTRY") return false;
+        }
+
+        throw error;
+    }
+}
+
+async function releaseStaffSlots(manager: EntityManager, staffId: string, slotStarts: Date[]) {
+    if (slotStarts.length === 0) return;
+
+    const staffBookingSlotRepo = manager.getRepository(StaffBookingSlot);
+
+    await staffBookingSlotRepo.delete({
+        staff_id: staffId,
+        slot_start: In(slotStarts),
+    });
+}
+
+async function resolveBookingResources(serviceIds: string[]) {
+    const services = await serviceService.getServicesByIds(serviceIds);
+
+    if (services.length < serviceIds.length) throw new AppError("One or more services were not found", 404, "SERVICE_NOT_FOUND");
+
+    if (!services.every((service) => service.is_active)) throw new AppError("One or more services are inactive", 400, "SERVICE_INACTIVE");
+
+    const branchId = services[0].branch_id;
+
+    if (!services.every((service) => service.branch_id === branchId)) throw new AppError("All services must belong to the same branch", 400, "BRANCH_MISMATCH");
+
+    const branch = await branchService.getBranch(branchId);
+
+    if (!branch) throw new AppError("Branch not found", 404, "BRANCH_NOT_FOUND");
+
+    if (!branch.is_active) throw new AppError("Branch is inactive", 400, "BRANCH_INACTIVE");
+
+    const staffs = await staffService.getAllStaffs({
+        branch_id: branchId,
+    });
+
     return {
-        date: `${year}-${month}-${day}`,
-        minuteOfDay: hour * 60 + minute,
+        services,
+        branchId,
+        staffs,
     };
 }
+
+export const getAvailability = async (data: GetAvailabilityQueryDto) => {
+    if (
+        getBusinessMinuteOfDay(data.date) !== 0 ||
+        data.date.getUTCSeconds() !== 0 ||
+        data.date.getUTCMilliseconds() !== 0
+    ) {
+        throw new AppError("Date must represent 00:00 in business timezone", 400, "VALIDATION_ERROR");
+    }
+
+    const {
+        services,
+        branchId,
+        staffs,
+    } = await resolveBookingResources(data.service_ids);
+
+    let totalDurationMinutes = 0;
+
+    services.forEach((service) => {
+        totalDurationMinutes += service.duration_minutes;
+    });
+
+    const durationMs = totalDurationMinutes * 60 * 1000;
+
+    const businessOpenTime = new Date(
+        data.date.getTime() + BUSINESS_OPEN_MINUTE * 60 * 1000
+    );
+
+    const businessCloseTime = new Date(
+        data.date.getTime() + BUSINESS_CLOSE_MINUTE * 60 * 1000
+    );
+
+    const now = Date.now();
+    const earliestAllowedStart = now + CUSTOMER_MIN_BOOKING_LEAD_TIME_MS;
+    const latestAllowedStart = now + CUSTOMER_MAX_BOOKING_HORIZON_MS;
+
+    if (staffs.length === 0) {
+        return {
+            branch_id: branchId,
+            duration_minutes: totalDurationMinutes,
+            slots: [],
+        };
+    }
+
+    const staffIds = staffs.map((staff) => staff.user_id);
+
+    const appointments = await appointmentRepo.findBy({
+        staff_id: In(staffIds),
+        status: In([
+            AppointmentStatus.PENDING,
+            AppointmentStatus.CONFIRMED,
+            AppointmentStatus.IN_PROGRESS,
+        ]),
+        start_time: LessThan(businessCloseTime),
+        end_time: MoreThan(businessOpenTime),
+    });
+
+    const slots: Date[] = [];
+
+    for (
+        let startTimeMs = businessOpenTime.getTime();
+        startTimeMs + durationMs <= businessCloseTime.getTime();
+        startTimeMs += BOOKING_SLOT_MS
+    ) {
+        if (startTimeMs < earliestAllowedStart) continue;
+
+        if (startTimeMs > latestAllowedStart) continue;
+
+        const startTime = new Date(startTimeMs);
+        const endTime = new Date(startTimeMs + durationMs);
+
+        const hasAvailableStaff = staffs.some((staff) => {
+            return !appointments.some((appointment) => {
+                return (
+                    appointment.staff_id === staff.user_id &&
+                    appointment.start_time.getTime() < endTime.getTime() &&
+                    appointment.end_time.getTime() > startTime.getTime()
+                );
+            });
+        });
+
+        if (hasAvailableStaff) {
+            slots.push(startTime);
+        }
+    }
+
+    return {
+        branch_id: branchId,
+        duration_minutes: totalDurationMinutes,
+        slots,
+    };
+};
 
 export const createAppointment = async (actorId: string, actorRole: UserRole, data: CreateAppointmentDto) => {
     let ownerId: string;
@@ -68,41 +232,47 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
         });
 
         if (pendingAppointmentCount >= CUSTOMER_MAX_PENDING_APPOINTMENTS) throw new AppError("Customer cannot have more than 3 pending appointments", 429, "TOO_MANY_PENDING_APPOINTMENTS");
-    } else if (actorRole === UserRole.ADMIN) {
-        if (data.user_id === undefined) throw new AppError("User_id is required when admin creates an appointment", 400, "VALIDATION_ERROR");
+        } else if (actorRole === UserRole.ADMIN) {
+            if (data.user_id === undefined) throw new AppError("User_id is required when admin creates an appointment", 400, "VALIDATION_ERROR");
 
-        const targetUser = await userService.getUser(data.user_id);
+            const targetUser = await userService.getUser(data.user_id);
 
-        if (!targetUser) throw new AppError("User not found", 404, "USER_NOT_FOUND");
+            if (!targetUser) throw new AppError("User not found", 404, "USER_NOT_FOUND");
 
-        if (!targetUser.is_active) throw new AppError("User account is inactive", 400, "USER_INACTIVE");
+            if (!targetUser.is_active) throw new AppError("User account is inactive", 400, "USER_INACTIVE");
 
-        ownerId = data.user_id;
-    } else {
-        throw new AppError("You do not have permission to perform this action", 403, "FORBIDDEN");
+            ownerId = data.user_id;
+        } else {
+            throw new AppError("You do not have permission to perform this action", 403, "FORBIDDEN");
+        }
+
+        const {
+        services,
+        branchId,
+        staffs,
+    } = await resolveBookingResources(data.service_ids);
+
+    let candidateStaffs = staffs;
+
+    if (actorRole === UserRole.CUSTOMER) {
+        if (data.staff_id !== undefined) throw new AppError("Customers cannot specify staff_id", 403, "FORBIDDEN");
     }
 
-    const staff = await staffService.getStaff(data.staff_id);
+    if (actorRole === UserRole.ADMIN) {
+        if (data.staff_id === undefined) throw new AppError("Staff_id is required when admin creates an appointment", 400, "VALIDATION_ERROR");
 
-    if (!staff) throw new AppError("Staff not found", 404, "STAFF_NOT_FOUND");
+        const staff = await staffService.getStaff(data.staff_id);
 
-    if (!staff.user.is_active) throw new AppError("Staff is inactive", 400, "STAFF_INACTIVE");
+        if (!staff) throw new AppError("Staff not found", 404, "STAFF_NOT_FOUND");
 
-    if (staff.user.role !== UserRole.STAFF) throw new AppError("User is not a staff member", 400, "INVALID_STAFF_ACCOUNT");
+        if (!staff.user.is_active) throw new AppError("Staff is inactive", 400, "STAFF_INACTIVE");
 
-    const branch = await branchService.getBranch(staff.branch_id);
+        if (staff.user.role !== UserRole.STAFF) throw new AppError("User is not a staff member", 400, "INVALID_STAFF_ACCOUNT");
 
-    if (!branch) throw new AppError("Branch not found", 404, "BRANCH_NOT_FOUND");
+        if (staff.branch_id !== branchId) throw new AppError("All services must belong to the same branch as the staff", 400, "BRANCH_MISMATCH");
 
-    if (!branch.is_active) throw new AppError("Branch is inactive", 400, "BRANCH_INACTIVE");
-
-    const services = await serviceService.getServicesByIds(data.service_ids);
-
-    if (services.length < data.service_ids.length) throw new AppError("One or more services were not found", 404, "SERVICE_NOT_FOUND");
-
-    if (!services.every(service => service.is_active)) throw new AppError("One or more services are inactive", 400, "SERVICE_INACTIVE");
-
-    if (!services.every((service) => service.branch_id === staff.branch_id)) throw new AppError("All services must belong to the same branch as the staff", 400, "BRANCH_MISMATCH");
+        candidateStaffs = [staff];
+    }
 
     let totalDurationMinutes = 0;
 
@@ -114,32 +284,16 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
 
     endTime = new Date(data.start_time.getTime() + totalDurationMinutes * 60 * 1000);
 
-    const bufferedStartTime = new Date(data.start_time.getTime() - APPOINTMENT_BUFFER_MS);
-    const bufferedEndTime = new Date(endTime.getTime() + APPOINTMENT_BUFFER_MS);
-
     if (actorRole === UserRole.CUSTOMER) {
-        const businessStart = getBusinessDateTime(data.start_time);
-        const businessEnd = getBusinessDateTime(endTime);
+        const businessStartMinute = getBusinessMinuteOfDay(data.start_time);
+        const businessEndMinute = getBusinessMinuteOfDay(endTime);
 
-        if (businessStart.minuteOfDay % 15 !== 0 || data.start_time.getUTCSeconds() !== 0 || data.start_time.getUTCMilliseconds() !== 0) throw new AppError("Appointment start time must be on a 15-minute interval", 400, "INVALID_APPOINTMENT_TIME");
+        if (businessStartMinute % 15 !== 0 || data.start_time.getUTCSeconds() !== 0 || data.start_time.getUTCMilliseconds() !== 0) throw new AppError("Appointment start time must be on a 15-minute interval", 400, "INVALID_APPOINTMENT_TIME");
 
-        if (businessStart.minuteOfDay < BUSINESS_OPEN_MINUTE) throw new AppError("Appointment must start at or after 09:00", 400, "OUTSIDE_BUSINESS_HOURS");
+        if (businessStartMinute < BUSINESS_OPEN_MINUTE) throw new AppError(`Appointment must start at or after ${formatMinuteOfDay(BUSINESS_OPEN_MINUTE)}`, 400, "OUTSIDE_BUSINESS_HOURS");
 
-        if (businessEnd.minuteOfDay > BUSINESS_CLOSE_MINUTE) throw new AppError("Appointment must end by 21:00", 400, "OUTSIDE_BUSINESS_HOURS");
+        if (businessEndMinute > BUSINESS_CLOSE_MINUTE) throw new AppError(`Appointment must end by ${formatMinuteOfDay(BUSINESS_CLOSE_MINUTE)}`, 400, "OUTSIDE_BUSINESS_HOURS");
     }
-
-    const overlapAppointment = await appointmentRepo.findOneBy({
-        staff_id: staff.user_id,
-        status: In([
-            AppointmentStatus.PENDING,
-            AppointmentStatus.CONFIRMED,
-            AppointmentStatus.IN_PROGRESS,
-        ]),
-        start_time: LessThan(bufferedEndTime),
-        end_time: MoreThan(bufferedStartTime),
-    });
-
-    if (overlapAppointment) throw new AppError("Staff already has an appointment during this time", 409, "APPOINTMENT_CONFLICT");
 
     const customerOverlapAppointment = await appointmentRepo.findOneBy({
         user_id: ownerId,
@@ -157,33 +311,61 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
     return await AppDataSource.transaction(async (manager) => {
         const transactionAppointmentRepo = manager.getRepository(Appointment);
         const appointmentServiceRepo = manager.getRepository(AppointmentService);
+        const slotStarts = getRequiredSlotStarts(data.start_time, endTime);
 
-        const newAppointment = transactionAppointmentRepo.create({
-            user_id: ownerId,
-            staff_id: staff.user_id,
-            branch_id: staff.branch_id,
-            start_time: data.start_time,
-            end_time: endTime,
-            status: AppointmentStatus.PENDING,
-        });
-
-        const savedAppointment = await transactionAppointmentRepo.save(newAppointment);
-
-        const appointmentServices = services.map((service) => {
-            return appointmentServiceRepo.create({
-                appointment_id: savedAppointment.id,
-                service_id: service.id,
-                service_name: service.name,
-                price: service.price,
-                duration_minutes: service.duration_minutes,
+        for (const staff of candidateStaffs) {
+            const overlapAppointment = await transactionAppointmentRepo.findOneBy({
+                staff_id: staff.user_id,
+                status: In([
+                    AppointmentStatus.PENDING,
+                    AppointmentStatus.CONFIRMED,
+                    AppointmentStatus.IN_PROGRESS,
+                ]),
+                start_time: LessThan(endTime),
+                end_time: MoreThan(data.start_time),
             });
-        });
 
-        const savedAppointmentServices = await appointmentServiceRepo.save(appointmentServices);
+            if (overlapAppointment) continue;
 
-        savedAppointment.appointment_services = savedAppointmentServices;
+            const reserved = await tryReserveStaffSlots(
+                manager,
+                staff.user_id,
+                slotStarts
+            );
 
-        return savedAppointment;
+            if (!reserved) continue;
+
+            const newAppointment = transactionAppointmentRepo.create({
+                user_id: ownerId,
+                staff_id: staff.user_id,
+                branch_id: branchId,
+                start_time: data.start_time,
+                end_time: endTime,
+                status: AppointmentStatus.PENDING,
+            });
+
+            const savedAppointment = await transactionAppointmentRepo.save(newAppointment);
+
+            const appointmentServices = services.map((service) => {
+                return appointmentServiceRepo.create({
+                    appointment_id: savedAppointment.id,
+                    service_id: service.id,
+                    service_name: service.name,
+                    price: service.price,
+                    duration_minutes: service.duration_minutes,
+                });
+            });
+
+            const savedAppointmentServices = await appointmentServiceRepo.save(appointmentServices);
+
+            savedAppointment.appointment_services = savedAppointmentServices;
+
+            return savedAppointment;
+        }
+
+        if (actorRole === UserRole.ADMIN) throw new AppError("Staff already has an appointment during this time", 409, "APPOINTMENT_CONFLICT");
+
+        throw new AppError("No staff is available for this time slot", 409, "SLOT_UNAVAILABLE");
     });
 };
 
@@ -317,6 +499,7 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
     let appointmentServices = appointment.appointment_services;
     let startTime = appointment.start_time;
     let endTime = appointment.end_time;
+    const hasScheduleChanges = data.staff_id !== undefined || data.service_ids !== undefined || data.start_time !== undefined;
     let status = appointment.status;
     let actualStartedAt = appointment.actual_started_at;
     let actualCompletedAt = appointment.actual_completed_at;
@@ -418,9 +601,6 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
         endTime = new Date(startTime.getTime() + totalDurationMinutes * 60 * 1000);
     }
 
-    const bufferedStartTime = new Date(startTime.getTime() - APPOINTMENT_BUFFER_MS);
-    const bufferedEndTime = new Date(endTime.getTime() + APPOINTMENT_BUFFER_MS);
-
     if (status === AppointmentStatus.PENDING || status === AppointmentStatus.CONFIRMED) {
         const overlapAppointment = await appointmentRepo.findOneBy({
             id: Not(appointment.id),
@@ -430,16 +610,59 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
                 AppointmentStatus.CONFIRMED,
                 AppointmentStatus.IN_PROGRESS,
             ]),
-            start_time: LessThan(bufferedEndTime),
-            end_time: MoreThan(bufferedStartTime),
+            start_time: LessThan(endTime),
+            end_time: MoreThan(startTime),
         });
 
         if (overlapAppointment) throw new AppError("Staff already has an appointment during this time", 409, "APPOINTMENT_CONFLICT");
     }
 
+    const oldSlotStarts = getRequiredSlotStarts(
+        appointment.start_time,
+        appointment.end_time
+    );
+
+    const newSlotStarts = getRequiredSlotStarts(
+        startTime,
+        endTime
+    );
+
     return await AppDataSource.transaction(async (manager) => {
         const transactionAppointmentRepo = manager.getRepository(Appointment);
         const appointmentServiceRepo = manager.getRepository(AppointmentService);
+
+        if (hasScheduleChanges) {
+            await releaseStaffSlots(
+                manager,
+                appointment.staff_id,
+                oldSlotStarts
+            );
+
+            const reserved = await tryReserveStaffSlots(
+                manager,
+                staff.user_id,
+                newSlotStarts
+            );
+
+            if (!reserved) {
+                throw new AppError(
+                    "Staff already has an appointment during this time",
+                    409,
+                    "APPOINTMENT_CONFLICT"
+                );
+            }
+        }
+        
+        if (
+            appointment.status !== AppointmentStatus.CANCELLED &&
+            status === AppointmentStatus.CANCELLED
+        ) {
+            await releaseStaffSlots(
+                manager,
+                appointment.staff_id,
+                oldSlotStarts
+            );
+        }
 
         appointment.staff_id = staff.user_id;
         appointment.staff = staff;

@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import * as appointmentService from "./appointments.service";
-import { parseCreateAppointmentDto, parseGetAppointmentsQuery, parseUpdateAppointmentDto } from "./appointments.dto";
+import { parseCreateAppointmentDto, parseGetAppointmentsQuery, parseGetAvailabilityQuery, parseUpdateAppointmentDto } from "./appointments.dto";
 import { AppError } from "../../common/errors";
 import { Appointment } from "./appointments.entity";
 import { parseUuidParam } from "../../common/validators";
@@ -36,6 +36,21 @@ export const getAllAppointments = async (req: Request, res: Response) => {
                 ...data,
                 appointments: data.appointments.map(toAppointmentResponse),
             },
+        }
+    });
+};
+
+export const getAvailability = async (req: Request, res: Response) => {
+    if (!req.user) throw new AppError("Authentication required", 401, "AUTHENTICATION_REQUIRED");
+
+    const data = await appointmentService.getAvailability(
+        parseGetAvailabilityQuery(req.query)
+    );
+
+    return res.status(200).json({
+        success: {
+            message: "Get appointment availability successfully",
+            data,
         }
     });
 };

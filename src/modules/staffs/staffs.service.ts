@@ -9,10 +9,11 @@ import * as branchService from "../branches/branches.service";
 const staffRepo = AppDataSource.getRepository(Staff);
 
 export const getAllStaffs = async (query: GetStaffsQueryDto) => {
-    const [staffs, total] = await staffRepo.findAndCount({
+    return await staffRepo.find({
         where: query.branch_id === undefined ? {
             user: {
                 is_active: true,
+                role: UserRole.STAFF,
             },
             branch: {
                 is_active: true,
@@ -21,6 +22,7 @@ export const getAllStaffs = async (query: GetStaffsQueryDto) => {
             branch_id: query.branch_id,
             user: {
                 is_active: true,
+                role: UserRole.STAFF,
             },
             branch: {
                 is_active: true,
@@ -32,17 +34,7 @@ export const getAllStaffs = async (query: GetStaffsQueryDto) => {
         order: {
             created_at: "ASC",
         },
-        skip: (query.page - 1) * query.limit,
-        take: query.limit,
     });
-
-    return {
-        staffs,
-        total,
-        page: query.page,
-        limit: query.limit,
-        total_pages: Math.ceil(total / query.limit),
-    };
 };
 
 export const getStaff = async (userId: string) => {

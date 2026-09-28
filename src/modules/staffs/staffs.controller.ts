@@ -8,16 +8,13 @@ import { parseUuidParam } from "../../common/validators";
 export const getAllStaffs = async (req: Request, res: Response) => {
     const data = await staffService.getAllStaffs(parseGetStaffsQuery(req.query));
 
-    const publicData = {
-        ...data,
-        staffs: data.staffs.map((staff) => {
-            return {
-                id: staff.user_id,
-                branch_id: staff.branch_id,
-                full_name: staff.user.full_name,
-            };
-        }),
-    };
+    const publicData = data.map((staff) => {
+        return {
+            id: staff.user_id,
+            branch_id: staff.branch_id,
+            full_name: staff.user.full_name,
+        };
+    });
 
     return res.status(200).json({
         success: {

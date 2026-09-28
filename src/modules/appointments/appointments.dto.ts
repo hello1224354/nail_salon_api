@@ -3,7 +3,7 @@ import { AppointmentStatus } from "./appointments.entity";
 
 export interface CreateAppointmentDto {
     user_id?: string;
-    staff_id: string;
+    staff_id?: string;
     service_ids: string[];
     start_time: Date;
 }
@@ -23,6 +23,11 @@ export interface GetAppointmentsQueryDto {
     to?: Date;
     page: number;
     limit: number;
+}
+
+export interface GetAvailabilityQueryDto {
+    service_ids: string[];
+    date: Date;
 }
 
 const DEFAULT_PAGE = 1;
@@ -153,7 +158,7 @@ export function parseCreateAppointmentDto(body: unknown): CreateAppointmentDto {
 
     if (data.user_id !== undefined && (typeof data.user_id !== "string" || !isUuid(data.user_id))) throw new AppError("User_id must be a valid UUID", 400, "VALIDATION_ERROR");
 
-    if (typeof data.staff_id !== "string" || !isUuid(data.staff_id)) throw new AppError("Staff_id must be a valid UUID", 400, "VALIDATION_ERROR");
+    if (data.staff_id !== undefined && (typeof data.staff_id !== "string" || !isUuid(data.staff_id))) throw new AppError("Staff_id must be a valid UUID", 400, "VALIDATION_ERROR");
 
     if (!Array.isArray(data.service_ids)) throw new AppError("Service_ids must be an array", 400, "VALIDATION_ERROR");
 
@@ -169,7 +174,7 @@ export function parseCreateAppointmentDto(body: unknown): CreateAppointmentDto {
 
     return {
         user_id: data.user_id as string | undefined,
-        staff_id: data.staff_id,
+        staff_id: data.staff_id as string | undefined,
         service_ids: data.service_ids as string[],
         start_time: startTime,
     };
@@ -211,5 +216,28 @@ export function parseUpdateAppointmentDto(body: unknown): UpdateAppointmentDto {
         service_ids: data.service_ids as string[] | undefined,
         start_time: startTime,
         status: status === undefined ? undefined : AppointmentStatus[status as keyof typeof AppointmentStatus],
+    };
+}
+
+export function parseGetAvailabilityQuery(query: unknown): GetAvailabilityQueryDto {
+    if (query === null || typeof query !== "object" || Array.isArray(query)) throw new AppError("Query must be an object", 400, "VALIDATION_ERROR");
+
+    const data = query as Record<string, unknown>;
+
+    if (typeof data.service_ids !== "string" || data.service_ids.trim().length === 0) throw new AppError("Service_ids must be a non-empty comma-separated string", 400, "VALIDATION_ERROR");
+
+    const serviceIds = data.service_ids.split(",").map((id) => id.trim());
+
+    if (serviceIds.some((id) => id.length === 0)) throw new AppError("Service_ids must not contain empty values", 400, "VALIDATION_ERROR");
+
+    if (!serviceIds.every((id) => isUuid(id))) throw new AppError("Every service_id must be a valid UUID", 400, "VALIDATION_ERROR");
+
+    if (new Set(serviceIds).size !== serviceIds.length) throw new AppError("Service_ids must not contain duplicates", 400, "VALIDATION_ERROR");
+
+    const date = parseDateTime(data.date, "Date");
+
+    return {
+        service_ids: serviceIds,
+        date,
     };
 }

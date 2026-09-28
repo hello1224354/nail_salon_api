@@ -16,13 +16,7 @@ export interface UpdateStaffDto {
 
 export interface GetStaffsQueryDto {
     branch_id?: number;
-    page: number;
-    limit: number;
 }
-
-const DEFAULT_PAGE = 1;
-const DEFAULT_LIMIT = 5;
-const MAX_LIMIT = 100;
 
 function parsePositiveIntegerQuery(value: unknown, fieldName: string, defaultValue: number): number {
     if (value === undefined) return defaultValue;
@@ -42,19 +36,8 @@ export function parseGetStaffsQuery(query: unknown): GetStaffsQueryDto {
     const data = query as Record<string, unknown>;
     const branchId = data.branch_id === undefined ? undefined : parsePositiveIntegerQuery(data.branch_id, "Branch_id", 1);
 
-    const page = parsePositiveIntegerQuery(data.page, "Page", DEFAULT_PAGE);
-    const limit = parsePositiveIntegerQuery(data.limit, "Limit", DEFAULT_LIMIT);
-
-    if (limit > MAX_LIMIT) throw new AppError(`Limit must not exceed ${MAX_LIMIT}`, 400, "VALIDATION_ERROR");
-
-    const offset = (page - 1) * limit;
-
-    if (!Number.isSafeInteger(offset)) throw new AppError("Pagination offset is too large", 400, "VALIDATION_ERROR");
-
     return {
         branch_id: branchId,
-        page,
-        limit,
     };
 }
 
