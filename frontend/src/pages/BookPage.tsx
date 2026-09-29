@@ -1,5 +1,11 @@
 import { useMemo, useState } from "react";
 
+interface BranchOption {
+    id: number;
+    name: string;
+    address: string;
+}
+
 interface ServiceOption {
     id: string;
     name: string;
@@ -14,6 +20,19 @@ interface DateOption {
     day: string;
     month: string;
 }
+
+const branches: BranchOption[] = [
+    {
+        id: 1,
+        name: "Nail Studio District 1",
+        address: "District 1, Ho Chi Minh City",
+    },
+    {
+        id: 2,
+        name: "Nail Studio District 3",
+        address: "District 3, Ho Chi Minh City",
+    },
+];
 
 const services: ServiceOption[] = [
     {
@@ -77,6 +96,18 @@ const dates: DateOption[] = [
         day: "05",
         month: "Oct",
     },
+    {
+        value: "2026-10-06",
+        weekday: "Tue",
+        day: "06",
+        month: "Oct",
+    },
+    {
+        value: "2026-10-07",
+        weekday: "Wed",
+        day: "07",
+        month: "Oct",
+    },
 ];
 
 const availableTimes = [
@@ -100,9 +131,16 @@ function formatPrice(price: number) {
 }
 
 function BookPage() {
+    const [selectedBranchId, setSelectedBranchId] = useState<number | null>(null);
     const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
     const [selectedDate, setSelectedDate] = useState<string | null>(null);
     const [selectedTime, setSelectedTime] = useState<string | null>(null);
+
+    const selectedBranch = useMemo(() => {
+        return branches.find((branch) => {
+            return branch.id === selectedBranchId;
+        });
+    }, [selectedBranchId]);
 
     const selectedServices = useMemo(() => {
         return services.filter((service) => {
@@ -118,13 +156,25 @@ function BookPage() {
         return total + service.price;
     }, 0);
 
+    const selectBranch = (branchId: number) => {
+        setSelectedBranchId(branchId);
+        setSelectedServiceIds([]);
+        setSelectedDate(null);
+        setSelectedTime(null);
+    };
+
     const toggleService = (serviceId: string) => {
         setSelectedServiceIds((current) => {
             if (current.includes(serviceId)) {
-                return current.filter((id) => id !== serviceId);
+                return current.filter((id) => {
+                    return id !== serviceId;
+                });
             }
 
-            return [...current, serviceId];
+            return [
+                ...current,
+                serviceId,
+            ];
         });
 
         setSelectedTime(null);
@@ -148,45 +198,86 @@ function BookPage() {
                     </h1>
 
                     <p className="mt-3 max-w-2xl leading-7 text-stone-600">
-                        Choose your services, select a day, then pick an
-                        available time.
+                        Choose a salon, select your services and pick an available appointment time.
                     </p>
+                </div>
+            </section>
+
+            <section className="border-b border-stone-200 bg-stone-100">
+                <div className="mx-auto max-w-7xl px-6 py-5">
+                    <div className="grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
+                        <div className="flex items-center gap-3">
+                            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-stone-900 font-semibold text-white">
+                                1
+                            </span>
+
+                            <span className="font-medium text-stone-900">
+                                Salon
+                            </span>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white font-semibold text-stone-500">
+                                2
+                            </span>
+
+                            <span className="font-medium text-stone-600">
+                                Services
+                            </span>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white font-semibold text-stone-500">
+                                3
+                            </span>
+
+                            <span className="font-medium text-stone-600">
+                                Date
+                            </span>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white font-semibold text-stone-500">
+                                4
+                            </span>
+
+                            <span className="font-medium text-stone-600">
+                                Time
+                            </span>
+                        </div>
+                    </div>
                 </div>
             </section>
 
             <section className="mx-auto grid max-w-7xl gap-8 px-6 py-10 lg:grid-cols-[1fr_360px]">
                 <div className="space-y-8">
                     <section className="rounded-3xl border border-stone-200 bg-white p-6 sm:p-8">
-                        <div className="flex items-start justify-between gap-6">
-                            <div>
-                                <p className="text-sm font-medium text-stone-500">
-                                    Step 01
-                                </p>
+                        <div>
+                            <p className="text-sm font-medium text-stone-500">
+                                Step 01
+                            </p>
 
-                                <h2 className="mt-1 text-2xl font-semibold">
-                                    Choose services
-                                </h2>
-                            </div>
+                            <h2 className="mt-1 text-2xl font-semibold">
+                                Choose a salon
+                            </h2>
 
-                            <p className="text-sm text-stone-500">
-                                {selectedServiceIds.length} selected
+                            <p className="mt-2 text-sm leading-6 text-stone-500">
+                                Select the location you would like to visit.
                             </p>
                         </div>
 
                         <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                            {services.map((service) => {
-                                const selected = selectedServiceIds.includes(
-                                    service.id
-                                );
+                            {branches.map((branch) => {
+                                const selected = selectedBranchId === branch.id;
 
                                 return (
                                     <button
-                                        key={service.id}
+                                        key={branch.id}
                                         type="button"
                                         onClick={() => {
-                                            toggleService(service.id);
+                                            selectBranch(branch.id);
                                         }}
-                                        className={`rounded-2xl border p-5 text-left transition ${
+                                        className={`group rounded-2xl border p-5 text-left transition ${
                                             selected
                                                 ? "border-stone-900 bg-stone-900 text-white"
                                                 : "border-stone-200 bg-white hover:border-stone-400"
@@ -194,8 +285,18 @@ function BookPage() {
                                     >
                                         <div className="flex items-start justify-between gap-4">
                                             <div>
-                                                <h3 className="font-semibold">
-                                                    {service.name}
+                                                <p
+                                                    className={`text-xs font-semibold uppercase tracking-wider ${
+                                                        selected
+                                                            ? "text-stone-300"
+                                                            : "text-stone-400"
+                                                    }`}
+                                                >
+                                                    Location
+                                                </p>
+
+                                                <h3 className="mt-2 font-semibold">
+                                                    {branch.name}
                                                 </h3>
 
                                                 <p
@@ -205,7 +306,7 @@ function BookPage() {
                                                             : "text-stone-500"
                                                     }`}
                                                 >
-                                                    {service.description}
+                                                    {branch.address}
                                                 </p>
                                             </div>
 
@@ -221,19 +322,13 @@ function BookPage() {
                                         </div>
 
                                         <div
-                                            className={`mt-5 flex items-center justify-between text-sm ${
+                                            className={`mt-5 border-t pt-4 text-sm ${
                                                 selected
-                                                    ? "text-stone-200"
-                                                    : "text-stone-500"
+                                                    ? "border-stone-700 text-stone-300"
+                                                    : "border-stone-100 text-stone-500"
                                             }`}
                                         >
-                                            <span>
-                                                {service.durationMinutes} min
-                                            </span>
-
-                                            <span className="font-medium">
-                                                {formatPrice(service.price)}
-                                            </span>
+                                            Open daily · 09:00–21:00
                                         </div>
                                     </button>
                                 );
@@ -242,60 +337,98 @@ function BookPage() {
                     </section>
 
                     <section className="rounded-3xl border border-stone-200 bg-white p-6 sm:p-8">
-                        <div>
-                            <p className="text-sm font-medium text-stone-500">
-                                Step 02
+                        <div className="flex items-start justify-between gap-6">
+                            <div>
+                                <p className="text-sm font-medium text-stone-500">
+                                    Step 02
+                                </p>
+
+                                <h2 className="mt-1 text-2xl font-semibold">
+                                    Choose services
+                                </h2>
+
+                                <p className="mt-2 text-sm leading-6 text-stone-500">
+                                    Select one or more treatments for your appointment.
+                                </p>
+                            </div>
+
+                            <p className="shrink-0 text-sm text-stone-500">
+                                {selectedServiceIds.length} selected
                             </p>
-
-                            <h2 className="mt-1 text-2xl font-semibold">
-                                Choose a date
-                            </h2>
                         </div>
 
-                        <div className="mt-6 grid grid-cols-3 gap-3 sm:grid-cols-5">
-                            {dates.map((date) => {
-                                const selected = selectedDate === date.value;
+                        {selectedBranchId === null ? (
+                            <div className="mt-6 rounded-2xl bg-stone-100 px-5 py-8 text-center text-sm text-stone-500">
+                                Choose a salon before selecting services.
+                            </div>
+                        ) : (
+                            <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                                {services.map((service) => {
+                                    const selected = selectedServiceIds.includes(
+                                        service.id
+                                    );
 
-                                return (
-                                    <button
-                                        key={date.value}
-                                        type="button"
-                                        onClick={() => {
-                                            selectDate(date.value);
-                                        }}
-                                        className={`rounded-2xl border px-3 py-4 text-center transition ${
-                                            selected
-                                                ? "border-stone-900 bg-stone-900 text-white"
-                                                : "border-stone-200 hover:border-stone-400"
-                                        }`}
-                                    >
-                                        <p
-                                            className={`text-xs ${
+                                    return (
+                                        <button
+                                            key={service.id}
+                                            type="button"
+                                            onClick={() => {
+                                                toggleService(service.id);
+                                            }}
+                                            className={`rounded-2xl border p-5 text-left transition ${
                                                 selected
-                                                    ? "text-stone-300"
-                                                    : "text-stone-500"
+                                                    ? "border-stone-900 bg-stone-900 text-white"
+                                                    : "border-stone-200 bg-white hover:border-stone-400"
                                             }`}
                                         >
-                                            {date.weekday}
-                                        </p>
+                                            <div className="flex items-start justify-between gap-4">
+                                                <div>
+                                                    <h3 className="font-semibold">
+                                                        {service.name}
+                                                    </h3>
 
-                                        <p className="mt-1 text-xl font-semibold">
-                                            {date.day}
-                                        </p>
+                                                    <p
+                                                        className={`mt-2 text-sm leading-6 ${
+                                                            selected
+                                                                ? "text-stone-300"
+                                                                : "text-stone-500"
+                                                        }`}
+                                                    >
+                                                        {service.description}
+                                                    </p>
+                                                </div>
 
-                                        <p
-                                            className={`text-xs ${
-                                                selected
-                                                    ? "text-stone-300"
-                                                    : "text-stone-500"
-                                            }`}
-                                        >
-                                            {date.month}
-                                        </p>
-                                    </button>
-                                );
-                            })}
-                        </div>
+                                                <div
+                                                    className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs ${
+                                                        selected
+                                                            ? "border-white bg-white text-stone-900"
+                                                            : "border-stone-300"
+                                                    }`}
+                                                >
+                                                    {selected ? "✓" : ""}
+                                                </div>
+                                            </div>
+
+                                            <div
+                                                className={`mt-5 flex items-center justify-between border-t pt-4 text-sm ${
+                                                    selected
+                                                        ? "border-stone-700 text-stone-300"
+                                                        : "border-stone-100 text-stone-500"
+                                                }`}
+                                            >
+                                                <span>
+                                                    {service.durationMinutes} min
+                                                </span>
+
+                                                <span className="font-medium">
+                                                    {formatPrice(service.price)}
+                                                </span>
+                                            </div>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </section>
 
                     <section className="rounded-3xl border border-stone-200 bg-white p-6 sm:p-8">
@@ -305,45 +438,124 @@ function BookPage() {
                             </p>
 
                             <h2 className="mt-1 text-2xl font-semibold">
-                                Available time
+                                Choose a date
                             </h2>
 
-                            <p className="mt-2 text-sm text-stone-500">
-                                Times are shown for the services you selected.
+                            <p className="mt-2 text-sm leading-6 text-stone-500">
+                                Pick the day that works best for you.
                             </p>
                         </div>
 
                         {selectedServiceIds.length === 0 ? (
-                            <div className="mt-6 rounded-2xl bg-stone-100 px-5 py-8 text-center text-stone-500">
-                                Choose at least one service first.
-                            </div>
-                        ) : selectedDate === null ? (
-                            <div className="mt-6 rounded-2xl bg-stone-100 px-5 py-8 text-center text-stone-500">
-                                Choose a date to view available times.
+                            <div className="mt-6 rounded-2xl bg-stone-100 px-5 py-8 text-center text-sm text-stone-500">
+                                Choose at least one service before selecting a date.
                             </div>
                         ) : (
-                            <div className="mt-6 grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5">
-                                {availableTimes.map((time) => {
-                                    const selected = selectedTime === time;
+                            <div className="mt-6 grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-7">
+                                {dates.map((date) => {
+                                    const selected = selectedDate === date.value;
 
                                     return (
                                         <button
-                                            key={time}
+                                            key={date.value}
                                             type="button"
                                             onClick={() => {
-                                                setSelectedTime(time);
+                                                selectDate(date.value);
                                             }}
-                                            className={`rounded-xl border px-4 py-3 text-sm font-medium transition ${
+                                            className={`rounded-2xl border px-3 py-4 text-center transition ${
                                                 selected
                                                     ? "border-stone-900 bg-stone-900 text-white"
-                                                    : "border-stone-200 bg-white hover:border-stone-500"
+                                                    : "border-stone-200 bg-white hover:border-stone-400"
                                             }`}
                                         >
-                                            {time}
+                                            <p
+                                                className={`text-xs ${
+                                                    selected
+                                                        ? "text-stone-300"
+                                                        : "text-stone-500"
+                                                }`}
+                                            >
+                                                {date.weekday}
+                                            </p>
+
+                                            <p className="mt-1 text-xl font-semibold">
+                                                {date.day}
+                                            </p>
+
+                                            <p
+                                                className={`text-xs ${
+                                                    selected
+                                                        ? "text-stone-300"
+                                                        : "text-stone-500"
+                                                }`}
+                                            >
+                                                {date.month}
+                                            </p>
                                         </button>
                                     );
                                 })}
                             </div>
+                        )}
+                    </section>
+
+                    <section className="rounded-3xl border border-stone-200 bg-white p-6 sm:p-8">
+                        <div>
+                            <p className="text-sm font-medium text-stone-500">
+                                Step 04
+                            </p>
+
+                            <h2 className="mt-1 text-2xl font-semibold">
+                                Available time
+                            </h2>
+
+                            <p className="mt-2 text-sm leading-6 text-stone-500">
+                                Available slots are shown for your selected services.
+                            </p>
+                        </div>
+
+                        {selectedServiceIds.length === 0 ? (
+                            <div className="mt-6 rounded-2xl bg-stone-100 px-5 py-8 text-center text-sm text-stone-500">
+                                Choose at least one service first.
+                            </div>
+                        ) : selectedDate === null ? (
+                            <div className="mt-6 rounded-2xl bg-stone-100 px-5 py-8 text-center text-sm text-stone-500">
+                                Choose a date to view available times.
+                            </div>
+                        ) : (
+                            <>
+                                <div className="mt-6 flex items-center justify-between">
+                                    <p className="text-sm font-medium">
+                                        Available slots
+                                    </p>
+
+                                    <p className="text-xs text-stone-400">
+                                        15-minute intervals
+                                    </p>
+                                </div>
+
+                                <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5">
+                                    {availableTimes.map((time) => {
+                                        const selected = selectedTime === time;
+
+                                        return (
+                                            <button
+                                                key={time}
+                                                type="button"
+                                                onClick={() => {
+                                                    setSelectedTime(time);
+                                                }}
+                                                className={`rounded-xl border px-4 py-3 text-sm font-medium transition ${
+                                                    selected
+                                                        ? "border-stone-900 bg-stone-900 text-white"
+                                                        : "border-stone-200 bg-white hover:border-stone-500"
+                                                }`}
+                                            >
+                                                {time}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </>
                         )}
                     </section>
                 </div>
@@ -359,6 +571,28 @@ function BookPage() {
                         </h2>
 
                         <div className="mt-6 border-t border-stone-200 pt-5">
+                            <p className="text-xs font-semibold uppercase tracking-wider text-stone-400">
+                                Salon
+                            </p>
+
+                            {selectedBranch === undefined ? (
+                                <p className="mt-3 text-sm text-stone-500">
+                                    No salon selected.
+                                </p>
+                            ) : (
+                                <div className="mt-3">
+                                    <p className="text-sm font-medium">
+                                        {selectedBranch.name}
+                                    </p>
+
+                                    <p className="mt-1 text-sm leading-6 text-stone-500">
+                                        {selectedBranch.address}
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="mt-5 border-t border-stone-200 pt-5">
                             <p className="text-xs font-semibold uppercase tracking-wider text-stone-400">
                                 Services
                             </p>
@@ -389,7 +623,7 @@ function BookPage() {
                             )}
                         </div>
 
-                        <div className="mt-5 border-t border-stone-200 pt-5">
+                        <div className="mt-5 space-y-3 border-t border-stone-200 pt-5">
                             <div className="flex justify-between gap-4 text-sm">
                                 <span className="text-stone-500">
                                     Duration
@@ -402,7 +636,7 @@ function BookPage() {
                                 </span>
                             </div>
 
-                            <div className="mt-3 flex justify-between gap-4 text-sm">
+                            <div className="flex justify-between gap-4 text-sm">
                                 <span className="text-stone-500">
                                     Date
                                 </span>
@@ -412,7 +646,7 @@ function BookPage() {
                                 </span>
                             </div>
 
-                            <div className="mt-3 flex justify-between gap-4 text-sm">
+                            <div className="flex justify-between gap-4 text-sm">
                                 <span className="text-stone-500">
                                     Time
                                 </span>
@@ -436,6 +670,7 @@ function BookPage() {
                         <button
                             type="button"
                             disabled={
+                                selectedBranchId === null ||
                                 selectedServiceIds.length === 0 ||
                                 selectedDate === null ||
                                 selectedTime === null
@@ -446,8 +681,7 @@ function BookPage() {
                         </button>
 
                         <p className="mt-4 text-center text-xs leading-5 text-stone-400">
-                            Staff will be assigned automatically based on
-                            availability.
+                            An available nail technician will be assigned automatically.
                         </p>
                     </div>
                 </aside>

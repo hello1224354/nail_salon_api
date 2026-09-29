@@ -4,11 +4,13 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import "./index.css";
 import App from "./App";
 import HomePage from "./pages/HomePage";
+import ServicesPage from "./pages/ServicesPage";
 import BookPage from "./pages/BookPage";
 import AppointmentsPage from "./pages/AppointmentsPage";
 import ProfilePage from "./pages/ProfilePage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
+import NotFoundPage from "./pages/NotFoundPage";
 
 createRoot(document.getElementById("root")!).render(
     <StrictMode>
@@ -18,6 +20,11 @@ createRoot(document.getElementById("root")!).render(
                     <Route
                         path="/"
                         element={<HomePage />}
+                    />
+
+                    <Route
+                        path="/services"
+                        element={<ServicesPage />}
                     />
 
                     <Route
@@ -43,6 +50,11 @@ createRoot(document.getElementById("root")!).render(
                     <Route
                         path="/register"
                         element={<RegisterPage />}
+                    />
+
+                    <Route
+                        path="*"
+                        element={<NotFoundPage />}
                     />
                 </Route>
             </Routes>
