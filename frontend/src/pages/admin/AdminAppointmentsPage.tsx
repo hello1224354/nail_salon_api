@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 interface AdminAppointment {
     id: string;
     customerName: string;
@@ -8,7 +10,12 @@ interface AdminAppointment {
     services: string[];
     durationMinutes: number;
     estimatedTotal: number;
-    status: "PENDING" | "CONFIRMED" | "COMPLETED" | "CANCELLED";
+    status:
+        | "PENDING"
+        | "CONFIRMED"
+        | "IN_PROGRESS"
+        | "COMPLETED"
+        | "CANCELLED";
 }
 
 const appointments: AdminAppointment[] = [
@@ -71,6 +78,9 @@ function getStatusClassName(status: AdminAppointment["status"]) {
 
         case "CONFIRMED":
             return "bg-emerald-100 text-emerald-700";
+
+        case "IN_PROGRESS":
+            return "bg-blue-100 text-blue-700";
 
         case "COMPLETED":
             return "bg-stone-200 text-stone-600";
@@ -240,35 +250,52 @@ function AdminAppointmentsPage() {
                                     </div>
                                 </div>
 
-                                {appointment.status === "PENDING" ? (
-                                    <div className="flex flex-col gap-4 border-t border-stone-200 bg-stone-50 p-6 sm:flex-row sm:items-center sm:justify-between">
-                                        <div>
-                                            <p className="text-sm font-medium">
-                                                Customer confirmation required
+                                <div className="flex flex-col gap-4 border-t border-stone-200 bg-stone-50 p-6 sm:flex-row sm:items-center sm:justify-between">
+                                    <div>
+                                        {appointment.status === "PENDING" ? (
+                                            <>
+                                                <p className="text-sm font-medium">
+                                                    Customer confirmation required
+                                                </p>
+
+                                                <p className="mt-1 text-sm text-stone-500">
+                                                    Call the customer before confirming this appointment.
+                                                </p>
+                                            </>
+                                        ) : (
+                                            <p className="text-sm text-stone-500">
+                                                View the complete appointment information.
                                             </p>
-
-                                            <p className="mt-1 text-sm text-stone-500">
-                                                Call the customer before confirming this appointment.
-                                            </p>
-                                        </div>
-
-                                        <div className="flex flex-wrap gap-3">
-                                            <button
-                                                type="button"
-                                                className="rounded-full border border-stone-300 bg-white px-5 py-2.5 text-sm font-medium transition hover:bg-stone-100"
-                                            >
-                                                Call customer
-                                            </button>
-
-                                            <button
-                                                type="button"
-                                                className="rounded-full bg-stone-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-stone-700"
-                                            >
-                                                Confirm appointment
-                                            </button>
-                                        </div>
+                                        )}
                                     </div>
-                                ) : null}
+
+                                    <div className="flex flex-wrap gap-3">
+                                        <Link
+                                            to={`/admin/appointments/${appointment.id}`}
+                                            className="rounded-full border border-stone-300 bg-white px-5 py-2.5 text-sm font-medium transition hover:bg-stone-100"
+                                        >
+                                            View details
+                                        </Link>
+
+                                        {appointment.status === "PENDING" && (
+                                            <>
+                                                <button
+                                                    type="button"
+                                                    className="rounded-full border border-stone-300 bg-white px-5 py-2.5 text-sm font-medium transition hover:bg-stone-100"
+                                                >
+                                                    Call customer
+                                                </button>
+
+                                                <button
+                                                    type="button"
+                                                    className="rounded-full bg-stone-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-stone-700"
+                                                >
+                                                    Confirm appointment
+                                                </button>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
                             </article>
                         );
                     })}

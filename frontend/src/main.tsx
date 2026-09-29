@@ -19,11 +19,13 @@ import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import AdminAppointmentsPage from "./pages/admin/AdminAppointmentsPage";
+import AdminAppointmentDetailsPage from "./pages/admin/AdminAppointmentDetailsPage";
 import AdminServicesPage from "./pages/admin/AdminServicesPage";
 import AdminServiceFormPage from "./pages/admin/AdminServiceFormPage";
 import AdminBranchesPage from "./pages/admin/AdminBranchesPage";
 import AdminBranchFormPage from "./pages/admin/AdminBranchFormPage";
 import AdminStaffPage from "./pages/admin/AdminStaffPage";
+import AdminStaffFormPage from "./pages/admin/AdminStaffFormPage";
 
 createRoot(document.getElementById("root")!).render(
     <StrictMode>
@@ -46,6 +48,11 @@ createRoot(document.getElementById("root")!).render(
                     <Route
                         path="appointments"
                         element={<AdminAppointmentsPage />}
+                    />
+
+                    <Route
+                        path="appointments/:id"
+                        element={<AdminAppointmentDetailsPage />}
                     />
 
                     <Route
@@ -81,6 +88,16 @@ createRoot(document.getElementById("root")!).render(
                     <Route
                         path="staff"
                         element={<AdminStaffPage />}
+                    />
+
+                    <Route
+                        path="staff/new"
+                        element={<AdminStaffFormPage />}
+                    />
+
+                    <Route
+                        path="staff/:id/edit"
+                        element={<AdminStaffFormPage />}
                     />
                 </Route>
 

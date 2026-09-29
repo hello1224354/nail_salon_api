@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 interface AdminStaff {
     id: string;
     fullName: string;
@@ -66,12 +68,12 @@ function AdminStaffPage() {
                             </p>
                         </div>
 
-                        <button
-                            type="button"
+                        <Link
+                            to="/admin/staff/new"
                             className="w-fit rounded-full bg-stone-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-stone-700"
                         >
                             Add staff
-                        </button>
+                        </Link>
                     </div>
                 </div>
             </section>
@@ -153,7 +155,7 @@ function AdminStaffPage() {
                 </div>
 
                 <div className="overflow-hidden rounded-3xl border border-stone-200 bg-white">
-                    <div className="hidden grid-cols-[1.3fr_1fr_1fr_130px_180px] gap-4 border-b border-stone-200 bg-stone-50 px-6 py-4 text-xs font-semibold uppercase tracking-wider text-stone-400 lg:grid">
+                    <div className="hidden grid-cols-[1.3fr_1fr_1fr_130px_100px] gap-4 border-b border-stone-200 bg-stone-50 px-6 py-4 text-xs font-semibold uppercase tracking-wider text-stone-400 lg:grid">
                         <p>
                             Staff
                         </p>
@@ -171,7 +173,7 @@ function AdminStaffPage() {
                         </p>
 
                         <p className="text-right">
-                            Actions
+                            Action
                         </p>
                     </div>
 
@@ -180,7 +182,7 @@ function AdminStaffPage() {
                             return (
                                 <article
                                     key={staff.id}
-                                    className="grid gap-5 px-6 py-5 lg:grid-cols-[1.3fr_1fr_1fr_130px_180px] lg:items-center"
+                                    className="grid gap-5 px-6 py-5 lg:grid-cols-[1.3fr_1fr_1fr_130px_100px] lg:items-center"
                                 >
                                     <div>
                                         <p className="text-xs font-semibold uppercase tracking-wider text-stone-400 lg:hidden">
@@ -238,22 +240,13 @@ function AdminStaffPage() {
                                         </span>
                                     </div>
 
-                                    <div className="flex flex-wrap gap-2 lg:justify-end">
-                                        <button
-                                            type="button"
-                                            className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-medium transition hover:bg-stone-100"
+                                    <div className="lg:text-right">
+                                        <Link
+                                            to={`/admin/staff/${staff.id}/edit`}
+                                            className="inline-flex rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-medium transition hover:bg-stone-100"
                                         >
                                             Edit
-                                        </button>
-
-                                        <button
-                                            type="button"
-                                            className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-medium transition hover:bg-stone-100"
-                                        >
-                                            {staff.isActive
-                                                ? "Deactivate"
-                                                : "Activate"}
-                                        </button>
+                                        </Link>
                                     </div>
                                 </article>
                             );
