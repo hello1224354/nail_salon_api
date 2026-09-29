@@ -1,4 +1,6 @@
 import { useMemo, useState } from "react";
+import { useOutletContext } from "react-router-dom";
+import type { AppOutletContext } from "../App";
 
 interface ServiceOption {
     id: string;
@@ -14,11 +16,6 @@ interface DateOption {
     day: string;
     month: string;
 }
-
-const selectedBranch = {
-    name: "Nail Studio District 1",
-    address: "District 1, Ho Chi Minh City",
-};
 
 const services: ServiceOption[] = [
     {
@@ -117,6 +114,8 @@ function formatPrice(price: number) {
 }
 
 function BookPage() {
+    const { selectedBranch } = useOutletContext<AppOutletContext>();
+
     const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
     const [selectedDate, setSelectedDate] = useState<string | null>(null);
     const [selectedTime, setSelectedTime] = useState<string | null>(null);

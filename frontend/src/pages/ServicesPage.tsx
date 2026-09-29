@@ -1,3 +1,6 @@
+import { useOutletContext } from "react-router-dom";
+import type { AppOutletContext } from "../App";
+
 interface ServiceItem {
     id: string;
     name: string;
@@ -73,6 +76,8 @@ function formatPrice(price: number) {
 }
 
 function ServicesPage() {
+    const { selectedBranch } = useOutletContext<AppOutletContext>();
+
     return (
         <main className="min-h-[70vh]">
             <section className="border-b border-stone-200 bg-white">
@@ -99,7 +104,7 @@ function ServicesPage() {
                         </h2>
 
                         <p className="mt-2 text-sm text-stone-500">
-                            Services at the currently selected branch.
+                            Services available at {selectedBranch.name}.
                         </p>
                     </div>
 
