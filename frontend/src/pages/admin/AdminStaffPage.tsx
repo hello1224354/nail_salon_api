@@ -1,10 +1,22 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
+
+type BranchFilter =
+    | "ALL"
+    | 1
+    | 2;
+
+type StatusFilter =
+    | "ALL"
+    | "ACTIVE"
+    | "INACTIVE";
 
 interface AdminStaff {
     id: string;
     fullName: string;
     phone: string;
     email: string | null;
+    branchId: number;
     branch: string;
     isActive: boolean;
 }
@@ -15,6 +27,7 @@ const staffs: AdminStaff[] = [
         fullName: "Nguyen Thi Mai",
         phone: "0912345678",
         email: "mai@nailstudio.com",
+        branchId: 1,
         branch: "Nail Studio District 1",
         isActive: true,
     },
@@ -23,6 +36,7 @@ const staffs: AdminStaff[] = [
         fullName: "Tran Ngoc Anh",
         phone: "0987654321",
         email: "anh@nailstudio.com",
+        branchId: 1,
         branch: "Nail Studio District 1",
         isActive: true,
     },
@@ -31,6 +45,7 @@ const staffs: AdminStaff[] = [
         fullName: "Le Thu Ha",
         phone: "0901234567",
         email: null,
+        branchId: 2,
         branch: "Nail Studio District 3",
         isActive: true,
     },
@@ -39,15 +54,51 @@ const staffs: AdminStaff[] = [
         fullName: "Pham Minh Chau",
         phone: "0934567890",
         email: "chau@nailstudio.com",
+        branchId: 2,
         branch: "Nail Studio District 3",
         isActive: false,
     },
 ];
 
 function AdminStaffPage() {
+    const [branchFilter, setBranchFilter] =
+        useState<BranchFilter>("ALL");
+
+    const [statusFilter, setStatusFilter] =
+        useState<StatusFilter>("ALL");
+
     const activeStaffs = staffs.filter((staff) => {
         return staff.isActive;
     }).length;
+
+    const filteredStaffs = staffs.filter((staff) => {
+        const matchesBranch =
+            branchFilter === "ALL" ||
+            staff.branchId === branchFilter;
+
+        const matchesStatus =
+            statusFilter === "ALL" ||
+            (statusFilter === "ACTIVE" && staff.isActive) ||
+            (statusFilter === "INACTIVE" && !staff.isActive);
+
+        return matchesBranch && matchesStatus;
+    });
+
+    const getBranchButtonClassName = (
+        value: BranchFilter
+    ) => {
+        return branchFilter === value
+            ? "shrink-0 rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-white"
+            : "shrink-0 rounded-full bg-white px-4 py-2 text-sm font-medium text-stone-600 transition hover:bg-stone-200";
+    };
+
+    const getStatusButtonClassName = (
+        value: StatusFilter
+    ) => {
+        return statusFilter === value
+            ? "rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-white"
+            : "rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-600 transition hover:bg-stone-100";
+    };
 
     return (
         <main>
@@ -117,142 +168,179 @@ function AdminStaffPage() {
                     <div className="flex gap-2 overflow-x-auto">
                         <button
                             type="button"
-                            className="shrink-0 rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-white"
+                            onClick={() => {
+                                setBranchFilter("ALL");
+                            }}
+                            className={getBranchButtonClassName("ALL")}
                         >
                             All branches
                         </button>
 
                         <button
                             type="button"
-                            className="shrink-0 rounded-full bg-white px-4 py-2 text-sm font-medium text-stone-600 transition hover:bg-stone-200"
+                            onClick={() => {
+                                setBranchFilter(1);
+                            }}
+                            className={getBranchButtonClassName(1)}
                         >
                             District 1
                         </button>
 
                         <button
                             type="button"
-                            className="shrink-0 rounded-full bg-white px-4 py-2 text-sm font-medium text-stone-600 transition hover:bg-stone-200"
+                            onClick={() => {
+                                setBranchFilter(2);
+                            }}
+                            className={getBranchButtonClassName(2)}
                         >
                             District 3
                         </button>
                     </div>
 
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 overflow-x-auto">
                         <button
                             type="button"
-                            className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-600 transition hover:bg-stone-100"
+                            onClick={() => {
+                                setStatusFilter("ALL");
+                            }}
+                            className={getStatusButtonClassName("ALL")}
+                        >
+                            All
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setStatusFilter("ACTIVE");
+                            }}
+                            className={getStatusButtonClassName("ACTIVE")}
                         >
                             Active
                         </button>
 
                         <button
                             type="button"
-                            className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-600 transition hover:bg-stone-100"
+                            onClick={() => {
+                                setStatusFilter("INACTIVE");
+                            }}
+                            className={getStatusButtonClassName("INACTIVE")}
                         >
                             Inactive
                         </button>
                     </div>
                 </div>
 
-                <div className="overflow-hidden rounded-3xl border border-stone-200 bg-white">
-                    <div className="hidden grid-cols-[1.3fr_1fr_1fr_130px_100px] gap-4 border-b border-stone-200 bg-stone-50 px-6 py-4 text-xs font-semibold uppercase tracking-wider text-stone-400 lg:grid">
-                        <p>
-                            Staff
-                        </p>
+                {filteredStaffs.length === 0 ? (
+                    <div className="rounded-3xl border border-stone-200 bg-white px-6 py-16 text-center">
+                        <h2 className="text-lg font-semibold">
+                            No staff found
+                        </h2>
 
-                        <p>
-                            Contact
-                        </p>
-
-                        <p>
-                            Branch
-                        </p>
-
-                        <p>
-                            Status
-                        </p>
-
-                        <p className="text-right">
-                            Action
+                        <p className="mt-2 text-sm text-stone-500">
+                            No staff members match the selected filters.
                         </p>
                     </div>
+                ) : (
+                    <div className="overflow-hidden rounded-3xl border border-stone-200 bg-white">
+                        <div className="hidden grid-cols-[1.3fr_1fr_1fr_130px_100px] gap-4 border-b border-stone-200 bg-stone-50 px-6 py-4 text-xs font-semibold uppercase tracking-wider text-stone-400 lg:grid">
+                            <p>
+                                Staff
+                            </p>
 
-                    <div className="divide-y divide-stone-200">
-                        {staffs.map((staff) => {
-                            return (
-                                <article
-                                    key={staff.id}
-                                    className="grid gap-5 px-6 py-5 lg:grid-cols-[1.3fr_1fr_1fr_130px_100px] lg:items-center"
-                                >
-                                    <div>
-                                        <p className="text-xs font-semibold uppercase tracking-wider text-stone-400 lg:hidden">
-                                            Staff
-                                        </p>
+                            <p>
+                                Contact
+                            </p>
 
-                                        <p className="mt-1 font-semibold lg:mt-0">
-                                            {staff.fullName}
-                                        </p>
+                            <p>
+                                Branch
+                            </p>
 
-                                        <p className="mt-1 text-xs text-stone-400">
-                                            {staff.id}
-                                        </p>
-                                    </div>
+                            <p>
+                                Status
+                            </p>
 
-                                    <div>
-                                        <p className="text-xs font-semibold uppercase tracking-wider text-stone-400 lg:hidden">
-                                            Contact
-                                        </p>
+                            <p className="text-right">
+                                Action
+                            </p>
+                        </div>
 
-                                        <p className="mt-1 text-sm font-medium lg:mt-0">
-                                            {staff.phone}
-                                        </p>
+                        <div className="divide-y divide-stone-200">
+                            {filteredStaffs.map((staff) => {
+                                return (
+                                    <article
+                                        key={staff.id}
+                                        className="grid gap-5 px-6 py-5 lg:grid-cols-[1.3fr_1fr_1fr_130px_100px] lg:items-center"
+                                    >
+                                        <div>
+                                            <p className="text-xs font-semibold uppercase tracking-wider text-stone-400 lg:hidden">
+                                                Staff
+                                            </p>
 
-                                        <p className="mt-1 text-xs text-stone-500">
-                                            {staff.email ?? "No email"}
-                                        </p>
-                                    </div>
+                                            <p className="mt-1 font-semibold lg:mt-0">
+                                                {staff.fullName}
+                                            </p>
 
-                                    <div>
-                                        <p className="text-xs font-semibold uppercase tracking-wider text-stone-400 lg:hidden">
-                                            Branch
-                                        </p>
+                                            <p className="mt-1 text-xs text-stone-400">
+                                                {staff.id}
+                                            </p>
+                                        </div>
 
-                                        <p className="mt-1 text-sm text-stone-600 lg:mt-0">
-                                            {staff.branch}
-                                        </p>
-                                    </div>
+                                        <div>
+                                            <p className="text-xs font-semibold uppercase tracking-wider text-stone-400 lg:hidden">
+                                                Contact
+                                            </p>
 
-                                    <div>
-                                        <p className="text-xs font-semibold uppercase tracking-wider text-stone-400 lg:hidden">
-                                            Status
-                                        </p>
+                                            <p className="mt-1 text-sm font-medium lg:mt-0">
+                                                {staff.phone}
+                                            </p>
 
-                                        <span
-                                            className={`mt-1 inline-flex rounded-full px-3 py-1.5 text-xs font-semibold lg:mt-0 ${
-                                                staff.isActive
-                                                    ? "bg-emerald-100 text-emerald-700"
-                                                    : "bg-stone-200 text-stone-600"
-                                            }`}
-                                        >
-                                            {staff.isActive
-                                                ? "ACTIVE"
-                                                : "INACTIVE"}
-                                        </span>
-                                    </div>
+                                            <p className="mt-1 text-xs text-stone-500">
+                                                {staff.email ?? "No email"}
+                                            </p>
+                                        </div>
 
-                                    <div className="lg:text-right">
-                                        <Link
-                                            to={`/admin/staff/${staff.id}/edit`}
-                                            className="inline-flex rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-medium transition hover:bg-stone-100"
-                                        >
-                                            Edit
-                                        </Link>
-                                    </div>
-                                </article>
-                            );
-                        })}
+                                        <div>
+                                            <p className="text-xs font-semibold uppercase tracking-wider text-stone-400 lg:hidden">
+                                                Branch
+                                            </p>
+
+                                            <p className="mt-1 text-sm text-stone-600 lg:mt-0">
+                                                {staff.branch}
+                                            </p>
+                                        </div>
+
+                                        <div>
+                                            <p className="text-xs font-semibold uppercase tracking-wider text-stone-400 lg:hidden">
+                                                Status
+                                            </p>
+
+                                            <span
+                                                className={`mt-1 inline-flex rounded-full px-3 py-1.5 text-xs font-semibold lg:mt-0 ${
+                                                    staff.isActive
+                                                        ? "bg-emerald-100 text-emerald-700"
+                                                        : "bg-stone-200 text-stone-600"
+                                                }`}
+                                            >
+                                                {staff.isActive
+                                                    ? "ACTIVE"
+                                                    : "INACTIVE"}
+                                            </span>
+                                        </div>
+
+                                        <div className="lg:text-right">
+                                            <Link
+                                                to={`/admin/staff/${staff.id}/edit`}
+                                                className="inline-flex rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-medium transition hover:bg-stone-100"
+                                            >
+                                                Edit
+                                            </Link>
+                                        </div>
+                                    </article>
+                                );
+                            })}
+                        </div>
                     </div>
-                </div>
+                )}
             </section>
         </main>
     );

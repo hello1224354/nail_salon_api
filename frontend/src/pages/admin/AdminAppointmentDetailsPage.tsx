@@ -82,6 +82,62 @@ const appointments: Record<string, AdminAppointmentDetails> = {
         ],
         status: "CONFIRMED",
     },
+    "APT-004": {
+        id: "APT-004",
+        customerName: "Pham Thi Lan",
+        phone: "0934567890",
+        date: "03 Oct 2026",
+        time: "13:30",
+        branch: "Nail Studio District 3",
+        staffName: "Le Thu Ha",
+        services: [
+            {
+                name: "Gel Pedicure",
+                durationMinutes: 60,
+                price: 280000,
+            },
+        ],
+        status: "IN_PROGRESS",
+    },
+    "APT-005": {
+        id: "APT-005",
+        customerName: "Hoang Minh Anh",
+        phone: "0976543210",
+        date: "01 Oct 2026",
+        time: "15:15",
+        branch: "Nail Studio District 1",
+        staffName: "Nguyen Thi Mai",
+        services: [
+            {
+                name: "Classic Manicure",
+                durationMinutes: 30,
+                price: 120000,
+            },
+            {
+                name: "Gel Removal",
+                durationMinutes: 20,
+                price: 80000,
+            },
+        ],
+        status: "COMPLETED",
+    },
+    "APT-006": {
+        id: "APT-006",
+        customerName: "Do Thu Trang",
+        phone: "0965432109",
+        date: "01 Oct 2026",
+        time: "16:30",
+        branch: "Nail Studio District 3",
+        staffName: "Pham Minh Chau",
+        services: [
+            {
+                name: "Spa Pedicure",
+                durationMinutes: 60,
+                price: 260000,
+            },
+        ],
+        status: "CANCELLED",
+    },
 };
 
 function formatPrice(price: number) {
@@ -107,6 +163,25 @@ function getStatusClassName(status: AppointmentStatus) {
 
         case "CANCELLED":
             return "bg-red-100 text-red-700";
+    }
+}
+
+function getDescription(status: AppointmentStatus) {
+    switch (status) {
+        case "PENDING":
+            return "Review the booking request before confirming it with the customer.";
+
+        case "CONFIRMED":
+            return "Review the confirmed appointment information.";
+
+        case "IN_PROGRESS":
+            return "Review the appointment currently in progress.";
+
+        case "COMPLETED":
+            return "Review the completed appointment information.";
+
+        case "CANCELLED":
+            return "Review the cancelled appointment information.";
     }
 }
 
@@ -181,7 +256,7 @@ function AdminAppointmentDetailsPage() {
                             </h1>
 
                             <p className="mt-3 text-stone-600">
-                                Review the booking request before confirming it with the customer.
+                                {getDescription(appointment.status)}
                             </p>
                         </div>
 

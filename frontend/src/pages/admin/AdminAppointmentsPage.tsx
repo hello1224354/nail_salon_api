@@ -1,4 +1,16 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
+
+type AppointmentStatus =
+    | "PENDING"
+    | "CONFIRMED"
+    | "IN_PROGRESS"
+    | "COMPLETED"
+    | "CANCELLED";
+
+type AppointmentFilter =
+    | "ALL"
+    | AppointmentStatus;
 
 interface AdminAppointment {
     id: string;
@@ -10,12 +22,7 @@ interface AdminAppointment {
     services: string[];
     durationMinutes: number;
     estimatedTotal: number;
-    status:
-        | "PENDING"
-        | "CONFIRMED"
-        | "IN_PROGRESS"
-        | "COMPLETED"
-        | "CANCELLED";
+    status: AppointmentStatus;
 }
 
 const appointments: AdminAppointment[] = [
@@ -62,6 +69,79 @@ const appointments: AdminAppointment[] = [
         estimatedTotal: 120000,
         status: "CONFIRMED",
     },
+    {
+        id: "APT-004",
+        customerName: "Pham Thi Lan",
+        phone: "0934567890",
+        date: "03 Oct 2026",
+        time: "13:30",
+        branch: "Nail Studio District 3",
+        services: [
+            "Gel Pedicure",
+        ],
+        durationMinutes: 60,
+        estimatedTotal: 280000,
+        status: "IN_PROGRESS",
+    },
+    {
+        id: "APT-005",
+        customerName: "Hoang Minh Anh",
+        phone: "0976543210",
+        date: "01 Oct 2026",
+        time: "15:15",
+        branch: "Nail Studio District 1",
+        services: [
+            "Classic Manicure",
+            "Gel Removal",
+        ],
+        durationMinutes: 50,
+        estimatedTotal: 200000,
+        status: "COMPLETED",
+    },
+    {
+        id: "APT-006",
+        customerName: "Do Thu Trang",
+        phone: "0965432109",
+        date: "01 Oct 2026",
+        time: "16:30",
+        branch: "Nail Studio District 3",
+        services: [
+            "Spa Pedicure",
+        ],
+        durationMinutes: 60,
+        estimatedTotal: 260000,
+        status: "CANCELLED",
+    },
+];
+
+const filters: {
+    label: string;
+    value: AppointmentFilter;
+}[] = [
+    {
+        label: "New requests",
+        value: "PENDING",
+    },
+    {
+        label: "All",
+        value: "ALL",
+    },
+    {
+        label: "Confirmed",
+        value: "CONFIRMED",
+    },
+    {
+        label: "In progress",
+        value: "IN_PROGRESS",
+    },
+    {
+        label: "Completed",
+        value: "COMPLETED",
+    },
+    {
+        label: "Cancelled",
+        value: "CANCELLED",
+    },
 ];
 
 function formatPrice(price: number) {
@@ -71,7 +151,7 @@ function formatPrice(price: number) {
     }).format(price);
 }
 
-function getStatusClassName(status: AdminAppointment["status"]) {
+function getStatusClassName(status: AppointmentStatus) {
     switch (status) {
         case "PENDING":
             return "bg-amber-100 text-amber-700";
@@ -91,9 +171,20 @@ function getStatusClassName(status: AdminAppointment["status"]) {
 }
 
 function AdminAppointmentsPage() {
+    const [activeFilter, setActiveFilter] =
+        useState<AppointmentFilter>("PENDING");
+
     const pendingCount = appointments.filter((appointment) => {
         return appointment.status === "PENDING";
     }).length;
+
+    const filteredAppointments = appointments.filter((appointment) => {
+        if (activeFilter === "ALL") {
+            return true;
+        }
+
+        return appointment.status === activeFilter;
+    });
 
     return (
         <main>
@@ -129,177 +220,183 @@ function AdminAppointmentsPage() {
 
             <section className="border-b border-stone-200 bg-stone-50">
                 <div className="flex gap-2 overflow-x-auto px-6 py-4 sm:px-8 lg:px-10">
-                    <button
-                        type="button"
-                        className="shrink-0 rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-white"
-                    >
-                        New requests
-                    </button>
+                    {filters.map((filter) => {
+                        const isActive =
+                            activeFilter === filter.value;
 
-                    <button
-                        type="button"
-                        className="shrink-0 rounded-full bg-white px-4 py-2 text-sm font-medium text-stone-600 transition hover:bg-stone-200"
-                    >
-                        All
-                    </button>
-
-                    <button
-                        type="button"
-                        className="shrink-0 rounded-full bg-white px-4 py-2 text-sm font-medium text-stone-600 transition hover:bg-stone-200"
-                    >
-                        Confirmed
-                    </button>
-
-                    <button
-                        type="button"
-                        className="shrink-0 rounded-full bg-white px-4 py-2 text-sm font-medium text-stone-600 transition hover:bg-stone-200"
-                    >
-                        Completed
-                    </button>
+                        return (
+                            <button
+                                key={filter.value}
+                                type="button"
+                                onClick={() => {
+                                    setActiveFilter(filter.value);
+                                }}
+                                className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition ${
+                                    isActive
+                                        ? "bg-stone-900 text-white"
+                                        : "bg-white text-stone-600 hover:bg-stone-200"
+                                }`}
+                            >
+                                {filter.label}
+                            </button>
+                        );
+                    })}
                 </div>
             </section>
 
             <section className="px-6 py-8 sm:px-8 lg:px-10">
-                <div className="space-y-5">
-                    {appointments.map((appointment) => {
-                        return (
-                            <article
-                                key={appointment.id}
-                                className="rounded-3xl border border-stone-200 bg-white"
-                            >
-                                <div className="flex flex-col gap-5 border-b border-stone-200 p-6 sm:flex-row sm:items-start sm:justify-between">
-                                    <div>
-                                        <div className="flex flex-wrap items-center gap-3">
-                                            <p className="text-xs font-semibold uppercase tracking-wider text-stone-400">
-                                                {appointment.id}
+                {filteredAppointments.length === 0 ? (
+                    <div className="rounded-3xl border border-stone-200 bg-white px-6 py-16 text-center">
+                        <h2 className="text-lg font-semibold">
+                            No appointments
+                        </h2>
+
+                        <p className="mt-2 text-sm text-stone-500">
+                            There are no appointments in this status.
+                        </p>
+                    </div>
+                ) : (
+                    <div className="space-y-5">
+                        {filteredAppointments.map((appointment) => {
+                            return (
+                                <article
+                                    key={appointment.id}
+                                    className="rounded-3xl border border-stone-200 bg-white"
+                                >
+                                    <div className="flex flex-col gap-5 border-b border-stone-200 p-6 sm:flex-row sm:items-start sm:justify-between">
+                                        <div>
+                                            <div className="flex flex-wrap items-center gap-3">
+                                                <p className="text-xs font-semibold uppercase tracking-wider text-stone-400">
+                                                    {appointment.id}
+                                                </p>
+
+                                                <span
+                                                    className={`rounded-full px-3 py-1 text-xs font-semibold ${getStatusClassName(
+                                                        appointment.status
+                                                    )}`}
+                                                >
+                                                    {appointment.status}
+                                                </span>
+                                            </div>
+
+                                            <h2 className="mt-3 text-xl font-semibold">
+                                                {appointment.customerName}
+                                            </h2>
+
+                                            <p className="mt-1 text-sm text-stone-500">
+                                                {appointment.phone}
                                             </p>
-
-                                            <span
-                                                className={`rounded-full px-3 py-1 text-xs font-semibold ${getStatusClassName(
-                                                    appointment.status
-                                                )}`}
-                                            >
-                                                {appointment.status}
-                                            </span>
                                         </div>
 
-                                        <h2 className="mt-3 text-xl font-semibold">
-                                            {appointment.customerName}
-                                        </h2>
-
-                                        <p className="mt-1 text-sm text-stone-500">
-                                            {appointment.phone}
-                                        </p>
-                                    </div>
-
-                                    <div className="sm:text-right">
-                                        <p className="text-sm text-stone-500">
-                                            Appointment time
-                                        </p>
-
-                                        <p className="mt-1 text-lg font-semibold">
-                                            {appointment.date} · {appointment.time}
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <div className="grid gap-6 p-6 lg:grid-cols-[1fr_1fr_180px]">
-                                    <div>
-                                        <p className="text-xs font-semibold uppercase tracking-wider text-stone-400">
-                                            Branch
-                                        </p>
-
-                                        <p className="mt-2 text-sm font-medium">
-                                            {appointment.branch}
-                                        </p>
-                                    </div>
-
-                                    <div>
-                                        <p className="text-xs font-semibold uppercase tracking-wider text-stone-400">
-                                            Services
-                                        </p>
-
-                                        <div className="mt-2 flex flex-wrap gap-2">
-                                            {appointment.services.map((service) => {
-                                                return (
-                                                    <span
-                                                        key={service}
-                                                        className="rounded-full bg-stone-100 px-3 py-1.5 text-sm text-stone-700"
-                                                    >
-                                                        {service}
-                                                    </span>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <p className="text-xs font-semibold uppercase tracking-wider text-stone-400">
-                                            Estimate
-                                        </p>
-
-                                        <p className="mt-2 font-semibold">
-                                            {formatPrice(
-                                                appointment.estimatedTotal
-                                            )}
-                                        </p>
-
-                                        <p className="mt-1 text-sm text-stone-500">
-                                            {appointment.durationMinutes} min
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <div className="flex flex-col gap-4 border-t border-stone-200 bg-stone-50 p-6 sm:flex-row sm:items-center sm:justify-between">
-                                    <div>
-                                        {appointment.status === "PENDING" ? (
-                                            <>
-                                                <p className="text-sm font-medium">
-                                                    Customer confirmation required
-                                                </p>
-
-                                                <p className="mt-1 text-sm text-stone-500">
-                                                    Call the customer before confirming this appointment.
-                                                </p>
-                                            </>
-                                        ) : (
+                                        <div className="sm:text-right">
                                             <p className="text-sm text-stone-500">
-                                                View the complete appointment information.
+                                                Appointment time
                                             </p>
-                                        )}
+
+                                            <p className="mt-1 text-lg font-semibold">
+                                                {appointment.date} · {appointment.time}
+                                            </p>
+                                        </div>
                                     </div>
 
-                                    <div className="flex flex-wrap gap-3">
-                                        <Link
-                                            to={`/admin/appointments/${appointment.id}`}
-                                            className="rounded-full border border-stone-300 bg-white px-5 py-2.5 text-sm font-medium transition hover:bg-stone-100"
-                                        >
-                                            View details
-                                        </Link>
+                                    <div className="grid gap-6 p-6 lg:grid-cols-[1fr_1fr_180px]">
+                                        <div>
+                                            <p className="text-xs font-semibold uppercase tracking-wider text-stone-400">
+                                                Branch
+                                            </p>
 
-                                        {appointment.status === "PENDING" && (
-                                            <>
-                                                <button
-                                                    type="button"
-                                                    className="rounded-full border border-stone-300 bg-white px-5 py-2.5 text-sm font-medium transition hover:bg-stone-100"
-                                                >
-                                                    Call customer
-                                                </button>
+                                            <p className="mt-2 text-sm font-medium">
+                                                {appointment.branch}
+                                            </p>
+                                        </div>
 
-                                                <button
-                                                    type="button"
-                                                    className="rounded-full bg-stone-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-stone-700"
-                                                >
-                                                    Confirm appointment
-                                                </button>
-                                            </>
-                                        )}
+                                        <div>
+                                            <p className="text-xs font-semibold uppercase tracking-wider text-stone-400">
+                                                Services
+                                            </p>
+
+                                            <div className="mt-2 flex flex-wrap gap-2">
+                                                {appointment.services.map((service) => {
+                                                    return (
+                                                        <span
+                                                            key={service}
+                                                            className="rounded-full bg-stone-100 px-3 py-1.5 text-sm text-stone-700"
+                                                        >
+                                                            {service}
+                                                        </span>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <p className="text-xs font-semibold uppercase tracking-wider text-stone-400">
+                                                Estimate
+                                            </p>
+
+                                            <p className="mt-2 font-semibold">
+                                                {formatPrice(
+                                                    appointment.estimatedTotal
+                                                )}
+                                            </p>
+
+                                            <p className="mt-1 text-sm text-stone-500">
+                                                {appointment.durationMinutes} min
+                                            </p>
+                                        </div>
                                     </div>
-                                </div>
-                            </article>
-                        );
-                    })}
-                </div>
+
+                                    <div className="flex flex-col gap-4 border-t border-stone-200 bg-stone-50 p-6 sm:flex-row sm:items-center sm:justify-between">
+                                        <div>
+                                            {appointment.status === "PENDING" ? (
+                                                <>
+                                                    <p className="text-sm font-medium">
+                                                        Customer confirmation required
+                                                    </p>
+
+                                                    <p className="mt-1 text-sm text-stone-500">
+                                                        Call the customer before confirming this appointment.
+                                                    </p>
+                                                </>
+                                            ) : (
+                                                <p className="text-sm text-stone-500">
+                                                    View the complete appointment information.
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        <div className="flex flex-wrap gap-3">
+                                            <Link
+                                                to={`/admin/appointments/${appointment.id}`}
+                                                className="rounded-full border border-stone-300 bg-white px-5 py-2.5 text-sm font-medium transition hover:bg-stone-100"
+                                            >
+                                                View details
+                                            </Link>
+
+                                            {appointment.status === "PENDING" && (
+                                                <>
+                                                    <button
+                                                        type="button"
+                                                        className="rounded-full border border-stone-300 bg-white px-5 py-2.5 text-sm font-medium transition hover:bg-stone-100"
+                                                    >
+                                                        Call customer
+                                                    </button>
+
+                                                    <button
+                                                        type="button"
+                                                        className="rounded-full bg-stone-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-stone-700"
+                                                    >
+                                                        Confirm appointment
+                                                    </button>
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+                                </article>
+                            );
+                        })}
+                    </div>
+                )}
             </section>
         </main>
     );
