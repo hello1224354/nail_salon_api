@@ -20,6 +20,7 @@ import RegisterPage from "./pages/RegisterPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import AdminAppointmentsPage from "./pages/admin/AdminAppointmentsPage";
 import AdminServicesPage from "./pages/admin/AdminServicesPage";
+import AdminBranchesPage from "./pages/admin/AdminBranchesPage";
 
 createRoot(document.getElementById("root")!).render(
     <StrictMode>
@@ -47,6 +48,11 @@ createRoot(document.getElementById("root")!).render(
                     <Route
                         path="services"
                         element={<AdminServicesPage />}
+                    />
+
+                    <Route
+                        path="branches"
+                        element={<AdminBranchesPage />}
                     />
                 </Route>
 
