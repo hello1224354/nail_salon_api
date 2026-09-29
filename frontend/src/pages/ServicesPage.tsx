@@ -77,73 +77,17 @@ function ServicesPage() {
         <main className="min-h-[70vh]">
             <section className="border-b border-stone-200 bg-white">
                 <div className="mx-auto max-w-7xl px-6 py-12 lg:py-16">
-                    <div className="flex items-start justify-between gap-6">
-                        <div>
-                            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-stone-500">
-                                Nail care
-                            </p>
+                    <p className="text-sm font-semibold uppercase tracking-[0.2em] text-stone-500">
+                        Nail care
+                    </p>
 
-                            <h1 className="mt-3 text-4xl font-semibold tracking-tight sm:text-5xl">
-                                Our services
-                            </h1>
+                    <h1 className="mt-3 text-4xl font-semibold tracking-tight sm:text-5xl">
+                        Our services
+                    </h1>
 
-                            <p className="mt-5 max-w-2xl text-lg leading-8 text-stone-600">
-                                Explore nail treatments, estimated duration and pricing available at Nail Studio.
-                            </p>
-                        </div>
-
-                        <button
-                            type="button"
-                            className="mt-1 hidden shrink-0 items-center gap-2 rounded-full border border-stone-300 bg-white px-4 py-2.5 text-sm font-medium text-stone-700 transition hover:bg-stone-100 sm:flex"
-                        >
-                            <span className="h-2 w-2 rounded-full bg-emerald-500" />
-
-                            <span>
-                                District 1
-                            </span>
-
-                            <svg
-                                viewBox="0 0 20 20"
-                                fill="none"
-                                className="h-4 w-4 text-stone-400"
-                                aria-hidden="true"
-                            >
-                                <path
-                                    d="M6 8L10 12L14 8"
-                                    stroke="currentColor"
-                                    strokeWidth="1.7"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                />
-                            </svg>
-                        </button>
-                    </div>
-
-                    <button
-                        type="button"
-                        className="mt-6 flex items-center gap-2 rounded-full border border-stone-300 bg-white px-4 py-2.5 text-sm font-medium text-stone-700 transition hover:bg-stone-100 sm:hidden"
-                    >
-                        <span className="h-2 w-2 rounded-full bg-emerald-500" />
-
-                        <span>
-                            District 1
-                        </span>
-
-                        <svg
-                            viewBox="0 0 20 20"
-                            fill="none"
-                            className="h-4 w-4 text-stone-400"
-                            aria-hidden="true"
-                        >
-                            <path
-                                d="M6 8L10 12L14 8"
-                                stroke="currentColor"
-                                strokeWidth="1.7"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                            />
-                        </svg>
-                    </button>
+                    <p className="mt-5 max-w-2xl text-lg leading-8 text-stone-600">
+                        Explore nail treatments, estimated duration and pricing available at Nail Studio.
+                    </p>
                 </div>
             </section>
 
@@ -155,7 +99,7 @@ function ServicesPage() {
                         </h2>
 
                         <p className="mt-2 text-sm text-stone-500">
-                            Showing services available at District 1.
+                            Services at the currently selected branch.
                         </p>
                     </div>
 

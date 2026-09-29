@@ -69,16 +69,65 @@ function App() {
                     </nav>
 
                     <div className="flex shrink-0 items-center gap-3">
+                        <button
+                            type="button"
+                            className="flex items-center gap-2 rounded-full border border-stone-300 bg-white px-3 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-100 sm:px-4"
+                        >
+                            <svg
+                                viewBox="0 0 20 20"
+                                fill="none"
+                                className="h-4 w-4 shrink-0 text-stone-500"
+                                aria-hidden="true"
+                            >
+                                <path
+                                    d="M10 10.5C11.6569 10.5 13 9.15685 13 7.5C13 5.84315 11.6569 4.5 10 4.5C8.34315 4.5 7 5.84315 7 7.5C7 9.15685 8.34315 10.5 10 10.5Z"
+                                    stroke="currentColor"
+                                    strokeWidth="1.5"
+                                />
+
+                                <path
+                                    d="M15.5 7.5C15.5 12 10 16 10 16C10 16 4.5 12 4.5 7.5C4.5 4.46243 6.96243 2 10 2C13.0376 2 15.5 4.46243 15.5 7.5Z"
+                                    stroke="currentColor"
+                                    strokeWidth="1.5"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                />
+                            </svg>
+
+                            <span className="hidden sm:inline">
+                                District 1
+                            </span>
+
+                            <span className="sm:hidden">
+                                D1
+                            </span>
+
+                            <svg
+                                viewBox="0 0 20 20"
+                                fill="none"
+                                className="h-4 w-4 shrink-0 text-stone-400"
+                                aria-hidden="true"
+                            >
+                                <path
+                                    d="M6 8L10 12L14 8"
+                                    stroke="currentColor"
+                                    strokeWidth="1.7"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                />
+                            </svg>
+                        </button>
+
                         <NavLink
                             to="/login"
-                            className="hidden text-sm font-medium text-stone-600 transition hover:text-stone-900 sm:block"
+                            className="hidden text-sm font-medium text-stone-600 transition hover:text-stone-900 lg:block"
                         >
                             Sign in
                         </NavLink>
 
                         <NavLink
                             to="/book"
-                            className="rounded-full bg-stone-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-stone-700"
+                            className="hidden rounded-full bg-stone-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-stone-700 sm:inline-flex"
                         >
                             Book now
                         </NavLink>

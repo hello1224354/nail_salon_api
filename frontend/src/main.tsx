@@ -7,6 +7,7 @@ import HomePage from "./pages/HomePage";
 import ServicesPage from "./pages/ServicesPage";
 import BookPage from "./pages/BookPage";
 import AppointmentsPage from "./pages/AppointmentsPage";
+import AppointmentDetailsPage from "./pages/AppointmentDetailsPage";
 import ProfilePage from "./pages/ProfilePage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
@@ -35,6 +36,11 @@ createRoot(document.getElementById("root")!).render(
                     <Route
                         path="/appointments"
                         element={<AppointmentsPage />}
+                    />
+
+                    <Route
+                        path="/appointments/details"
+                        element={<AppointmentDetailsPage />}
                     />
 
                     <Route

@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 interface AppointmentItem {
     id: string;
     date: string;
@@ -223,12 +225,12 @@ function AppointmentsPage() {
                                                 </p>
                                             </div>
 
-                                            <button
-                                                type="button"
+                                            <Link
+                                                to="/appointments/details"
                                                 className="w-fit rounded-full border border-stone-300 bg-white px-5 py-2.5 text-sm font-medium transition hover:bg-stone-100"
                                             >
                                                 View details
-                                            </button>
+                                            </Link>
                                         </div>
                                     </div>
                                 </div>
