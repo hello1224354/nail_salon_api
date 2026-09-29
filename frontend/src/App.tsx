@@ -52,12 +52,21 @@ function App() {
                         </NavLink>
                     </nav>
 
-                    <NavLink
-                        to="/book"
-                        className="rounded-full bg-stone-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-stone-700"
-                    >
-                        Book now
-                    </NavLink>
+                    <div className="flex items-center gap-3">
+                        <NavLink
+                            to="/login"
+                            className="hidden text-sm font-medium text-stone-600 transition hover:text-stone-900 sm:block"
+                        >
+                            Sign in
+                        </NavLink>
+
+                        <NavLink
+                            to="/book"
+                            className="rounded-full bg-stone-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-stone-700"
+                        >
+                            Book now
+                        </NavLink>
+                    </div>
                 </div>
             </header>
 

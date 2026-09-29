@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 function HomePage() {
     return (
         <main>
@@ -16,12 +17,12 @@ function HomePage() {
                     </p>
 
                     <div className="mt-8 flex flex-wrap gap-3">
-                        <a
-                            href="/book"
+                        <Link
+                            to="/book"
                             className="rounded-full bg-stone-900 px-6 py-3 font-medium text-white transition hover:bg-stone-700"
                         >
                             Book appointment
-                        </a>
+                        </Link>
 
                         <button
                             type="button"

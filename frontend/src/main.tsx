@@ -7,6 +7,8 @@ import HomePage from "./pages/HomePage";
 import BookPage from "./pages/BookPage";
 import AppointmentsPage from "./pages/AppointmentsPage";
 import ProfilePage from "./pages/ProfilePage";
+import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
 
 createRoot(document.getElementById("root")!).render(
     <StrictMode>
@@ -31,6 +33,16 @@ createRoot(document.getElementById("root")!).render(
                     <Route
                         path="/profile"
                         element={<ProfilePage />}
+                    />
+
+                    <Route
+                        path="/login"
+                        element={<LoginPage />}
+                    />
+
+                    <Route
+                        path="/register"
+                        element={<RegisterPage />}
                     />
                 </Route>
             </Routes>
