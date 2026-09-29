@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 interface AdminBranch {
     id: number;
     name: string;
@@ -44,12 +46,12 @@ function AdminBranchesPage() {
                             </p>
                         </div>
 
-                        <button
-                            type="button"
+                        <Link
+                            to="/admin/branches/new"
                             className="w-fit rounded-full bg-stone-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-stone-700"
                         >
                             Add branch
-                        </button>
+                        </Link>
                     </div>
                 </div>
             </section>
@@ -143,22 +145,13 @@ function AdminBranchesPage() {
                                         </p>
                                     </div>
 
-                                    <div className="mt-6 flex flex-wrap gap-3 border-t border-stone-200 pt-5">
-                                        <button
-                                            type="button"
-                                            className="rounded-full border border-stone-300 bg-white px-5 py-2.5 text-sm font-medium transition hover:bg-stone-100"
+                                    <div className="mt-6 border-t border-stone-200 pt-5">
+                                        <Link
+                                            to={`/admin/branches/${branch.id}/edit`}
+                                            className="inline-flex rounded-full border border-stone-300 bg-white px-5 py-2.5 text-sm font-medium transition hover:bg-stone-100"
                                         >
                                             Edit branch
-                                        </button>
-
-                                        <button
-                                            type="button"
-                                            className="rounded-full border border-stone-300 bg-white px-5 py-2.5 text-sm font-medium transition hover:bg-stone-100"
-                                        >
-                                            {branch.isActive
-                                                ? "Deactivate"
-                                                : "Activate"}
-                                        </button>
+                                        </Link>
                                     </div>
                                 </div>
                             </article>

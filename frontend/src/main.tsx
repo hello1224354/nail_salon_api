@@ -22,6 +22,7 @@ import AdminAppointmentsPage from "./pages/admin/AdminAppointmentsPage";
 import AdminServicesPage from "./pages/admin/AdminServicesPage";
 import AdminServiceFormPage from "./pages/admin/AdminServiceFormPage";
 import AdminBranchesPage from "./pages/admin/AdminBranchesPage";
+import AdminBranchFormPage from "./pages/admin/AdminBranchFormPage";
 import AdminStaffPage from "./pages/admin/AdminStaffPage";
 
 createRoot(document.getElementById("root")!).render(
@@ -65,6 +66,16 @@ createRoot(document.getElementById("root")!).render(
                     <Route
                         path="branches"
                         element={<AdminBranchesPage />}
+                    />
+
+                    <Route
+                        path="branches/new"
+                        element={<AdminBranchFormPage />}
+                    />
+
+                    <Route
+                        path="branches/:id/edit"
+                        element={<AdminBranchFormPage />}
                     />
 
                     <Route
