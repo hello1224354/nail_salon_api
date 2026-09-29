@@ -3,6 +3,7 @@ import type { AppOutletContext } from "../App";
 
 interface ServiceItem {
     id: string;
+    branchId: number;
     name: string;
     description: string;
     durationMinutes: number;
@@ -12,6 +13,7 @@ interface ServiceItem {
 const services: ServiceItem[] = [
     {
         id: "classic-manicure",
+        branchId: 1,
         name: "Classic Manicure",
         description: "Nail shaping, cuticle care and classic polish.",
         durationMinutes: 30,
@@ -19,6 +21,7 @@ const services: ServiceItem[] = [
     },
     {
         id: "gel-manicure",
+        branchId: 1,
         name: "Gel Manicure",
         description: "Long-lasting gel color with complete nail care.",
         durationMinutes: 45,
@@ -26,6 +29,7 @@ const services: ServiceItem[] = [
     },
     {
         id: "classic-pedicure",
+        branchId: 1,
         name: "Classic Pedicure",
         description: "Foot soak, nail care and a clean classic finish.",
         durationMinutes: 45,
@@ -33,6 +37,7 @@ const services: ServiceItem[] = [
     },
     {
         id: "nail-art",
+        branchId: 1,
         name: "Nail Art",
         description: "Decorative details and custom designs for your nails.",
         durationMinutes: 30,
@@ -40,6 +45,7 @@ const services: ServiceItem[] = [
     },
     {
         id: "spa-pedicure",
+        branchId: 2,
         name: "Spa Pedicure",
         description: "Relaxing foot care, nail shaping and polished finish.",
         durationMinutes: 60,
@@ -47,6 +53,7 @@ const services: ServiceItem[] = [
     },
     {
         id: "gel-pedicure",
+        branchId: 2,
         name: "Gel Pedicure",
         description: "Complete pedicure finished with long-lasting gel color.",
         durationMinutes: 60,
@@ -54,6 +61,7 @@ const services: ServiceItem[] = [
     },
     {
         id: "nail-extension",
+        branchId: 2,
         name: "Nail Extension",
         description: "Add length and shape with a polished extension finish.",
         durationMinutes: 75,
@@ -61,6 +69,7 @@ const services: ServiceItem[] = [
     },
     {
         id: "gel-removal",
+        branchId: 2,
         name: "Gel Removal",
         description: "Gentle removal of existing gel polish and nail cleanup.",
         durationMinutes: 20,
@@ -77,6 +86,10 @@ function formatPrice(price: number) {
 
 function ServicesPage() {
     const { selectedBranch } = useOutletContext<AppOutletContext>();
+
+    const branchServices = services.filter((service) => {
+        return service.branchId === selectedBranch.id;
+    });
 
     return (
         <main className="min-h-[70vh]">
@@ -109,50 +122,62 @@ function ServicesPage() {
                     </div>
 
                     <p className="hidden text-sm text-stone-400 sm:block">
-                        {services.length} services
+                        {branchServices.length} services
                     </p>
                 </div>
 
-                <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                    {services.map((service) => {
-                        return (
-                            <article
-                                key={service.id}
-                                className="group flex flex-col overflow-hidden rounded-3xl border border-stone-200 bg-white transition hover:border-stone-400"
-                            >
-                                <div className="relative flex h-48 items-center justify-center overflow-hidden bg-stone-200">
-                                    <span className="text-sm text-stone-500">
-                                        Service image
-                                    </span>
+                {branchServices.length === 0 ? (
+                    <div className="rounded-3xl border border-stone-200 bg-white px-6 py-16 text-center">
+                        <h2 className="text-lg font-semibold">
+                            No services available
+                        </h2>
 
-                                    <span className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1.5 text-xs font-medium text-stone-600 backdrop-blur">
-                                        {service.durationMinutes} min
-                                    </span>
-                                </div>
-
-                                <div className="flex flex-1 flex-col p-5">
-                                    <h3 className="text-lg font-semibold">
-                                        {service.name}
-                                    </h3>
-
-                                    <p className="mt-2 flex-1 text-sm leading-6 text-stone-500">
-                                        {service.description}
-                                    </p>
-
-                                    <div className="mt-6 flex items-end justify-between border-t border-stone-100 pt-4">
+                        <p className="mt-2 text-sm text-stone-500">
+                            This branch does not currently have any available services.
+                        </p>
+                    </div>
+                ) : (
+                    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                        {branchServices.map((service) => {
+                            return (
+                                <article
+                                    key={service.id}
+                                    className="group flex flex-col overflow-hidden rounded-3xl border border-stone-200 bg-white transition hover:border-stone-400"
+                                >
+                                    <div className="relative flex h-48 items-center justify-center overflow-hidden bg-stone-200">
                                         <span className="text-sm text-stone-500">
-                                            Price
+                                            Service image
                                         </span>
 
-                                        <span className="text-lg font-semibold">
-                                            {formatPrice(service.price)}
+                                        <span className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1.5 text-xs font-medium text-stone-600 backdrop-blur">
+                                            {service.durationMinutes} min
                                         </span>
                                     </div>
-                                </div>
-                            </article>
-                        );
-                    })}
-                </div>
+
+                                    <div className="flex flex-1 flex-col p-5">
+                                        <h3 className="text-lg font-semibold">
+                                            {service.name}
+                                        </h3>
+
+                                        <p className="mt-2 flex-1 text-sm leading-6 text-stone-500">
+                                            {service.description}
+                                        </p>
+
+                                        <div className="mt-6 flex items-end justify-between border-t border-stone-100 pt-4">
+                                            <span className="text-sm text-stone-500">
+                                                Price
+                                            </span>
+
+                                            <span className="text-lg font-semibold">
+                                                {formatPrice(service.price)}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </article>
+                            );
+                        })}
+                    </div>
+                )}
             </section>
         </main>
     );

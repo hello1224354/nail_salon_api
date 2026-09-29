@@ -1,9 +1,14 @@
-import { useMemo, useState } from "react";
+import {
+    useEffect,
+    useMemo,
+    useState,
+} from "react";
 import { useOutletContext } from "react-router-dom";
 import type { AppOutletContext } from "../App";
 
 interface ServiceOption {
     id: string;
+    branchId: number;
     name: string;
     description: string;
     durationMinutes: number;
@@ -19,7 +24,8 @@ interface DateOption {
 
 const services: ServiceOption[] = [
     {
-        id: "manicure",
+        id: "classic-manicure",
+        branchId: 1,
         name: "Classic Manicure",
         description: "Nail shaping, cuticle care and polish.",
         durationMinutes: 30,
@@ -27,13 +33,15 @@ const services: ServiceOption[] = [
     },
     {
         id: "gel-manicure",
+        branchId: 1,
         name: "Gel Manicure",
         description: "Long-lasting gel color with full nail care.",
         durationMinutes: 45,
         price: 220000,
     },
     {
-        id: "pedicure",
+        id: "classic-pedicure",
+        branchId: 1,
         name: "Classic Pedicure",
         description: "Foot soak, nail care and classic polish.",
         durationMinutes: 45,
@@ -41,10 +49,43 @@ const services: ServiceOption[] = [
     },
     {
         id: "nail-art",
+        branchId: 1,
         name: "Nail Art",
         description: "Custom decorative details for your nails.",
         durationMinutes: 30,
         price: 150000,
+    },
+    {
+        id: "spa-pedicure",
+        branchId: 2,
+        name: "Spa Pedicure",
+        description: "Relaxing foot care, nail shaping and polished finish.",
+        durationMinutes: 60,
+        price: 260000,
+    },
+    {
+        id: "gel-pedicure",
+        branchId: 2,
+        name: "Gel Pedicure",
+        description: "Complete pedicure with long-lasting gel color.",
+        durationMinutes: 60,
+        price: 280000,
+    },
+    {
+        id: "nail-extension",
+        branchId: 2,
+        name: "Nail Extension",
+        description: "Add length and shape with a polished extension finish.",
+        durationMinutes: 75,
+        price: 350000,
+    },
+    {
+        id: "gel-removal",
+        branchId: 2,
+        name: "Gel Removal",
+        description: "Gentle gel polish removal and nail cleanup.",
+        durationMinutes: 20,
+        price: 80000,
     },
 ];
 
@@ -120,11 +161,26 @@ function BookPage() {
     const [selectedDate, setSelectedDate] = useState<string | null>(null);
     const [selectedTime, setSelectedTime] = useState<string | null>(null);
 
-    const selectedServices = useMemo(() => {
+    const branchServices = useMemo(() => {
         return services.filter((service) => {
+            return service.branchId === selectedBranch.id;
+        });
+    }, [selectedBranch.id]);
+
+    const selectedServices = useMemo(() => {
+        return branchServices.filter((service) => {
             return selectedServiceIds.includes(service.id);
         });
-    }, [selectedServiceIds]);
+    }, [
+        branchServices,
+        selectedServiceIds,
+    ]);
+
+    useEffect(() => {
+        setSelectedServiceIds([]);
+        setSelectedDate(null);
+        setSelectedTime(null);
+    }, [selectedBranch.id]);
 
     const totalDurationMinutes = selectedServices.reduce((total, service) => {
         return total + service.durationMinutes;
@@ -189,7 +245,7 @@ function BookPage() {
                                 </h2>
 
                                 <p className="mt-2 text-sm leading-6 text-stone-500">
-                                    Select one or more treatments for your appointment.
+                                    Select one or more treatments available at {selectedBranch.name}.
                                 </p>
                             </div>
 
@@ -198,72 +254,78 @@ function BookPage() {
                             </p>
                         </div>
 
-                        <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                            {services.map((service) => {
-                                const selected = selectedServiceIds.includes(
-                                    service.id
-                                );
+                        {branchServices.length === 0 ? (
+                            <div className="mt-6 rounded-2xl bg-stone-100 px-5 py-8 text-center text-sm text-stone-500">
+                                This branch does not currently have any available services.
+                            </div>
+                        ) : (
+                            <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                                {branchServices.map((service) => {
+                                    const selected = selectedServiceIds.includes(
+                                        service.id
+                                    );
 
-                                return (
-                                    <button
-                                        key={service.id}
-                                        type="button"
-                                        onClick={() => {
-                                            toggleService(service.id);
-                                        }}
-                                        className={`rounded-2xl border p-5 text-left transition ${
-                                            selected
-                                                ? "border-stone-900 bg-stone-900 text-white"
-                                                : "border-stone-200 bg-white hover:border-stone-400"
-                                        }`}
-                                    >
-                                        <div className="flex items-start justify-between gap-4">
-                                            <div>
-                                                <h3 className="font-semibold">
-                                                    {service.name}
-                                                </h3>
+                                    return (
+                                        <button
+                                            key={service.id}
+                                            type="button"
+                                            onClick={() => {
+                                                toggleService(service.id);
+                                            }}
+                                            className={`rounded-2xl border p-5 text-left transition ${
+                                                selected
+                                                    ? "border-stone-900 bg-stone-900 text-white"
+                                                    : "border-stone-200 bg-white hover:border-stone-400"
+                                            }`}
+                                        >
+                                            <div className="flex items-start justify-between gap-4">
+                                                <div>
+                                                    <h3 className="font-semibold">
+                                                        {service.name}
+                                                    </h3>
 
-                                                <p
-                                                    className={`mt-2 text-sm leading-6 ${
+                                                    <p
+                                                        className={`mt-2 text-sm leading-6 ${
+                                                            selected
+                                                                ? "text-stone-300"
+                                                                : "text-stone-500"
+                                                        }`}
+                                                    >
+                                                        {service.description}
+                                                    </p>
+                                                </div>
+
+                                                <div
+                                                    className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs ${
                                                         selected
-                                                            ? "text-stone-300"
-                                                            : "text-stone-500"
+                                                            ? "border-white bg-white text-stone-900"
+                                                            : "border-stone-300"
                                                     }`}
                                                 >
-                                                    {service.description}
-                                                </p>
+                                                    {selected ? "✓" : ""}
+                                                </div>
                                             </div>
 
                                             <div
-                                                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs ${
+                                                className={`mt-5 flex items-center justify-between border-t pt-4 text-sm ${
                                                     selected
-                                                        ? "border-white bg-white text-stone-900"
-                                                        : "border-stone-300"
+                                                        ? "border-stone-700 text-stone-300"
+                                                        : "border-stone-100 text-stone-500"
                                                 }`}
                                             >
-                                                {selected ? "✓" : ""}
+                                                <span>
+                                                    {service.durationMinutes} min
+                                                </span>
+
+                                                <span className="font-medium">
+                                                    {formatPrice(service.price)}
+                                                </span>
                                             </div>
-                                        </div>
-
-                                        <div
-                                            className={`mt-5 flex items-center justify-between border-t pt-4 text-sm ${
-                                                selected
-                                                    ? "border-stone-700 text-stone-300"
-                                                    : "border-stone-100 text-stone-500"
-                                            }`}
-                                        >
-                                            <span>
-                                                {service.durationMinutes} min
-                                            </span>
-
-                                            <span className="font-medium">
-                                                {formatPrice(service.price)}
-                                            </span>
-                                        </div>
-                                    </button>
-                                );
-                            })}
-                        </div>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </section>
 
                     <section className="rounded-3xl border border-stone-200 bg-white p-6 sm:p-8">

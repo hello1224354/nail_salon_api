@@ -1,27 +1,99 @@
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 
-const appointment = {
-    id: "APT-001",
-    date: "02 Oct 2026",
-    weekday: "Friday",
-    time: "10:30",
-    branch: "Nail Studio District 1",
-    address: "District 1, Ho Chi Minh City",
-    services: [
-        {
-            name: "Gel Manicure",
-            durationMinutes: 45,
-            price: 220000,
-        },
-        {
-            name: "Nail Art",
-            durationMinutes: 30,
-            price: 150000,
-        },
-    ],
-    durationMinutes: 75,
-    totalPrice: 370000,
-    status: "CONFIRMED",
+type AppointmentStatus =
+    | "PENDING"
+    | "CONFIRMED"
+    | "IN_PROGRESS"
+    | "COMPLETED"
+    | "CANCELLED";
+
+interface AppointmentService {
+    name: string;
+    durationMinutes: number;
+    price: number;
+}
+
+interface AppointmentDetails {
+    id: string;
+    date: string;
+    weekday: string;
+    time: string;
+    branch: string;
+    address: string;
+    services: AppointmentService[];
+    status: AppointmentStatus;
+}
+
+const appointments: Record<string, AppointmentDetails> = {
+    "APT-001": {
+        id: "APT-001",
+        date: "02 Oct 2026",
+        weekday: "Friday",
+        time: "10:30",
+        branch: "Nail Studio District 1",
+        address: "District 1, Ho Chi Minh City",
+        services: [
+            {
+                name: "Gel Manicure",
+                durationMinutes: 45,
+                price: 220000,
+            },
+            {
+                name: "Nail Art",
+                durationMinutes: 30,
+                price: 150000,
+            },
+        ],
+        status: "CONFIRMED",
+    },
+    "APT-002": {
+        id: "APT-002",
+        date: "08 Oct 2026",
+        weekday: "Thursday",
+        time: "14:00",
+        branch: "Nail Studio District 3",
+        address: "District 3, Ho Chi Minh City",
+        services: [
+            {
+                name: "Classic Pedicure",
+                durationMinutes: 45,
+                price: 180000,
+            },
+        ],
+        status: "PENDING",
+    },
+    "APT-003": {
+        id: "APT-003",
+        date: "20 Sep 2026",
+        weekday: "Sunday",
+        time: "09:15",
+        branch: "Nail Studio District 1",
+        address: "District 1, Ho Chi Minh City",
+        services: [
+            {
+                name: "Classic Manicure",
+                durationMinutes: 30,
+                price: 120000,
+            },
+        ],
+        status: "COMPLETED",
+    },
+    "APT-004": {
+        id: "APT-004",
+        date: "18 Sep 2026",
+        weekday: "Friday",
+        time: "16:00",
+        branch: "Nail Studio District 3",
+        address: "District 3, Ho Chi Minh City",
+        services: [
+            {
+                name: "Spa Pedicure",
+                durationMinutes: 60,
+                price: 260000,
+            },
+        ],
+        status: "CANCELLED",
+    },
 };
 
 function formatPrice(price: number) {
@@ -31,7 +103,95 @@ function formatPrice(price: number) {
     }).format(price);
 }
 
+function getStatusClassName(status: AppointmentStatus) {
+    switch (status) {
+        case "PENDING":
+            return "bg-amber-100 text-amber-700";
+
+        case "CONFIRMED":
+            return "bg-emerald-100 text-emerald-700";
+
+        case "IN_PROGRESS":
+            return "bg-blue-100 text-blue-700";
+
+        case "COMPLETED":
+            return "bg-stone-200 text-stone-600";
+
+        case "CANCELLED":
+            return "bg-red-100 text-red-700";
+    }
+}
+
+function getStatusMessage(status: AppointmentStatus) {
+    switch (status) {
+        case "PENDING":
+            return "Your request has been sent. The salon will contact you by phone to confirm the appointment.";
+
+        case "CONFIRMED":
+            return "Your appointment has been confirmed.";
+
+        case "IN_PROGRESS":
+            return "Your appointment is currently in progress.";
+
+        case "COMPLETED":
+            return "This appointment has been completed.";
+
+        case "CANCELLED":
+            return "This appointment has been cancelled.";
+    }
+}
+
 function AppointmentDetailsPage() {
+    const { id } = useParams();
+
+    const appointment =
+        id !== undefined
+            ? appointments[id]
+            : undefined;
+
+    if (appointment === undefined) {
+        return (
+            <main className="min-h-[70vh]">
+                <section className="mx-auto max-w-5xl px-6 py-16">
+                    <div className="rounded-3xl border border-stone-200 bg-white p-8">
+                        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-stone-400">
+                            Appointment
+                        </p>
+
+                        <h1 className="mt-3 text-2xl font-semibold">
+                            Appointment not found
+                        </h1>
+
+                        <p className="mt-3 text-stone-500">
+                            The requested appointment could not be found.
+                        </p>
+
+                        <Link
+                            to="/appointments"
+                            className="mt-6 inline-flex rounded-full bg-stone-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-stone-700"
+                        >
+                            Back to appointments
+                        </Link>
+                    </div>
+                </section>
+            </main>
+        );
+    }
+
+    const durationMinutes = appointment.services.reduce(
+        (total, service) => {
+            return total + service.durationMinutes;
+        },
+        0
+    );
+
+    const totalPrice = appointment.services.reduce(
+        (total, service) => {
+            return total + service.price;
+        },
+        0
+    );
+
     return (
         <main className="min-h-[70vh]">
             <section className="border-b border-stone-200 bg-white">
@@ -58,7 +218,11 @@ function AppointmentDetailsPage() {
                             </p>
                         </div>
 
-                        <span className="w-fit rounded-full bg-emerald-100 px-4 py-2 text-sm font-semibold text-emerald-700">
+                        <span
+                            className={`w-fit rounded-full px-4 py-2 text-sm font-semibold ${getStatusClassName(
+                                appointment.status
+                            )}`}
+                        >
                             {appointment.status}
                         </span>
                     </div>
@@ -66,6 +230,12 @@ function AppointmentDetailsPage() {
             </section>
 
             <section className="mx-auto max-w-5xl px-6 py-10">
+                <div className="mb-6 rounded-3xl border border-stone-200 bg-white p-6">
+                    <p className="text-sm leading-6 text-stone-600">
+                        {getStatusMessage(appointment.status)}
+                    </p>
+                </div>
+
                 <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
                     <div className="space-y-6">
                         <section className="rounded-3xl border border-stone-200 bg-white p-6 sm:p-8">
@@ -98,7 +268,7 @@ function AppointmentDetailsPage() {
                                     </p>
 
                                     <p className="mt-1 text-sm text-stone-500">
-                                        {appointment.durationMinutes} minutes
+                                        {durationMinutes} minutes
                                     </p>
                                 </div>
                             </div>
@@ -173,7 +343,7 @@ function AppointmentDetailsPage() {
                                     </span>
 
                                     <span className="font-medium">
-                                        {appointment.durationMinutes} min
+                                        {durationMinutes} min
                                     </span>
                                 </div>
 
@@ -190,11 +360,11 @@ function AppointmentDetailsPage() {
 
                             <div className="mt-5 flex items-center justify-between border-t border-stone-200 pt-5">
                                 <span className="font-medium">
-                                    Total
+                                    Estimated total
                                 </span>
 
                                 <span className="text-xl font-semibold">
-                                    {formatPrice(appointment.totalPrice)}
+                                    {formatPrice(totalPrice)}
                                 </span>
                             </div>
                         </div>

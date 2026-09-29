@@ -123,7 +123,7 @@ createRoot(document.getElementById("root")!).render(
                     />
 
                     <Route
-                        path="/appointments/details"
+                        path="/appointments/:id"
                         element={<AppointmentDetailsPage />}
                     />
 

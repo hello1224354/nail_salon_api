@@ -1,6 +1,105 @@
-import { Link } from "react-router-dom";
+import { Link, useOutletContext } from "react-router-dom";
+import type { AppOutletContext } from "../App";
+
+interface PopularService {
+    id: string;
+    branchId: number;
+    name: string;
+    description: string;
+    durationMinutes: number;
+    price: number;
+    imageLabel: string;
+}
+
+const popularServices: PopularService[] = [
+    {
+        id: "classic-manicure",
+        branchId: 1,
+        name: "Classic Manicure",
+        description: "Nail shaping, cuticle care and classic polish.",
+        durationMinutes: 30,
+        price: 120000,
+        imageLabel: "Manicure image",
+    },
+    {
+        id: "gel-manicure",
+        branchId: 1,
+        name: "Gel Manicure",
+        description: "Long-lasting gel color with complete nail care.",
+        durationMinutes: 45,
+        price: 220000,
+        imageLabel: "Gel manicure image",
+    },
+    {
+        id: "classic-pedicure",
+        branchId: 1,
+        name: "Classic Pedicure",
+        description: "Foot soak, nail care and a clean classic finish.",
+        durationMinutes: 45,
+        price: 180000,
+        imageLabel: "Pedicure image",
+    },
+    {
+        id: "nail-art",
+        branchId: 1,
+        name: "Nail Art",
+        description: "Decorative details and custom designs for your nails.",
+        durationMinutes: 30,
+        price: 150000,
+        imageLabel: "Nail art image",
+    },
+    {
+        id: "spa-pedicure",
+        branchId: 2,
+        name: "Spa Pedicure",
+        description: "Relaxing foot care, nail shaping and polished finish.",
+        durationMinutes: 60,
+        price: 260000,
+        imageLabel: "Spa pedicure image",
+    },
+    {
+        id: "gel-pedicure",
+        branchId: 2,
+        name: "Gel Pedicure",
+        description: "Complete pedicure finished with long-lasting gel color.",
+        durationMinutes: 60,
+        price: 280000,
+        imageLabel: "Gel pedicure image",
+    },
+    {
+        id: "nail-extension",
+        branchId: 2,
+        name: "Nail Extension",
+        description: "Add length and shape with a polished extension finish.",
+        durationMinutes: 75,
+        price: 350000,
+        imageLabel: "Nail extension image",
+    },
+    {
+        id: "gel-removal",
+        branchId: 2,
+        name: "Gel Removal",
+        description: "Gentle removal of existing gel polish and nail cleanup.",
+        durationMinutes: 20,
+        price: 80000,
+        imageLabel: "Gel removal image",
+    },
+];
+
+function formatPrice(price: number) {
+    return new Intl.NumberFormat("vi-VN", {
+        style: "currency",
+        currency: "VND",
+    }).format(price);
+}
 
 function HomePage() {
+    const { selectedBranch } = useOutletContext<AppOutletContext>();
+
+    const branchServices = popularServices.filter((service) => {
+        return service.branchId === selectedBranch.id;
+    });
+
     return (
         <main>
             <section className="mx-auto grid max-w-7xl gap-10 px-6 py-16 lg:grid-cols-2 lg:items-center lg:py-24">
@@ -77,7 +176,7 @@ function HomePage() {
                         </h2>
 
                         <p className="mt-3 max-w-2xl leading-7 text-stone-600">
-                            Simple, polished treatments for your everyday nail care.
+                            Available treatments at {selectedBranch.name}.
                         </p>
                     </div>
 
@@ -89,111 +188,52 @@ function HomePage() {
                     </Link>
                 </div>
 
-                <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-                    <article className="overflow-hidden rounded-3xl border border-stone-200 bg-white">
-                        <div className="flex h-44 items-center justify-center bg-stone-200 text-sm text-stone-500">
-                            Manicure image
-                        </div>
+                {branchServices.length === 0 ? (
+                    <div className="mt-8 rounded-3xl border border-stone-200 bg-white px-6 py-16 text-center">
+                        <h3 className="text-lg font-semibold">
+                            No services available
+                        </h3>
 
-                        <div className="p-5">
-                            <h3 className="text-lg font-semibold">
-                                Classic Manicure
-                            </h3>
+                        <p className="mt-2 text-sm text-stone-500">
+                            This branch does not currently have any available services.
+                        </p>
+                    </div>
+                ) : (
+                    <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+                        {branchServices.map((service) => {
+                            return (
+                                <article
+                                    key={service.id}
+                                    className="overflow-hidden rounded-3xl border border-stone-200 bg-white"
+                                >
+                                    <div className="flex h-44 items-center justify-center bg-stone-200 text-sm text-stone-500">
+                                        {service.imageLabel}
+                                    </div>
 
-                            <p className="mt-2 text-sm leading-6 text-stone-500">
-                                Nail shaping, cuticle care and classic polish.
-                            </p>
+                                    <div className="p-5">
+                                        <h3 className="text-lg font-semibold">
+                                            {service.name}
+                                        </h3>
 
-                            <div className="mt-5 flex items-center justify-between text-sm">
-                                <span className="text-stone-500">
-                                    30 min
-                                </span>
+                                        <p className="mt-2 text-sm leading-6 text-stone-500">
+                                            {service.description}
+                                        </p>
 
-                                <span className="font-semibold">
-                                    120.000 ₫
-                                </span>
-                            </div>
-                        </div>
-                    </article>
+                                        <div className="mt-5 flex items-center justify-between text-sm">
+                                            <span className="text-stone-500">
+                                                {service.durationMinutes} min
+                                            </span>
 
-                    <article className="overflow-hidden rounded-3xl border border-stone-200 bg-white">
-                        <div className="flex h-44 items-center justify-center bg-stone-200 text-sm text-stone-500">
-                            Gel manicure image
-                        </div>
-
-                        <div className="p-5">
-                            <h3 className="text-lg font-semibold">
-                                Gel Manicure
-                            </h3>
-
-                            <p className="mt-2 text-sm leading-6 text-stone-500">
-                                Long-lasting gel color with complete nail care.
-                            </p>
-
-                            <div className="mt-5 flex items-center justify-between text-sm">
-                                <span className="text-stone-500">
-                                    45 min
-                                </span>
-
-                                <span className="font-semibold">
-                                    220.000 ₫
-                                </span>
-                            </div>
-                        </div>
-                    </article>
-
-                    <article className="overflow-hidden rounded-3xl border border-stone-200 bg-white">
-                        <div className="flex h-44 items-center justify-center bg-stone-200 text-sm text-stone-500">
-                            Pedicure image
-                        </div>
-
-                        <div className="p-5">
-                            <h3 className="text-lg font-semibold">
-                                Classic Pedicure
-                            </h3>
-
-                            <p className="mt-2 text-sm leading-6 text-stone-500">
-                                Foot soak, nail care and a clean classic finish.
-                            </p>
-
-                            <div className="mt-5 flex items-center justify-between text-sm">
-                                <span className="text-stone-500">
-                                    45 min
-                                </span>
-
-                                <span className="font-semibold">
-                                    180.000 ₫
-                                </span>
-                            </div>
-                        </div>
-                    </article>
-
-                    <article className="overflow-hidden rounded-3xl border border-stone-200 bg-white">
-                        <div className="flex h-44 items-center justify-center bg-stone-200 text-sm text-stone-500">
-                            Nail art image
-                        </div>
-
-                        <div className="p-5">
-                            <h3 className="text-lg font-semibold">
-                                Nail Art
-                            </h3>
-
-                            <p className="mt-2 text-sm leading-6 text-stone-500">
-                                Decorative details and custom designs for your nails.
-                            </p>
-
-                            <div className="mt-5 flex items-center justify-between text-sm">
-                                <span className="text-stone-500">
-                                    30 min
-                                </span>
-
-                                <span className="font-semibold">
-                                    150.000 ₫
-                                </span>
-                            </div>
-                        </div>
-                    </article>
-                </div>
+                                            <span className="font-semibold">
+                                                {formatPrice(service.price)}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </article>
+                            );
+                        })}
+                    </div>
+                )}
             </section>
         </main>
     );
