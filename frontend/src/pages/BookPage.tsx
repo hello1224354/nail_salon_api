@@ -402,7 +402,7 @@ function BookPage() {
                         </p>
 
                         <h2 className="mt-1 text-2xl font-semibold">
-                            Your appointment
+                            Your appointment request
                         </h2>
 
                         <div className="mt-6 border-t border-stone-200 pt-5">
@@ -486,7 +486,7 @@ function BookPage() {
 
                         <div className="mt-5 flex items-center justify-between border-t border-stone-200 pt-5">
                             <span className="font-medium">
-                                Total
+                                Estimated total
                             </span>
 
                             <span className="text-xl font-semibold">
@@ -503,10 +503,16 @@ function BookPage() {
                             }
                             className="mt-6 w-full rounded-full bg-stone-900 px-5 py-3 font-medium text-white transition enabled:hover:bg-stone-700 disabled:cursor-not-allowed disabled:bg-stone-300"
                         >
-                            Continue
+                            Send booking request
                         </button>
 
-                        <p className="mt-4 text-center text-xs leading-5 text-stone-400">
+                        <div className="mt-4 rounded-2xl bg-stone-100 px-4 py-3">
+                            <p className="text-center text-xs leading-5 text-stone-500">
+                                After you send your request, the salon will contact you by phone to confirm the appointment.
+                            </p>
+                        </div>
+
+                        <p className="mt-3 text-center text-xs leading-5 text-stone-400">
                             An available nail technician will be assigned automatically.
                         </p>
                     </div>
