@@ -195,52 +195,6 @@ function HomePage() {
                     </article>
                 </div>
             </section>
-
-            <section className="border-y border-stone-200 bg-white">
-                <div className="mx-auto grid max-w-7xl gap-6 px-6 py-12 md:grid-cols-3">
-                    <article className="rounded-2xl border border-stone-200 p-6">
-                        <p className="text-sm text-stone-500">
-                            Step 01
-                        </p>
-
-                        <h2 className="mt-2 text-xl font-semibold">
-                            Choose services
-                        </h2>
-
-                        <p className="mt-3 leading-7 text-stone-600">
-                            Select the nail services you want for your visit.
-                        </p>
-                    </article>
-
-                    <article className="rounded-2xl border border-stone-200 p-6">
-                        <p className="text-sm text-stone-500">
-                            Step 02
-                        </p>
-
-                        <h2 className="mt-2 text-xl font-semibold">
-                            Pick a time
-                        </h2>
-
-                        <p className="mt-3 leading-7 text-stone-600">
-                            See available appointment times and choose one that works for you.
-                        </p>
-                    </article>
-
-                    <article className="rounded-2xl border border-stone-200 p-6">
-                        <p className="text-sm text-stone-500">
-                            Step 03
-                        </p>
-
-                        <h2 className="mt-2 text-xl font-semibold">
-                            Confirm booking
-                        </h2>
-
-                        <p className="mt-3 leading-7 text-stone-600">
-                            Confirm your appointment and we will handle staff assignment automatically.
-                        </p>
-                    </article>
-                </div>
-            </section>
         </main>
     );
 }

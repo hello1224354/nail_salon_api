@@ -203,52 +203,6 @@ function BookPage() {
                 </div>
             </section>
 
-            <section className="border-b border-stone-200 bg-stone-100">
-                <div className="mx-auto max-w-7xl px-6 py-5">
-                    <div className="grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
-                        <div className="flex items-center gap-3">
-                            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-stone-900 font-semibold text-white">
-                                1
-                            </span>
-
-                            <span className="font-medium text-stone-900">
-                                Salon
-                            </span>
-                        </div>
-
-                        <div className="flex items-center gap-3">
-                            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white font-semibold text-stone-500">
-                                2
-                            </span>
-
-                            <span className="font-medium text-stone-600">
-                                Services
-                            </span>
-                        </div>
-
-                        <div className="flex items-center gap-3">
-                            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white font-semibold text-stone-500">
-                                3
-                            </span>
-
-                            <span className="font-medium text-stone-600">
-                                Date
-                            </span>
-                        </div>
-
-                        <div className="flex items-center gap-3">
-                            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white font-semibold text-stone-500">
-                                4
-                            </span>
-
-                            <span className="font-medium text-stone-600">
-                                Time
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
             <section className="mx-auto grid max-w-7xl gap-8 px-6 py-10 lg:grid-cols-[1fr_360px]">
                 <div className="space-y-8">
                     <section className="rounded-3xl border border-stone-200 bg-white p-6 sm:p-8">

@@ -89,24 +89,13 @@ function AppointmentsPage() {
                         Appointments
                     </p>
 
-                    <div className="mt-2 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-                        <div>
-                            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-                                My appointments
-                            </h1>
+                    <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
+                        My appointments
+                    </h1>
 
-                            <p className="mt-3 max-w-2xl leading-7 text-stone-600">
-                                Keep track of your upcoming visits and previous nail appointments.
-                            </p>
-                        </div>
-
-                        <button
-                            type="button"
-                            className="w-fit rounded-full bg-stone-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-stone-700"
-                        >
-                            Book new appointment
-                        </button>
-                    </div>
+                    <p className="mt-3 max-w-2xl leading-7 text-stone-600">
+                        View your upcoming and previous salon appointments.
+                    </p>
                 </div>
             </section>
 
@@ -116,7 +105,7 @@ function AppointmentsPage() {
                         type="button"
                         className="shrink-0 rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-white"
                     >
-                        All appointments
+                        All
                     </button>
 
                     <button
@@ -143,38 +132,6 @@ function AppointmentsPage() {
             </section>
 
             <section className="mx-auto max-w-7xl px-6 py-10">
-                <div className="mb-8 grid gap-4 sm:grid-cols-3">
-                    <div className="rounded-2xl border border-stone-200 bg-white p-5">
-                        <p className="text-sm text-stone-500">
-                            Upcoming
-                        </p>
-
-                        <p className="mt-2 text-3xl font-semibold">
-                            2
-                        </p>
-                    </div>
-
-                    <div className="rounded-2xl border border-stone-200 bg-white p-5">
-                        <p className="text-sm text-stone-500">
-                            Completed
-                        </p>
-
-                        <p className="mt-2 text-3xl font-semibold">
-                            1
-                        </p>
-                    </div>
-
-                    <div className="rounded-2xl border border-stone-200 bg-white p-5">
-                        <p className="text-sm text-stone-500">
-                            Total visits
-                        </p>
-
-                        <p className="mt-2 text-3xl font-semibold">
-                            3
-                        </p>
-                    </div>
-                </div>
-
                 <div className="space-y-5">
                     {appointments.map((appointment) => {
                         return (
@@ -206,7 +163,7 @@ function AppointmentsPage() {
                                     </div>
 
                                     <div className="p-6 sm:p-8">
-                                        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+                                        <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
                                             <div>
                                                 <p className="text-xs font-semibold uppercase tracking-wider text-stone-400">
                                                     {appointment.id}
@@ -221,7 +178,7 @@ function AppointmentsPage() {
                                                 </p>
                                             </div>
 
-                                            <div className="lg:text-right">
+                                            <div className="sm:text-right">
                                                 <p className="text-sm text-stone-500">
                                                     Total
                                                 </p>
@@ -258,7 +215,7 @@ function AppointmentsPage() {
                                         <div className="mt-6 flex flex-col gap-5 border-t border-stone-200 pt-6 sm:flex-row sm:items-center sm:justify-between">
                                             <div>
                                                 <p className="text-xs uppercase tracking-wider text-stone-400">
-                                                    Estimated duration
+                                                    Duration
                                                 </p>
 
                                                 <p className="mt-1 text-sm font-medium">
@@ -266,23 +223,12 @@ function AppointmentsPage() {
                                                 </p>
                                             </div>
 
-                                            <div className="flex flex-wrap gap-3">
-                                                <button
-                                                    type="button"
-                                                    className="rounded-full border border-stone-300 bg-white px-5 py-2.5 text-sm font-medium transition hover:bg-stone-100"
-                                                >
-                                                    View details
-                                                </button>
-
-                                                {appointment.status === "COMPLETED" && (
-                                                    <button
-                                                        type="button"
-                                                        className="rounded-full bg-stone-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-stone-700"
-                                                    >
-                                                        Book again
-                                                    </button>
-                                                )}
-                                            </div>
+                                            <button
+                                                type="button"
+                                                className="w-fit rounded-full border border-stone-300 bg-white px-5 py-2.5 text-sm font-medium transition hover:bg-stone-100"
+                                            >
+                                                View details
+                                            </button>
                                         </div>
                                     </div>
                                 </div>

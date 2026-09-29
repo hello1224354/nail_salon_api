@@ -1,5 +1,3 @@
-import { Link } from "react-router-dom";
-
 interface ServiceItem {
     id: string;
     name: string;
@@ -8,83 +6,62 @@ interface ServiceItem {
     price: number;
 }
 
-interface BranchServices {
-    id: number;
-    name: string;
-    address: string;
-    services: ServiceItem[];
-}
-
-const branches: BranchServices[] = [
+const services: ServiceItem[] = [
     {
-        id: 1,
-        name: "Nail Studio District 1",
-        address: "District 1, Ho Chi Minh City",
-        services: [
-            {
-                id: "classic-manicure",
-                name: "Classic Manicure",
-                description: "Nail shaping, cuticle care and classic polish.",
-                durationMinutes: 30,
-                price: 120000,
-            },
-            {
-                id: "gel-manicure",
-                name: "Gel Manicure",
-                description: "Long-lasting gel color with complete nail care.",
-                durationMinutes: 45,
-                price: 220000,
-            },
-            {
-                id: "classic-pedicure",
-                name: "Classic Pedicure",
-                description: "Foot soak, nail care and a clean classic finish.",
-                durationMinutes: 45,
-                price: 180000,
-            },
-            {
-                id: "nail-art",
-                name: "Nail Art",
-                description: "Decorative details and custom designs for your nails.",
-                durationMinutes: 30,
-                price: 150000,
-            },
-        ],
+        id: "classic-manicure",
+        name: "Classic Manicure",
+        description: "Nail shaping, cuticle care and classic polish.",
+        durationMinutes: 30,
+        price: 120000,
     },
     {
-        id: 2,
-        name: "Nail Studio District 3",
-        address: "District 3, Ho Chi Minh City",
-        services: [
-            {
-                id: "classic-manicure-d3",
-                name: "Classic Manicure",
-                description: "Nail shaping, cuticle care and classic polish.",
-                durationMinutes: 30,
-                price: 120000,
-            },
-            {
-                id: "gel-manicure-d3",
-                name: "Gel Manicure",
-                description: "Long-lasting gel color with complete nail care.",
-                durationMinutes: 45,
-                price: 220000,
-            },
-            {
-                id: "spa-pedicure",
-                name: "Spa Pedicure",
-                description: "Extended foot care with nail shaping and polish.",
-                durationMinutes: 60,
-                price: 260000,
-            },
-            {
-                id: "nail-art-d3",
-                name: "Nail Art",
-                description: "Decorative details and custom designs for your nails.",
-                durationMinutes: 30,
-                price: 150000,
-            },
-        ],
+        id: "gel-manicure",
+        name: "Gel Manicure",
+        description: "Long-lasting gel color with complete nail care.",
+        durationMinutes: 45,
+        price: 220000,
+    },
+    {
+        id: "classic-pedicure",
+        name: "Classic Pedicure",
+        description: "Foot soak, nail care and a clean classic finish.",
+        durationMinutes: 45,
+        price: 180000,
+    },
+    {
+        id: "nail-art",
+        name: "Nail Art",
+        description: "Decorative details and custom designs for your nails.",
+        durationMinutes: 30,
+        price: 150000,
+    },
+    {
+        id: "spa-pedicure",
+        name: "Spa Pedicure",
+        description: "Relaxing foot care, nail shaping and polished finish.",
+        durationMinutes: 60,
+        price: 260000,
+    },
+    {
+        id: "gel-pedicure",
+        name: "Gel Pedicure",
+        description: "Complete pedicure finished with long-lasting gel color.",
+        durationMinutes: 60,
+        price: 280000,
+    },
+    {
+        id: "nail-extension",
+        name: "Nail Extension",
+        description: "Add length and shape with a polished extension finish.",
+        durationMinutes: 75,
+        price: 350000,
+    },
+    {
+        id: "gel-removal",
+        name: "Gel Removal",
+        description: "Gentle removal of existing gel polish and nail cleanup.",
+        durationMinutes: 20,
+        price: 80000,
     },
 ];
 
@@ -100,128 +77,132 @@ function ServicesPage() {
         <main className="min-h-[70vh]">
             <section className="border-b border-stone-200 bg-white">
                 <div className="mx-auto max-w-7xl px-6 py-12 lg:py-16">
-                    <p className="text-sm font-semibold uppercase tracking-[0.2em] text-stone-500">
-                        Nail care
-                    </p>
-
-                    <div className="mt-3 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+                    <div className="flex items-start justify-between gap-6">
                         <div>
-                            <h1 className="max-w-3xl text-4xl font-semibold tracking-tight sm:text-5xl">
-                                Services for your next visit.
+                            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-stone-500">
+                                Nail care
+                            </p>
+
+                            <h1 className="mt-3 text-4xl font-semibold tracking-tight sm:text-5xl">
+                                Our services
                             </h1>
 
                             <p className="mt-5 max-w-2xl text-lg leading-8 text-stone-600">
-                                Explore available nail treatments, estimated duration and pricing at each Nail Studio location.
+                                Explore nail treatments, estimated duration and pricing available at Nail Studio.
                             </p>
                         </div>
 
-                        <Link
-                            to="/book"
-                            className="w-fit shrink-0 rounded-full bg-stone-900 px-6 py-3 font-medium text-white transition hover:bg-stone-700"
+                        <button
+                            type="button"
+                            className="mt-1 hidden shrink-0 items-center gap-2 rounded-full border border-stone-300 bg-white px-4 py-2.5 text-sm font-medium text-stone-700 transition hover:bg-stone-100 sm:flex"
                         >
-                            Book appointment
-                        </Link>
+                            <span className="h-2 w-2 rounded-full bg-emerald-500" />
+
+                            <span>
+                                District 1
+                            </span>
+
+                            <svg
+                                viewBox="0 0 20 20"
+                                fill="none"
+                                className="h-4 w-4 text-stone-400"
+                                aria-hidden="true"
+                            >
+                                <path
+                                    d="M6 8L10 12L14 8"
+                                    stroke="currentColor"
+                                    strokeWidth="1.7"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                />
+                            </svg>
+                        </button>
                     </div>
+
+                    <button
+                        type="button"
+                        className="mt-6 flex items-center gap-2 rounded-full border border-stone-300 bg-white px-4 py-2.5 text-sm font-medium text-stone-700 transition hover:bg-stone-100 sm:hidden"
+                    >
+                        <span className="h-2 w-2 rounded-full bg-emerald-500" />
+
+                        <span>
+                            District 1
+                        </span>
+
+                        <svg
+                            viewBox="0 0 20 20"
+                            fill="none"
+                            className="h-4 w-4 text-stone-400"
+                            aria-hidden="true"
+                        >
+                            <path
+                                d="M6 8L10 12L14 8"
+                                stroke="currentColor"
+                                strokeWidth="1.7"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            />
+                        </svg>
+                    </button>
                 </div>
             </section>
 
-            <section className="mx-auto max-w-7xl px-6 py-12">
-                <div className="space-y-16">
-                    {branches.map((branch, branchIndex) => {
+            <section className="mx-auto max-w-7xl px-6 py-12 lg:py-16">
+                <div className="mb-8 flex items-end justify-between gap-6">
+                    <div>
+                        <h2 className="text-2xl font-semibold tracking-tight">
+                            Available treatments
+                        </h2>
+
+                        <p className="mt-2 text-sm text-stone-500">
+                            Showing services available at District 1.
+                        </p>
+                    </div>
+
+                    <p className="hidden text-sm text-stone-400 sm:block">
+                        {services.length} services
+                    </p>
+                </div>
+
+                <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    {services.map((service) => {
                         return (
-                            <section key={branch.id}>
-                                <div className="flex flex-col gap-5 border-b border-stone-200 pb-6 sm:flex-row sm:items-end sm:justify-between">
-                                    <div>
-                                        <p className="text-sm font-medium text-stone-400">
-                                            Location {String(branchIndex + 1).padStart(2, "0")}
-                                        </p>
+                            <article
+                                key={service.id}
+                                className="group flex flex-col overflow-hidden rounded-3xl border border-stone-200 bg-white transition hover:border-stone-400"
+                            >
+                                <div className="relative flex h-48 items-center justify-center overflow-hidden bg-stone-200">
+                                    <span className="text-sm text-stone-500">
+                                        Service image
+                                    </span>
 
-                                        <h2 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
-                                            {branch.name}
-                                        </h2>
+                                    <span className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1.5 text-xs font-medium text-stone-600 backdrop-blur">
+                                        {service.durationMinutes} min
+                                    </span>
+                                </div>
 
-                                        <p className="mt-2 text-sm text-stone-500">
-                                            {branch.address}
-                                        </p>
-                                    </div>
+                                <div className="flex flex-1 flex-col p-5">
+                                    <h3 className="text-lg font-semibold">
+                                        {service.name}
+                                    </h3>
 
-                                    <div className="flex items-center gap-2 text-sm text-stone-500">
-                                        <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                                    <p className="mt-2 flex-1 text-sm leading-6 text-stone-500">
+                                        {service.description}
+                                    </p>
 
-                                        <span>
-                                            Open daily · 09:00–21:00
+                                    <div className="mt-6 flex items-end justify-between border-t border-stone-100 pt-4">
+                                        <span className="text-sm text-stone-500">
+                                            Price
+                                        </span>
+
+                                        <span className="text-lg font-semibold">
+                                            {formatPrice(service.price)}
                                         </span>
                                     </div>
                                 </div>
-
-                                <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-                                    {branch.services.map((service) => {
-                                        return (
-                                            <article
-                                                key={service.id}
-                                                className="group flex flex-col overflow-hidden rounded-3xl border border-stone-200 bg-white transition hover:border-stone-400"
-                                            >
-                                                <div className="relative flex h-44 items-center justify-center overflow-hidden bg-stone-200">
-                                                    <span className="text-sm text-stone-500">
-                                                        Service image
-                                                    </span>
-
-                                                    <span className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1.5 text-xs font-medium text-stone-600 backdrop-blur">
-                                                        {service.durationMinutes} min
-                                                    </span>
-                                                </div>
-
-                                                <div className="flex flex-1 flex-col p-5">
-                                                    <h3 className="text-lg font-semibold">
-                                                        {service.name}
-                                                    </h3>
-
-                                                    <p className="mt-2 flex-1 text-sm leading-6 text-stone-500">
-                                                        {service.description}
-                                                    </p>
-
-                                                    <div className="mt-6 flex items-center justify-between border-t border-stone-100 pt-4">
-                                                        <span className="text-sm text-stone-500">
-                                                            From
-                                                        </span>
-
-                                                        <span className="font-semibold">
-                                                            {formatPrice(service.price)}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </article>
-                                        );
-                                    })}
-                                </div>
-                            </section>
+                            </article>
                         );
                     })}
-                </div>
-            </section>
-
-            <section className="border-t border-stone-200 bg-white">
-                <div className="mx-auto grid max-w-7xl gap-8 px-6 py-12 lg:grid-cols-[1fr_auto] lg:items-center">
-                    <div>
-                        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-stone-500">
-                            Ready to book?
-                        </p>
-
-                        <h2 className="mt-2 text-3xl font-semibold tracking-tight">
-                            Choose your salon, services and available time.
-                        </h2>
-
-                        <p className="mt-3 max-w-2xl leading-7 text-stone-600">
-                            You do not need to choose a nail technician. An available staff member will be assigned automatically.
-                        </p>
-                    </div>
-
-                    <Link
-                        to="/book"
-                        className="w-fit rounded-full bg-stone-900 px-6 py-3 font-medium text-white transition hover:bg-stone-700"
-                    >
-                        Start booking
-                    </Link>
                 </div>
             </section>
         </main>
