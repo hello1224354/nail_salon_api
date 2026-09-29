@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 interface AdminService {
     id: string;
     branch: string;
@@ -105,12 +107,12 @@ function AdminServicesPage() {
                             </p>
                         </div>
 
-                        <button
-                            type="button"
+                        <Link
+                            to="/admin/services/new"
                             className="w-fit rounded-full bg-stone-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-stone-700"
                         >
                             Add service
-                        </button>
+                        </Link>
                     </div>
                 </div>
             </section>
@@ -288,12 +290,12 @@ function AdminServicesPage() {
                                     </div>
 
                                     <div className="lg:text-right">
-                                        <button
-                                            type="button"
-                                            className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-medium transition hover:bg-stone-100"
+                                        <Link
+                                            to={`/admin/services/${service.id}/edit`}
+                                            className="inline-flex rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-medium transition hover:bg-stone-100"
                                         >
                                             Edit
-                                        </button>
+                                        </Link>
                                     </div>
                                 </article>
                             );

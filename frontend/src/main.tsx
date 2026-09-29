@@ -20,6 +20,7 @@ import RegisterPage from "./pages/RegisterPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import AdminAppointmentsPage from "./pages/admin/AdminAppointmentsPage";
 import AdminServicesPage from "./pages/admin/AdminServicesPage";
+import AdminServiceFormPage from "./pages/admin/AdminServiceFormPage";
 import AdminBranchesPage from "./pages/admin/AdminBranchesPage";
 import AdminStaffPage from "./pages/admin/AdminStaffPage";
 
@@ -49,6 +50,16 @@ createRoot(document.getElementById("root")!).render(
                     <Route
                         path="services"
                         element={<AdminServicesPage />}
+                    />
+
+                    <Route
+                        path="services/new"
+                        element={<AdminServiceFormPage />}
+                    />
+
+                    <Route
+                        path="services/:id/edit"
+                        element={<AdminServiceFormPage />}
                     />
 
                     <Route
