@@ -33,6 +33,13 @@ function AdminLayout() {
                     >
                         Appointments
                     </NavLink>
+
+                    <NavLink
+                        to="/admin/services"
+                        className={navClassName}
+                    >
+                        Services
+                    </NavLink>
                 </nav>
             </header>
 
@@ -61,15 +68,12 @@ function AdminLayout() {
                                 Appointments
                             </NavLink>
 
-                            <div className="flex items-center justify-between rounded-xl px-4 py-3 text-sm font-medium text-stone-400">
-                                <span>
-                                    Services
-                                </span>
-
-                                <span className="text-[10px] uppercase tracking-wider">
-                                    Soon
-                                </span>
-                            </div>
+                            <NavLink
+                                to="/admin/services"
+                                className={navClassName}
+                            >
+                                Services
+                            </NavLink>
 
                             <div className="flex items-center justify-between rounded-xl px-4 py-3 text-sm font-medium text-stone-400">
                                 <span>
