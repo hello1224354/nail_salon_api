@@ -47,6 +47,13 @@ function AdminLayout() {
                     >
                         Branches
                     </NavLink>
+
+                    <NavLink
+                        to="/admin/staff"
+                        className={navClassName}
+                    >
+                        Staff
+                    </NavLink>
                 </nav>
             </header>
 
@@ -89,15 +96,12 @@ function AdminLayout() {
                                 Branches
                             </NavLink>
 
-                            <div className="flex items-center justify-between rounded-xl px-4 py-3 text-sm font-medium text-stone-400">
-                                <span>
-                                    Staff
-                                </span>
-
-                                <span className="text-[10px] uppercase tracking-wider">
-                                    Soon
-                                </span>
-                            </div>
+                            <NavLink
+                                to="/admin/staff"
+                                className={navClassName}
+                            >
+                                Staff
+                            </NavLink>
                         </div>
                     </nav>
 
