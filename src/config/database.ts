@@ -19,5 +19,6 @@ export const AppDataSource = new DataSource({
     synchronize: env.DB_SYNCHRONIZE,
     logging: env.DB_LOGGING,
     entities: [Service, Staff, Appointment, AppointmentService, User, Branch, StaffBookingSlot, AuditLog],
+    migrations: [__dirname + "/../migrations/**/*{.js,.ts}"],
     timezone: "Z",
 });
