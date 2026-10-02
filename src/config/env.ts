@@ -39,15 +39,18 @@ function asRequiredString(name: string): string {
     return raw.trim();
 }
 
+const isProduction = process.env.NODE_ENV === "production";
+
 export const env = {
+    NODE_ENV: process.env.NODE_ENV ?? "development",
     PORT: asInt("PORT", 3000),
     DB_HOST: process.env.DB_HOST ?? "localhost",
     DB_PORT: asInt("DB_PORT", 3306),
     DB_USER: process.env.DB_USER ?? "root",
     DB_PASSWORD: process.env.DB_PASSWORD ?? "REMOVED_DEV_PASSWORD",
     DB_NAME: process.env.DB_NAME ?? "nail_salon_db",
-    DB_SYNCHRONIZE: asBool("DB_SYNCHRONIZE", true),
-    DB_LOGGING: asBool("DB_LOGGING", true),
+    DB_SYNCHRONIZE: isProduction ? false : asBool("DB_SYNCHRONIZE", true),
+    DB_LOGGING: isProduction ? false : asBool("DB_LOGGING", true),
     JWT_SECRET: asRequiredString("JWT_SECRET"),
     JWT_EXPIRES_IN_SECONDS: asInt("JWT_EXPIRES_IN_SECONDS", 3600),
 };
