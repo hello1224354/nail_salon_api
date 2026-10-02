@@ -7,6 +7,7 @@ import { env } from "./env";
 import { AppointmentService } from "../modules/appointments/appointment-services.entity";
 import { Branch } from "../modules/branches/branches.entity";
 import { StaffBookingSlot } from "../modules/appointments/staff-booking-slots.entity";
+import { AuditLog } from "../modules/audit/audit-log.entity";
 
 export const AppDataSource = new DataSource({
     type: "mysql",
@@ -17,6 +18,6 @@ export const AppDataSource = new DataSource({
     database: env.DB_NAME,
     synchronize: env.DB_SYNCHRONIZE,
     logging: env.DB_LOGGING,
-    entities: [Service, Staff, Appointment, AppointmentService, User, Branch, StaffBookingSlot],
+    entities: [Service, Staff, Appointment, AppointmentService, User, Branch, StaffBookingSlot, AuditLog],
     timezone: "Z",
 });

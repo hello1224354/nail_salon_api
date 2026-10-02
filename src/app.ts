@@ -6,6 +6,7 @@ import appointmentRoutes from "./modules/appointments/appointments.routes";
 import userRoutes from "./modules/users/users.routes";
 import branchRoutes from "./modules/branches/branches.routes";
 import { errorHandler } from "./common/error-handler";
+import { auditMutation } from "./common/middleware/audit.middleware";
 
 export const app = express();
 app.use((req, res, next) => {
@@ -17,6 +18,7 @@ app.use((req, res, next) => {
     next();
 });
 app.use(express.json());
+app.use(auditMutation);
 app.use("/api/services", serviceRoutes);
 app.use("/api/staffs", staffRoutes);
 app.use("/api/appointments", appointmentRoutes);
