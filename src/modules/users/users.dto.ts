@@ -52,6 +52,8 @@ export function parseRegisterUserDto(body: unknown): RegisterUserDto {
     if (typeof data.password !== "string") throw new AppError("Password must be a string", 400, "VALIDATION_ERROR");
 
     if (data.password.length < 8) throw new AppError("Password must be at least 8 characters", 400, "VALIDATION_ERROR");
+    
+    if (Buffer.byteLength(data.password, "utf8") > 72) throw new AppError("Password is too long", 400, "VALIDATION_ERROR");
 
     return {
         full_name: fullName,
@@ -73,6 +75,8 @@ export function parseLoginUserDto(body: unknown): LoginUserDto {
     if (!/^\+84\d{9}$/.test(phone)) throw new AppError("Phone must be a valid Vietnamese phone number", 400, "VALIDATION_ERROR");
 
     if (typeof data.password !== "string" || data.password.length === 0) throw new AppError("Password must be a non-empty string", 400, "VALIDATION_ERROR");
+
+    if (Buffer.byteLength(data.password, "utf8") > 72) throw new AppError("Password is too long", 400, "VALIDATION_ERROR");
 
     return {
         phone,

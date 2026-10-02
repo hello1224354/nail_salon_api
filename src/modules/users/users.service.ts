@@ -50,11 +50,11 @@ export const loginUser = async (data: LoginUserDto) => {
 
     if (!user) throw new AppError("Invalid phone or password", 401, "INVALID_CREDENTIALS");
 
-    if (!user.is_active) throw new AppError("User account is inactive", 403, "USER_INACTIVE");
-
     const passwordMatches = await bcrypt.compare(data.password, user.password_hash);
 
     if (!passwordMatches) throw new AppError("Invalid phone or password", 401, "INVALID_CREDENTIALS");
+
+    if (!user.is_active) throw new AppError("User account is inactive", 403, "USER_INACTIVE");
 
     const accessToken = jwt.sign(
         {
