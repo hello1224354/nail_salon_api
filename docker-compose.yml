@@ -3,9 +3,7 @@ services:
     image: mysql:8.0
     container_name: nail_salon_db
     environment:
-      MYSQL_ROOT_PASSWORD: REMOVED_DEV_PASSWORD # Mật khẩu cao nhất
-      MYSQL_DATABASE: nail_salon_db          # Tự động tạo DB tên này
-      MYSQL_USER: admin                      # Tạo sẵn 1 user
-      MYSQL_PASSWORD: REMOVED_DEV_PASSWORD         # Mật khẩu user
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
     ports:
-      - "3306:3306" # Mở cổng để code Node.js chọc vào được
+      - "3306:3306"

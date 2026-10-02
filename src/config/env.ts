@@ -47,7 +47,7 @@ export const env = {
     DB_HOST: process.env.DB_HOST ?? "localhost",
     DB_PORT: asInt("DB_PORT", 3306),
     DB_USER: process.env.DB_USER ?? "root",
-    DB_PASSWORD: process.env.DB_PASSWORD ?? "REMOVED_DEV_PASSWORD",
+    DB_PASSWORD: asRequiredString("DB_PASSWORD"),
     DB_NAME: process.env.DB_NAME ?? "nail_salon_db",
     DB_SYNCHRONIZE: isProduction ? false : asBool("DB_SYNCHRONIZE", true),
     DB_LOGGING: isProduction ? false : asBool("DB_LOGGING", true),
