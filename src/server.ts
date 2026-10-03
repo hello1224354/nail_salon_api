@@ -5,6 +5,17 @@ import { env } from "./config/env";
 
 async function startServer() {
     await AppDataSource.initialize();
+
+    if (env.NODE_ENV === "production") {
+        const hasPendingMigrations = await AppDataSource.showMigrations();
+
+        if (hasPendingMigrations) {
+            throw new Error(
+                "Pending database migrations. Run migrations before starting the server"
+            );
+        }
+    }
+
     const server = app.listen(env.PORT, () => {
         console.log("Server is running on port: ", env.PORT);
     });
