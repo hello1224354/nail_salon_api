@@ -19,6 +19,11 @@ app.use((req, res, next) => {
 });
 app.use(express.json());
 app.use(auditMutation);
+app.get("/health", (req, res) => {
+    return res.status(200).json({
+        status: "ok",
+    });
+});
 app.use("/api/services", serviceRoutes);
 app.use("/api/staffs", staffRoutes);
 app.use("/api/appointments", appointmentRoutes);
