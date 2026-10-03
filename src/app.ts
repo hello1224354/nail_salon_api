@@ -1,3 +1,5 @@
+import cors from "cors";
+import { env } from "./config/env";
 import express from "express";
 import { randomUUID } from "crypto";
 import serviceRoutes from "./modules/services/services.routes";
@@ -17,6 +19,9 @@ app.use((req, res, next) => {
 
     next();
 });
+app.use(cors({
+    origin: env.CORS_ORIGIN,
+}));
 app.use(express.json());
 app.use(auditMutation);
 app.get("/health", (req, res) => {

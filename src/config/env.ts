@@ -44,6 +44,7 @@ const isProduction = process.env.NODE_ENV === "production";
 export const env = {
     NODE_ENV: process.env.NODE_ENV ?? "development",
     PORT: asInt("PORT", 3000),
+    CORS_ORIGIN: process.env.CORS_ORIGIN ?? "http://localhost:3001",
     DB_HOST: process.env.DB_HOST ?? "localhost",
     DB_PORT: asInt("DB_PORT", 3306),
     DB_USER: process.env.DB_USER ?? "root",
