@@ -1,24 +1,126 @@
 @import "tailwindcss";
 
 :root {
-    --background: #f7f2ee;
-    --foreground: #1f1f1f;
+    --background: #f6f3ee;
+    --foreground: #302823;
+    --muted: #70645b;
+    --accent: #986a58;
+    --line: #ddd4ca;
+    --surface: #ffffff;
+    --tint: #eee3dc;
+    --dark: #2d2723;
 
-    --font-ui: Arial, Helvetica, sans-serif;
-    --font-display: Georgia, "Times New Roman", serif;
+    --font-ui: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    --font-display: "Noto Serif Display", "Palatino Linotype", "Book Antiqua", "Noto Serif", Palatino, serif;
 }
 
 @theme inline {
     --color-background: var(--background);
     --color-foreground: var(--foreground);
+    --color-cream: var(--background);
+    --color-ink: var(--foreground);
+    --color-muted: var(--muted);
+    --color-accent: var(--accent);
+    --color-line: var(--line);
+    --color-surface: var(--surface);
+    --color-tint: var(--tint);
+    --color-studio-dark: var(--dark);
 
     --font-sans: var(--font-ui);
     --font-serif: var(--font-display);
 }
 
+* {
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
 body {
     margin: 0;
+    min-width: 320px;
     background: var(--background);
     color: var(--foreground);
     font-family: var(--font-ui);
+    text-rendering: optimizeLegibility;
+    font-kerning: normal;
+}
+
+.font-serif {
+    letter-spacing: -0.022em;
+}
+
+.site-shell {
+    width: calc(100% - 40px);
+    max-width: 1600px;
+    margin-inline: auto;
+}
+
+@media (min-width: 640px) {
+    .site-shell {
+        width: calc(100% - 64px);
+    }
+}
+
+@media (min-width: 1024px) {
+    .site-shell {
+        width: calc(100% - 80px);
+    }
+}
+
+button,
+a,
+input,
+textarea,
+select {
+    -webkit-tap-highlight-color: transparent;
+}
+
+button,
+select {
+    font: inherit;
+}
+
+::selection {
+    background: #dcc8bd;
+    color: var(--foreground);
+}
+
+.focus-ring:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+}
+
+@keyframes booking-success-backdrop-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes booking-success-rise {
+    from {
+        opacity: 0;
+        transform: translateY(56px) scale(0.985);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.booking-success-overlay {
+    animation: booking-success-backdrop-in 220ms ease-out both;
+    backdrop-filter: blur(2px);
+}
+
+.booking-success-panel {
+    animation: booking-success-rise 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .booking-success-overlay,
+    .booking-success-panel {
+        animation: none;
+    }
 }
