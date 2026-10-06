@@ -42,7 +42,8 @@ async function executeRequest<T>(
         headers.set("Authorization", `Bearer ${token}`);
     }
 
-    const response = await fetch(`${config.API_BASE_URL}${path}`, {
+    const baseUrl = typeof window === "undefined" ? config.API_BASE_URL : "";
+    const response = await fetch(`${baseUrl}${path}`, {
         ...init,
         headers,
         credentials: "include",
