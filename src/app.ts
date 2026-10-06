@@ -7,6 +7,7 @@ import staffRoutes from "./modules/staffs/staffs.routes";
 import appointmentRoutes from "./modules/appointments/appointments.routes";
 import userRoutes from "./modules/users/users.routes";
 import branchRoutes from "./modules/branches/branches.routes";
+import offerRoutes from "./modules/offers/offers.routes";
 import { errorHandler } from "./common/error-handler";
 import { auditMutation } from "./common/middleware/audit.middleware";
 
@@ -34,6 +35,7 @@ app.use("/api/staffs", staffRoutes);
 app.use("/api/appointments", appointmentRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/branches", branchRoutes);
+app.use("/api/offers", offerRoutes);
 app.use((req, res) => {
     return res.status(404).json({
         error: {
