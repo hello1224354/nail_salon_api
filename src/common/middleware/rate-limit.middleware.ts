@@ -22,6 +22,16 @@ export const registerRateLimiter = rateLimit({
     },
 });
 
+export const mfaRateLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: () => {
+        throw new AppError("Too many MFA attempts. Try again later", 429, "RATE_LIMIT_EXCEEDED");
+    },
+});
+
 export const passwordRecoveryRateLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     limit: 5,
