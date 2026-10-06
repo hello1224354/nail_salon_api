@@ -493,7 +493,11 @@ export const getAppointment = async (id: string, userId: string, role: UserRole)
             id: id,
         },
         relations: {
-            staff: true,
+            user: true,
+            branch: true,
+            staff: {
+                user: true,
+            },
             appointment_services: true,
         },
     });
