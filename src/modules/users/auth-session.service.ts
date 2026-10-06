@@ -99,7 +99,7 @@ export async function refreshSession(refreshToken: string, fingerprint: SessionF
     const sessionId = getSessionId(refreshToken);
     if (!sessionId) throw new AppError("Invalid refresh session", 401, "INVALID_REFRESH_SESSION");
 
-    return await AppDataSource.transaction(async (manager) => {
+    const result = await AppDataSource.transaction(async (manager) => {
         const sessionRepo = manager.getRepository(RefreshSession);
         const transactionUserRepo = manager.getRepository(User);
 
@@ -109,7 +109,11 @@ export async function refreshSession(refreshToken: string, fingerprint: SessionF
         });
 
         if (!session || !tokenHashMatches(refreshToken, session.token_hash)) {
-            throw new AppError("Invalid refresh session", 401, "INVALID_REFRESH_SESSION");
+            return {
+                kind: "error" as const,
+                code: "INVALID_REFRESH_SESSION",
+                message: "Invalid refresh session",
+            };
         }
 
         if (session.revoked_at) {
@@ -118,16 +122,30 @@ export async function refreshSession(refreshToken: string, fingerprint: SessionF
                     { family_id: session.family_id, revoked_at: IsNull() },
                     { revoked_at: new Date() }
                 );
-                throw new AppError("Refresh token reuse detected", 401, "REFRESH_TOKEN_REUSE");
+
+                return {
+                    kind: "error" as const,
+                    code: "REFRESH_TOKEN_REUSE",
+                    message: "Refresh token reuse detected",
+                };
             }
 
-            throw new AppError("Refresh session is revoked", 401, "INVALID_REFRESH_SESSION");
+            return {
+                kind: "error" as const,
+                code: "INVALID_REFRESH_SESSION",
+                message: "Refresh session is revoked",
+            };
         }
 
         if (session.expires_at.getTime() <= Date.now()) {
             session.revoked_at = new Date();
             await sessionRepo.save(session);
-            throw new AppError("Refresh session expired", 401, "INVALID_REFRESH_SESSION");
+
+            return {
+                kind: "error" as const,
+                code: "INVALID_REFRESH_SESSION",
+                message: "Refresh session expired",
+            };
         }
 
         const user = await transactionUserRepo.findOneBy({ id: session.user_id });
@@ -136,7 +154,12 @@ export async function refreshSession(refreshToken: string, fingerprint: SessionF
                 { family_id: session.family_id, revoked_at: IsNull() },
                 { revoked_at: new Date() }
             );
-            throw new AppError("Refresh session is no longer valid", 401, "INVALID_REFRESH_SESSION");
+
+            return {
+                kind: "error" as const,
+                code: "INVALID_REFRESH_SESSION",
+                message: "Refresh session is no longer valid",
+            };
         }
 
         const newSessionId = randomUUID();
@@ -160,6 +183,7 @@ export async function refreshSession(refreshToken: string, fingerprint: SessionF
         await sessionRepo.save(session);
 
         return {
+            kind: "ok" as const,
             user,
             accessToken: signAccessToken(user),
             refreshToken: newRefreshToken,
@@ -167,6 +191,12 @@ export async function refreshSession(refreshToken: string, fingerprint: SessionF
             familyId: replacement.family_id,
         };
     });
+
+    if (result.kind === "error") {
+        throw new AppError(result.message, 401, result.code);
+    }
+
+    return result;
 }
 
 export async function revokeRefreshSession(refreshToken: string) {
