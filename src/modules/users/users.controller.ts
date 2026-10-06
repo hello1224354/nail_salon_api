@@ -15,6 +15,7 @@ import { UserRole } from "./users.entity";
 import {
     SecurityEventType,
     countRecentIdentifierEvents,
+    countRecentIpEvents,
     createSecurityEvent,
     hashSensitive,
 } from "../audit/security-event.service";
@@ -23,6 +24,10 @@ import { clearRefreshCookie, readRefreshCookie, setRefreshCookie } from "./sessi
 
 const ACCOUNT_LOGIN_WINDOW_MS = 30 * 60 * 1000;
 const ACCOUNT_LOGIN_FAILURE_LIMIT = 10;
+const IP_LOGIN_WINDOW_MS = 15 * 60 * 1000;
+const IP_LOGIN_FAILURE_LIMIT = 5;
+const MFA_SEND_WINDOW_MS = 15 * 60 * 1000;
+const MFA_SEND_LIMIT = 5;
 
 function publicUser(user: {
     id: string;
@@ -83,13 +88,28 @@ export const loginUser = async (req: Request, res: Response) => {
         since
     );
 
-    if (failedAttempts >= ACCOUNT_LOGIN_FAILURE_LIMIT) {
+    const ipFailedAttempts = context.ip
+        ? await countRecentIpEvents(
+              SecurityEventType.LOGIN_FAILED,
+              context.ip,
+              new Date(Date.now() - IP_LOGIN_WINDOW_MS)
+          )
+        : 0;
+
+    if (
+        failedAttempts >= ACCOUNT_LOGIN_FAILURE_LIMIT ||
+        ipFailedAttempts >= IP_LOGIN_FAILURE_LIMIT
+    ) {
         await createSecurityEvent({
             event_type: SecurityEventType.LOGIN_RATE_LIMITED,
             request_id: context.requestId,
             identifier: credentials.phone,
             ip: context.ip,
             user_agent: context.userAgent,
+            detail:
+                ipFailedAttempts >= IP_LOGIN_FAILURE_LIMIT
+                    ? "db_ip_limit"
+                    : "db_account_limit",
         });
 
         throw new AppError("Too many login attempts. Try again later", 429, "RATE_LIMIT_EXCEEDED");
@@ -99,6 +119,30 @@ export const loginUser = async (req: Request, res: Response) => {
         const user = await userService.loginUser(credentials);
 
         if (user.role === UserRole.ADMIN) {
+            const recentMfaSends = await countRecentIdentifierEvents(
+                SecurityEventType.MFA_CHALLENGE_SENT,
+                credentials.phone,
+                new Date(Date.now() - MFA_SEND_WINDOW_MS)
+            );
+
+            if (recentMfaSends >= MFA_SEND_LIMIT) {
+                await createSecurityEvent({
+                    event_type: SecurityEventType.LOGIN_RATE_LIMITED,
+                    request_id: context.requestId,
+                    user_id: user.id,
+                    identifier: credentials.phone,
+                    ip: context.ip,
+                    user_agent: context.userAgent,
+                    detail: "mfa_send_limit",
+                });
+
+                throw new AppError(
+                    "Too many verification codes requested. Try again later",
+                    429,
+                    "RATE_LIMIT_EXCEEDED"
+                );
+            }
+
             const challenge = await loginMfaService.createLoginMfaChallenge(user);
 
             await createSecurityEvent({
