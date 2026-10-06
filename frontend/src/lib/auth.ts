@@ -1,3 +1,5 @@
+import { config } from "@/lib/config";
+
 export type AuthUser = {
     id: string;
     full_name: string;
@@ -7,38 +9,111 @@ export type AuthUser = {
     is_active: boolean;
 };
 
-const ACCESS_TOKEN_KEY = "ns_nail_access_token";
-const AUTH_USER_KEY = "ns_nail_auth_user";
+type RefreshResponse = {
+    success?: {
+        data?: {
+            access_token?: string;
+            user?: AuthUser;
+        };
+    };
+};
+
 export const AUTH_CHANGED_EVENT = "ns-nail-auth-changed";
 
+let accessToken: string | null = null;
+let authUser: AuthUser | null = null;
+let refreshPromise: Promise<boolean> | null = null;
+
 function emitAuthChanged() {
-    window.dispatchEvent(new Event(AUTH_CHANGED_EVENT));
+    if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event(AUTH_CHANGED_EVENT));
+    }
 }
 
-export function saveSession(accessToken: string, user: AuthUser) {
-    sessionStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
-    sessionStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
+export function saveSession(nextAccessToken: string, user: AuthUser) {
+    accessToken = nextAccessToken;
+    authUser = user;
     emitAuthChanged();
 }
 
 export function getAccessToken() {
-    return sessionStorage.getItem(ACCESS_TOKEN_KEY);
+    return accessToken;
 }
 
-export function getAuthUser(): AuthUser | null {
-    const value = sessionStorage.getItem(AUTH_USER_KEY);
-    if (!value) return null;
-
-    try {
-        return JSON.parse(value) as AuthUser;
-    } catch {
-        clearSession();
-        return null;
-    }
+export function getAuthUser() {
+    return authUser;
 }
 
 export function clearSession() {
-    sessionStorage.removeItem(ACCESS_TOKEN_KEY);
-    sessionStorage.removeItem(AUTH_USER_KEY);
+    accessToken = null;
+    authUser = null;
     emitAuthChanged();
+}
+
+async function performRefresh() {
+    if (typeof window === "undefined") return false;
+
+    try {
+        const response = await fetch(`${config.API_BASE_URL}/api/users/session/refresh`, {
+            method: "POST",
+            credentials: "include",
+            headers: {
+                Accept: "application/json",
+            },
+            cache: "no-store",
+        });
+
+        const body = (await response.json().catch(() => null)) as RefreshResponse | null;
+        const data = body?.success?.data;
+
+        if (
+            !response.ok ||
+            !data ||
+            typeof data.access_token !== "string" ||
+            !data.user
+        ) {
+            clearSession();
+            return false;
+        }
+
+        saveSession(data.access_token, data.user);
+        return true;
+    } catch {
+        clearSession();
+        return false;
+    }
+}
+
+export async function refreshSession() {
+    if (!refreshPromise) {
+        refreshPromise = performRefresh().finally(() => {
+            refreshPromise = null;
+        });
+    }
+
+    return await refreshPromise;
+}
+
+export async function restoreSession() {
+    if (accessToken && authUser) return true;
+    return await refreshSession();
+}
+
+export async function logoutSession() {
+    if (typeof window !== "undefined") {
+        try {
+            await fetch(`${config.API_BASE_URL}/api/users/session/logout`, {
+                method: "POST",
+                credentials: "include",
+                headers: {
+                    Accept: "application/json",
+                },
+                cache: "no-store",
+            });
+        } catch {
+            // Clear local in-memory state even if the network request fails.
+        }
+    }
+
+    clearSession();
 }
