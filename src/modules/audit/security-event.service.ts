@@ -51,10 +51,14 @@ export async function createSecurityEvent(input: {
 }
 
 export async function countRecentIdentifierEvents(eventType: string, identifier: string, since: Date) {
+    const identifierHash = hashSensitive(identifier);
+
+    if (!identifierHash) return 0;
+
     return await securityEventRepo.count({
         where: {
             event_type: eventType,
-            identifier_hash: hashSensitive(identifier),
+            identifier_hash: identifierHash,
             created_at: MoreThan(since),
         },
     });
