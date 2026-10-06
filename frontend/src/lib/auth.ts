@@ -72,10 +72,14 @@ async function performRefresh() {
     try {
         let result = await requestRefreshOnce();
 
+        const refreshErrorCode =
+            result.body && "error" in result.body
+                ? result.body.error?.code
+                : undefined;
+
         if (
             result.response.status === 409 &&
-            "error" in (result.body ?? {}) &&
-            result.body?.error?.code === "REFRESH_RACE"
+            refreshErrorCode === "REFRESH_RACE"
         ) {
             await new Promise((resolve) => window.setTimeout(resolve, 150));
             result = await requestRefreshOnce();
