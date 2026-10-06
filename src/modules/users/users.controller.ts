@@ -244,7 +244,9 @@ export const refreshSession = async (req: Request, res: Response) => {
             }
         });
     } catch (error) {
-        clearRefreshCookie(res);
+        if (!(error instanceof AppError && error.code === "REFRESH_RACE")) {
+            clearRefreshCookie(res);
+        }
 
         if (error instanceof AppError && error.code === "REFRESH_TOKEN_REUSE") {
             await createSecurityEvent({
