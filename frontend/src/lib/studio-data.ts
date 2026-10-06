@@ -9,15 +9,15 @@ export type StudioService = Service & {
 };
 
 export const studio = {
-    name: "NS Nail Studio",
-    branch: "Quận 1",
-    address: "12 Lê Lợi, Quận 1, TP. Hồ Chí Minh",
-    hours: "Hằng ngày 09:00–21:00",
-    phoneDisplay: "+84 28 1234 5678",
-    phoneHref: "tel:+842812345678",
-    instagramUrl: "https://www.instagram.com/",
+    name: "Serpente Nail Room",
+    branch: "Quận 8",
+    address: "Lô 02.12 - Tầng 2 Pega Square, Chung cư Pegasuite, 1002 Tạ Quang Bửu, P. Bình Đông, TP.HCM",
+    hours: "Hằng ngày 09:00–20:30",
+    phoneDisplay: "081 879 8098",
+    phoneHref: "tel:+84818798098",
+    instagramUrl: "https://www.instagram.com/serpente.nailroom/",
     mapsUrl:
-        "https://www.google.com/maps/search/?api=1&query=12+Le+Loi%2C+Ho+Chi+Minh+City",
+        "https://www.google.com/maps/search/?api=1&query=1002+Ta+Quang+Buu%2C+Ho+Chi+Minh+City",
 } as const;
 
 type ServicePresentation = Pick<StudioService, "category" | "description" | "image"> & {
@@ -85,7 +85,7 @@ export function decorateService(service: Service): StudioService {
     const presentation = servicePresentation[service.name.trim().toLowerCase()] ?? {
         displayName: service.name,
         category: "Nghệ thuật & chăm sóc" as const,
-        description: "Dịch vụ chăm sóc móng chuyên nghiệp tại NS Nail Studio.",
+        description: "Dịch vụ chăm sóc móng chuyên nghiệp tại Serpente Nail Room.",
         image: "/nails/nail-care.png",
     };
 
