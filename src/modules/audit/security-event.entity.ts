@@ -2,6 +2,7 @@ import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn } from 
 
 @Entity("security_events")
 @Index(["event_type", "identifier_hash", "created_at"])
+@Index(["event_type", "ip_hash", "created_at"])
 export class SecurityEvent {
     @PrimaryGeneratedColumn("uuid")
     id: string;
