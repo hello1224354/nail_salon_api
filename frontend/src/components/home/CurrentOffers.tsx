@@ -44,11 +44,22 @@ export function CurrentOffers({ offers }: CurrentOffersProps) {
         if (!emblaApi) return;
         emblaApi.on("select", syncSelectedIndex);
         emblaApi.on("reInit", syncSelectedIndex);
-        autoplay.play();
+        const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+        const syncMotionPreference = () => {
+            if (mediaQuery.matches) {
+                autoplay.stop();
+            } else {
+                autoplay.play();
+            }
+        };
+
+        syncMotionPreference();
+        mediaQuery.addEventListener("change", syncMotionPreference);
 
         return () => {
             emblaApi.off("select", syncSelectedIndex);
             emblaApi.off("reInit", syncSelectedIndex);
+            mediaQuery.removeEventListener("change", syncMotionPreference);
             autoplay.stop();
         };
     }, [autoplay, emblaApi, syncSelectedIndex]);
@@ -138,7 +149,7 @@ export function CurrentOffers({ offers }: CurrentOffersProps) {
                                     fill
                                     priority={index === 0}
                                     sizes="(max-width: 1024px) 100vw, 58vw"
-                                    className="object-cover"
+                                    className="motion-image object-cover"
                                 />
                             </div>
                         </div>
