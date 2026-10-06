@@ -5,10 +5,13 @@ import {
     parseLoginUserDto,
     parseRegisterUserDto,
     parseResetPasswordDto,
+    parseVerifyLoginMfaDto,
 } from "./users.dto";
 import * as userService from "./users.service";
 import * as authSessionService from "./auth-session.service";
 import * as passwordResetService from "./password-reset.service";
+import * as loginMfaService from "./login-mfa.service";
+import { UserRole } from "./users.entity";
 import {
     SecurityEventType,
     countRecentIdentifierEvents,
@@ -94,6 +97,35 @@ export const loginUser = async (req: Request, res: Response) => {
 
     try {
         const user = await userService.loginUser(credentials);
+
+        if (user.role === UserRole.ADMIN) {
+            const challenge = await loginMfaService.createLoginMfaChallenge(user);
+
+            await createSecurityEvent({
+                event_type: SecurityEventType.MFA_CHALLENGE_SENT,
+                request_id: context.requestId,
+                user_id: user.id,
+                identifier: credentials.phone,
+                ip: context.ip,
+                user_agent: context.userAgent,
+            });
+
+            res.setHeader("Cache-Control", "no-store");
+
+            return res.status(202).json({
+                success: {
+                    message: "MFA verification required",
+                    data: {
+                        mfa_required: true,
+                        challenge_id: challenge.challengeId,
+                        masked_email: challenge.maskedEmail,
+                        expires_at: challenge.expiresAt,
+                        user: publicUser(user),
+                    }
+                }
+            });
+        }
+
         const session = await authSessionService.createLoginSession(user, context.fingerprint);
 
         setRefreshCookie(res, session.refreshToken, session.refreshExpiresAt);
@@ -126,6 +158,54 @@ export const loginUser = async (req: Request, res: Response) => {
                 ip: context.ip,
                 user_agent: context.userAgent,
                 detail: error.code,
+            });
+        }
+
+        throw error;
+    }
+};
+
+export const verifyLoginMfa = async (req: Request, res: Response) => {
+    const data = parseVerifyLoginMfaDto(req.body);
+    const context = requestSecurityContext(req, res);
+
+    try {
+        const user = await loginMfaService.verifyLoginMfaChallenge(data.challenge_id, data.code);
+
+        if (user.role !== UserRole.ADMIN) {
+            throw new AppError("Invalid or expired MFA code", 401, "INVALID_MFA_CODE");
+        }
+
+        const session = await authSessionService.createLoginSession(user, context.fingerprint);
+
+        setRefreshCookie(res, session.refreshToken, session.refreshExpiresAt);
+        res.setHeader("Cache-Control", "no-store");
+
+        await createSecurityEvent({
+            event_type: SecurityEventType.LOGIN_SUCCESS,
+            request_id: context.requestId,
+            user_id: user.id,
+            ip: context.ip,
+            user_agent: context.userAgent,
+            detail: "mfa_verified",
+        });
+
+        return res.status(200).json({
+            success: {
+                message: "MFA verified",
+                data: {
+                    access_token: session.accessToken,
+                    user: publicUser(user),
+                }
+            }
+        });
+    } catch (error) {
+        if (error instanceof AppError && error.code === "INVALID_MFA_CODE") {
+            await createSecurityEvent({
+                event_type: SecurityEventType.MFA_FAILED,
+                request_id: context.requestId,
+                ip: context.ip,
+                user_agent: context.userAgent,
             });
         }
 
