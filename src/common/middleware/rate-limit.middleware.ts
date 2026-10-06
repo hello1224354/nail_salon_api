@@ -22,6 +22,26 @@ export const registerRateLimiter = rateLimit({
     },
 });
 
+export const passwordRecoveryRateLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 5,
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: () => {
+        throw new AppError("Too many password recovery attempts. Try again later", 429, "RATE_LIMIT_EXCEEDED");
+    },
+});
+
+export const refreshRateLimiter = rateLimit({
+    windowMs: 5 * 60 * 1000,
+    limit: 60,
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: () => {
+        throw new AppError("Too many session refresh attempts", 429, "RATE_LIMIT_EXCEEDED");
+    },
+});
+
 export const bookingRateLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     limit: 5,
