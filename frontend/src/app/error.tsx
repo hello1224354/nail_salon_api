@@ -8,11 +8,7 @@ export default function ErrorPage({ error, reset }: { error: Error & { digest?: 
     }, [error]);
 
     return (
-        <section
-            className="site-shell flex min-h-[62vh] items-center py-16"
-            data-error-message={error.message}
-            data-error-digest={error.digest ?? ""}
-        >
+        <section className="site-shell flex min-h-[62vh] items-center py-16">
             <div className="max-w-2xl rounded-[24px] border border-line bg-surface p-7 sm:p-10">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">Đã xảy ra lỗi</p>
                 <h1 className="mt-4 font-serif text-4xl tracking-[-0.03em] sm:text-5xl">Trang chưa thể hiển thị.</h1>
