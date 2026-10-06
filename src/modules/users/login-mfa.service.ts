@@ -63,7 +63,7 @@ export async function createLoginMfaChallenge(user: User) {
     try {
         await sendPlainTextEmail(
             user.email,
-            "Mã xác nhận đăng nhập quản trị NS Nail Studio",
+            "Mã xác nhận đăng nhập quản trị Serpente Nail Room",
             [
                 `Mã OTP đăng nhập quản trị của bạn là: ${code}`,
                 "",
