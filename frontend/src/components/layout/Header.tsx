@@ -133,6 +133,14 @@ export function Header() {
                                     >
                                         Lịch của tôi
                                     </Link>
+                                    <Link
+                                        href="/account/security"
+                                        role="menuitem"
+                                        onClick={() => setAccountOpen(false)}
+                                        className="focus-ring block rounded-xl px-3 py-2.5 text-xs font-semibold text-ink transition-colors hover:bg-tint"
+                                    >
+                                        Bảo mật tài khoản
+                                    </Link>
                                     <button
                                         type="button"
                                         role="menuitem"
@@ -221,6 +229,13 @@ export function Header() {
                                         className="focus-ring mb-2 block w-full rounded-full border border-line px-5 py-3 text-center text-xs font-semibold text-ink"
                                     >
                                         Lịch của tôi
+                                    </Link>
+                                    <Link
+                                        href="/account/security"
+                                        onClick={() => setMobileOpen(false)}
+                                        className="focus-ring mb-2 block w-full rounded-full border border-line px-5 py-3 text-center text-xs font-semibold text-ink"
+                                    >
+                                        Bảo mật tài khoản
                                     </Link>
                                     <button
                                         type="button"

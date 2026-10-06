@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
@@ -535,15 +536,20 @@ export function AdminDashboard() {
                 <aside className="border-b border-line bg-[#2d2926] text-white lg:sticky lg:top-0 lg:h-screen lg:border-b-0 lg:border-r lg:border-white/10">
                     <div className="flex h-[76px] items-center justify-between px-5 lg:px-6">
                         <div className="flex items-center gap-3">
-                            <span className="flex size-9 items-center justify-center rounded-full border border-[#c9aa96]/60 font-serif text-[11px]">NS</span>
+                            <span className="flex size-9 items-center justify-center rounded-full border border-[#c9aa96]/60 font-serif text-[11px]">SR</span>
                             <div>
-                                <p className="font-serif text-lg leading-none">Nail Studio</p>
+                                <p className="font-serif text-lg leading-none">Serpente Nail Room</p>
                                 <p className="mt-1 text-[9px] uppercase tracking-[0.18em] text-white/40">Admin Console</p>
                             </div>
                         </div>
-                        <button onClick={logout} className="rounded-full border border-white/10 px-3 py-2 text-[10px] text-white/55 lg:hidden">
-                            Đăng xuất
-                        </button>
+                        <div className="flex items-center gap-2 lg:hidden">
+                            <Link href="/admin/security" className="rounded-full border border-white/10 px-3 py-2 text-[10px] text-white/70">
+                                Bảo mật
+                            </Link>
+                            <button onClick={logout} className="rounded-full border border-white/10 px-3 py-2 text-[10px] text-white/55">
+                                Đăng xuất
+                            </button>
+                        </div>
                     </div>
 
                     <nav className="flex gap-1 overflow-x-auto border-t border-white/10 px-3 py-3 lg:block lg:space-y-1 lg:border-t-0 lg:px-4 lg:py-6">
@@ -563,9 +569,14 @@ export function AdminDashboard() {
                     <div className="absolute bottom-0 left-0 hidden w-[248px] border-t border-white/10 p-5 lg:block">
                         <p className="truncate text-xs font-semibold">{admin?.full_name}</p>
                         <p className="mt-1 truncate text-[10px] text-white/40">{admin?.phone}</p>
-                        <button onClick={logout} className="mt-4 text-[11px] font-semibold text-[#d6b6a3] hover:text-white">
-                            Đăng xuất →
-                        </button>
+                        <div className="mt-4 flex flex-col gap-2">
+                            <Link href="/admin/security" className="text-[11px] font-semibold text-[#d6b6a3] hover:text-white">
+                                Đổi mật khẩu →
+                            </Link>
+                            <button onClick={logout} className="w-fit text-[11px] font-semibold text-white/55 hover:text-white">
+                                Đăng xuất →
+                            </button>
+                        </div>
                     </div>
                 </aside>
 

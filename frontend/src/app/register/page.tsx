@@ -5,7 +5,7 @@ import { studio } from "@/lib/studio-data";
 
 export const metadata: Metadata = {
     title: "Tạo tài khoản",
-    description: "Tạo tài khoản khách hàng để đặt lịch tại NS Nail Studio.",
+    description: "Tạo tài khoản khách hàng để đặt lịch tại Serpente Nail Room.",
 };
 
 export default function RegisterPage() {
@@ -29,7 +29,7 @@ export default function RegisterPage() {
                     <div className="relative min-h-[430px] overflow-hidden bg-tint lg:min-h-[760px]">
                     <Image
                         src="/nails/nail-04.png"
-                        alt="Mẫu nail nghệ thuật tại NS Nail Studio"
+                        alt="Mẫu nail nghệ thuật tại Serpente Nail Room"
                         fill
                         priority
                         sizes="(max-width: 1024px) 100vw, 50vw"
