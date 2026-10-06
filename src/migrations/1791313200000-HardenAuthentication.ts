@@ -36,6 +36,7 @@ export class HardenAuthentication1791313200000 implements MigrationInterface {
                 \`detail\` varchar(255) NULL,
                 \`created_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
                 INDEX \`IDX_security_events_lookup\` (\`event_type\`, \`identifier_hash\`, \`created_at\`),
+                INDEX \`IDX_security_events_ip_lookup\` (\`event_type\`, \`ip_hash\`, \`created_at\`),
                 PRIMARY KEY (\`id\`)
             ) ENGINE=InnoDB
         `);
