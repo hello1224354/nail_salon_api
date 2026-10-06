@@ -2,9 +2,9 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
     return {
-        name: "NS Nail Studio",
-        short_name: "NS Nail Studio",
-        description: "Đặt lịch và khám phá dịch vụ chăm sóc móng tại NS Nail Studio.",
+        name: "Serpente Nail Room",
+        short_name: "Serpente Nail Room",
+        description: "Đặt lịch và khám phá dịch vụ chăm sóc móng tại Serpente Nail Room.",
         start_url: "/",
         display: "standalone",
         background_color: "#f6f3ee",
