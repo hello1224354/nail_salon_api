@@ -90,6 +90,12 @@ export function LoginForm() {
                         </button>
                     </span>
                 </label>
+
+                <div className="flex justify-end">
+                    <Link href="/forgot-password" className="focus-ring rounded-sm text-xs font-semibold text-accent underline decoration-accent/30 underline-offset-4 hover:text-ink">
+                        Quên mật khẩu?
+                    </Link>
+                </div>
             </div>
 
             {error ? (
