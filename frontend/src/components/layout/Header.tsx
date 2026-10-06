@@ -57,7 +57,7 @@ export function Header() {
     const accountInitial = authUser?.full_name.trim().charAt(0).toUpperCase() ?? "T";
 
     return (
-        <header className="sticky top-0 z-50 border-b border-line bg-cream/95 backdrop-blur-md">
+        <header className="sticky top-0 z-50 border-b border-line bg-cream/95 shadow-[0_1px_0_rgba(48,40,35,0.02)] backdrop-blur-md">
             <div className="site-shell grid h-[76px] grid-cols-[1fr_auto_1fr] items-center">
                 <Link href="/" aria-label="Trang chủ NS Nail Studio" className="focus-ring col-start-1 row-start-1 justify-self-start rounded-md" onClick={() => setMobileOpen(false)}>
                     <Logo />
@@ -105,7 +105,7 @@ export function Header() {
                             </button>
 
                             {accountOpen ? (
-                                <div role="menu" className="absolute right-0 top-[calc(100%+12px)] w-64 overflow-hidden rounded-2xl border border-line bg-surface p-2 shadow-[0_18px_50px_rgba(48,40,35,0.14)]">
+                                <div role="menu" className="motion-menu absolute right-0 top-[calc(100%+12px)] w-64 overflow-hidden rounded-2xl border border-line bg-surface p-2 shadow-[0_18px_50px_rgba(48,40,35,0.14)]">
                                     <div className="px-3 pb-3 pt-2">
                                         <p className="truncate text-sm font-semibold text-ink">{authUser.full_name}</p>
                                         <p className="mt-1 text-xs text-muted">{authUser.phone}</p>
@@ -164,7 +164,7 @@ export function Header() {
             </div>
 
             {mobileOpen ? (
-                <div className="border-t border-line bg-cream pb-6 pt-4 xl:hidden">
+                <div className="motion-menu border-t border-line bg-cream pb-6 pt-4 xl:hidden">
                     <nav aria-label="Điều hướng trên điện thoại" className="site-shell flex flex-col gap-1">
                         {navigation.map((item) => {
                             const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);

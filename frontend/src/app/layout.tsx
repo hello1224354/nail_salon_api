@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import "./globals.css";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import { RouteMotion } from "@/components/layout/RouteMotion";
 
 export const metadata: Metadata = {
     applicationName: "NS Nail Studio",
@@ -35,7 +36,9 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
         <html lang="vi" className="h-full antialiased">
             <body className="flex min-h-screen flex-col bg-cream text-ink">
                 <Header />
-                <main className="flex-1">{children}</main>
+                <main className="flex-1">
+                    <RouteMotion>{children}</RouteMotion>
+                </main>
                 <Footer />
             </body>
         </html>
