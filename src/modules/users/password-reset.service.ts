@@ -55,7 +55,7 @@ export async function requestPasswordReset(email: string) {
     try {
         await sendPlainTextEmail(
             user.email,
-            "Mã đặt lại mật khẩu NS Nail Studio",
+            "Mã đặt lại mật khẩu Serpente Nail Room",
             [
                 `Mã OTP đặt lại mật khẩu của bạn là: ${code}`,
                 "",

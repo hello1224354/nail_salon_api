@@ -64,7 +64,7 @@ export async function sendPlainTextEmail(to: string, subject: string, body: stri
 
     const accessToken = await getGmailAccessToken();
     const message = [
-        `From: NS Nail Studio <${config.fromEmail}>`,
+        `From: Serpente Nail Room <${config.fromEmail}>`,
         `To: ${to}`,
         `Subject: ${encodeSubject(subject)}`,
         "MIME-Version: 1.0",
