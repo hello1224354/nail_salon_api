@@ -14,9 +14,15 @@ function getVietnamToday(): string {
         day: "2-digit",
     }).formatToParts(new Date());
 
-    const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+    const year = parts.find((part) => part.type === "year")?.value;
+    const month = parts.find((part) => part.type === "month")?.value;
+    const day = parts.find((part) => part.type === "day")?.value;
 
-    return `${values.year}-${values.month}-${values.day}`;
+    if (!year || !month || !day) {
+        throw new Error("Unable to resolve Vietnam calendar date");
+    }
+
+    return `${year}-${month}-${day}`;
 }
 
 function paginate(query: GetOffersQueryDto) {
