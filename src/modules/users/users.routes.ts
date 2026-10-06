@@ -6,6 +6,7 @@ import { requireTrustedOrigin } from "../../common/middleware/origin.middleware"
 import { UserRole } from "./users.entity";
 import {
     loginRateLimiter,
+    mfaRateLimiter,
     passwordRecoveryRateLimiter,
     refreshRateLimiter,
     registerRateLimiter,
@@ -15,6 +16,7 @@ const router = Router();
 
 router.post("/register", registerRateLimiter, controller.registerUser);
 router.post("/login", loginRateLimiter, controller.loginUser);
+router.post("/login/mfa/verify", mfaRateLimiter, controller.verifyLoginMfa);
 
 router.post(
     "/session/refresh",
