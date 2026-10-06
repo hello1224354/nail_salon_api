@@ -27,6 +27,11 @@ export interface ResetPasswordDto {
     new_password: string;
 }
 
+export interface VerifyLoginMfaDto {
+    challenge_id: string;
+    code: string;
+}
+
 function normalizePhone(value: string): string {
     const phone = value.replace(/[\s.-]/g, "");
 
@@ -191,5 +196,29 @@ export function parseResetPasswordDto(body: unknown): ResetPasswordDto {
         email: parseEmail(data.email),
         code: data.code,
         new_password: parsePassword(data.new_password, "New_password"),
+    };
+}
+
+export function parseVerifyLoginMfaDto(body: unknown): VerifyLoginMfaDto {
+    if (body === null || typeof body !== "object" || Array.isArray(body)) {
+        throw new AppError("Request body must be an object", 400, "VALIDATION_ERROR");
+    }
+
+    const data = body as Record<string, unknown>;
+
+    if (
+        typeof data.challenge_id !== "string" ||
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(data.challenge_id)
+    ) {
+        throw new AppError("Challenge_id must be a valid UUID", 400, "VALIDATION_ERROR");
+    }
+
+    if (typeof data.code !== "string" || !/^\d{6}$/.test(data.code)) {
+        throw new AppError("Code must be a 6-digit OTP", 400, "VALIDATION_ERROR");
+    }
+
+    return {
+        challenge_id: data.challenge_id,
+        code: data.code,
     };
 }
