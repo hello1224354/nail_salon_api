@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import type { FormEvent, ReactNode } from "react";
 import {
     apiRequest,
     getApiErrorMessage,
@@ -105,7 +106,7 @@ function Field({
     span = false,
 }: {
     label: string;
-    children: React.ReactNode;
+    children: ReactNode;
     span?: boolean;
 }) {
     return (
