@@ -15,7 +15,7 @@ export default function AdminLoginPage() {
                 <div className="flex flex-col justify-center p-7 sm:p-10 lg:p-14">
                     <div className="flex items-center gap-3">
                         <span className="flex size-10 items-center justify-center rounded-full border border-[#c9aa96]/65 font-serif text-xs">
-                            NS
+                            SR
                         </span>
                         <div>
                             <p className="font-serif text-xl">Serpente Nail Room</p>
