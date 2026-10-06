@@ -1,5 +1,3 @@
-import { config } from "@/lib/config";
-
 export type AuthUser = {
     id: string;
     full_name: string;
@@ -54,7 +52,7 @@ async function performRefresh() {
     if (typeof window === "undefined") return false;
 
     try {
-        const response = await fetch(`${config.API_BASE_URL}/api/users/session/refresh`, {
+        const response = await fetch("/api/users/session/refresh", {
             method: "POST",
             credentials: "include",
             headers: {
@@ -102,7 +100,7 @@ export async function restoreSession() {
 export async function logoutSession() {
     if (typeof window !== "undefined") {
         try {
-            await fetch(`${config.API_BASE_URL}/api/users/session/logout`, {
+            await fetch("/api/users/session/logout", {
                 method: "POST",
                 credentials: "include",
                 headers: {
