@@ -56,6 +56,8 @@ export function Header() {
 
     const accountInitial = authUser?.full_name.trim().charAt(0).toUpperCase() ?? "T";
 
+    if (pathname.startsWith("/admin")) return null;
+
     return (
         <header className="sticky top-0 z-50 border-b border-line bg-cream/95 shadow-[0_1px_0_rgba(48,40,35,0.02)] backdrop-blur-md">
             <div className="site-shell grid h-[76px] grid-cols-[1fr_auto_1fr] items-center">

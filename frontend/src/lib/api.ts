@@ -129,6 +129,8 @@ export type Branch = {
     name: string;
     address: string;
     is_active: boolean;
+    created_at?: string;
+    updated_at?: string;
 };
 
 export type BranchList = {
@@ -146,6 +148,8 @@ export type Service = {
     price: number;
     duration_minutes: number;
     is_active: boolean;
+    created_at?: string;
+    updated_at?: string;
 };
 
 export type ServiceList = {
@@ -194,8 +198,25 @@ export type Appointment = {
     branch_id: number;
     start_time: string;
     end_time: string;
+    actual_started_at?: string | null;
+    actual_completed_at?: string | null;
     status: string;
     appointment_services?: AppointmentService[];
+    customer?: {
+        id: string;
+        full_name: string;
+        phone: string;
+        email: string | null;
+    };
+    staff?: {
+        id: string;
+        full_name: string | null;
+    };
+    branch?: {
+        id: number;
+        name: string;
+        address: string;
+    };
 };
 
 export type AppointmentList = {
@@ -204,4 +225,17 @@ export type AppointmentList = {
     page: number;
     limit: number;
     total_pages: number;
+};
+
+
+export type AdminStaff = {
+    id: string;
+    branch_id: number;
+    branch_name: string | null;
+    full_name: string;
+    phone: string;
+    email: string | null;
+    is_active: boolean;
+    created_at?: string;
+    updated_at?: string;
 };

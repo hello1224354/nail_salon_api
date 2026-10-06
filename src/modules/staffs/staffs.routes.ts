@@ -7,6 +7,7 @@ import { UserRole } from "../users/users.entity";
 const router = Router();
 
 router.get("/", controller.getAllStaffs);
+router.get("/admin", authenticate, requireRole(UserRole.ADMIN), controller.getAllStaffsForAdmin);
 router.get("/:id", controller.getStaffById);
 router.post("/", authenticate, requireRole(UserRole.ADMIN), controller.createStaff);
 router.put("/:id", authenticate, requireRole(UserRole.ADMIN), controller.updateStaff);

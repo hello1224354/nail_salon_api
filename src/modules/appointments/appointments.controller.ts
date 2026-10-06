@@ -6,9 +6,26 @@ import { Appointment } from "./appointments.entity";
 import { parseUuidParam } from "../../common/validators";
 
 function toAppointmentResponse(appointment: Appointment) {
-    const { staff, ...data } = appointment;
+    const { staff, user, branch, ...data } = appointment;
 
-    return data;
+    return {
+        ...data,
+        customer: user ? {
+            id: user.id,
+            full_name: user.full_name,
+            phone: user.phone,
+            email: user.email,
+        } : undefined,
+        staff: staff ? {
+            id: staff.user_id,
+            full_name: staff.user?.full_name ?? null,
+        } : undefined,
+        branch: branch ? {
+            id: branch.id,
+            name: branch.name,
+            address: branch.address,
+        } : undefined,
+    };
 }
 
 export const createAppointment = async (req: Request, res: Response) => {

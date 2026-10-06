@@ -1,7 +1,14 @@
+"use client";
+
+import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { studio } from "@/lib/studio-data";
 
 export function Footer() {
+    const pathname = usePathname();
+
+    if (pathname.startsWith("/admin")) return null;
+
     return (
         <footer className="bg-studio-dark text-white">
             <div className="site-shell py-12 lg:py-14">
