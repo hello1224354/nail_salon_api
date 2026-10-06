@@ -16,9 +16,9 @@ export function Footer() {
                     <div className="md:col-span-2 lg:col-span-1">
                         <div className="flex items-center gap-3">
                             <span className="flex size-8 items-center justify-center rounded-full border border-[#bba18e] font-serif text-[11px]">
-                                NS
+                                SR
                             </span>
-                            <span className="font-serif text-2xl">Nail Studio</span>
+                            <span className="font-serif text-2xl">Serpente Nail Room</span>
                         </div>
                         <p className="mt-3 text-sm text-[#cdbfb3]">
                             Chăm sóc móng, chu đáo trong từng khoảnh khắc.
@@ -44,7 +44,7 @@ export function Footer() {
 
                     <div>
                         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#bba18e]">
-                            Quận 1
+                            {studio.branch}
                         </p>
                         <div className="mt-4 space-y-2.5 text-sm text-white/90">
                             <a
@@ -64,7 +64,7 @@ export function Footer() {
                 </div>
 
                 <div className="mt-12 flex flex-col gap-2 border-t border-white/15 pt-5 text-[11px] text-[#bfb0a4] sm:flex-row sm:items-center sm:justify-between">
-                    <span>© 2026 Nail Studio</span>
+                    <span>© 2026 Serpente Nail Room</span>
                     <span>Đặt lịch khách hàng · Xác nhận qua điện thoại</span>
                 </div>
             </div>
