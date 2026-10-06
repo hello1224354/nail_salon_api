@@ -1,5 +1,5 @@
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from "crypto";
-import jwt from "jsonwebtoken";
+import jwt, { VerifyOptions } from "jsonwebtoken";
 import { IsNull } from "typeorm";
 import { AppDataSource } from "../../config/database";
 import { env } from "../../config/env";
@@ -60,7 +60,7 @@ export function signAccessToken(user: User) {
     );
 }
 
-export function getAccessTokenVerifyOptions(): jwt.VerifyOptions {
+export function getAccessTokenVerifyOptions(): VerifyOptions {
     return {
         algorithms: ["HS256"],
         audience: ACCESS_TOKEN_AUDIENCE,
