@@ -257,7 +257,8 @@ export function AdminDashboard() {
 
     const loadAll = useCallback(
         async (quiet = false) => {
-            quiet ? setRefreshing(true) : setLoading(true);
+            if (quiet) setRefreshing(true);
+            else setLoading(true);
             setError("");
 
             try {
@@ -274,7 +275,12 @@ export function AdminDashboard() {
 
     useEffect(() => {
         if (!ready) return;
-        void loadAll();
+
+        const timer = window.setTimeout(() => {
+            void loadAll();
+        }, 0);
+
+        return () => window.clearTimeout(timer);
     }, [loadAll, ready]);
 
     useEffect(() => {
