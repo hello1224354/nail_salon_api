@@ -16,7 +16,7 @@ import {
     type Service,
     type ServiceList,
 } from "@/lib/api";
-import { clearSession, getAccessToken, getAuthUser, type AuthUser } from "@/lib/auth";
+import { getAuthUser, logoutSession, restoreSession, type AuthUser } from "@/lib/auth";
 import { formatAppointmentStatus, formatVnd, localizeBranchName } from "@/lib/studio-data";
 
 type TabKey = "overview" | "appointments" | "services" | "staff" | "branches" | "offers";
@@ -189,27 +189,37 @@ export function AdminDashboard() {
     const [appointmentPages, setAppointmentPages] = useState(1);
     const [submitting, setSubmitting] = useState(false);
 
-    const token = ready ? getAccessToken() : null;
-
     useEffect(() => {
-        const user = getAuthUser();
-        const accessToken = getAccessToken();
+        let cancelled = false;
 
-        if (!user || !accessToken || user.role.toLowerCase() !== "admin") {
-            router.replace("/admin/login");
-            return;
+        async function bootstrapAdmin() {
+            const restored = await restoreSession();
+            const user = getAuthUser();
+
+            if (!restored || !user || user.role.toLowerCase() !== "admin") {
+                if (!cancelled) router.replace("/admin/login");
+                return;
+            }
+
+            if (!cancelled) {
+                setAdmin(user);
+                setReady(true);
+            }
         }
 
-        setAdmin(user);
-        setReady(true);
+        void bootstrapAdmin();
+
+        return () => {
+            cancelled = true;
+        };
     }, [router]);
 
-    const loadStaticData = useCallback(async (accessToken: string) => {
+    const loadStaticData = useCallback(async () => {
         const [branchesResult, servicesResult, staffResult, offersResult] = await Promise.all([
-            apiRequest<BranchList>("/api/branches/admin?page=1&limit=100", {}, accessToken),
-            apiRequest<ServiceList>("/api/services/admin?page=1&limit=100", {}, accessToken),
-            apiRequest<AdminStaff[]>("/api/staffs/admin", {}, accessToken),
-            apiRequest<OfferList>("/api/offers/admin?page=1&limit=100", {}, accessToken),
+            apiRequest<BranchList>("/api/branches/admin?page=1&limit=100"),
+            apiRequest<ServiceList>("/api/services/admin?page=1&limit=100"),
+            apiRequest<AdminStaff[]>("/api/staffs/admin"),
+            apiRequest<OfferList>("/api/offers/admin?page=1&limit=100"),
         ]);
 
         setData((current) => ({
@@ -222,7 +232,7 @@ export function AdminDashboard() {
     }, []);
 
     const loadAppointments = useCallback(
-        async (accessToken: string, page = appointmentPage) => {
+        async (page = appointmentPage) => {
             const params = new URLSearchParams({
                 page: String(page),
                 limit: "20",
@@ -232,9 +242,7 @@ export function AdminDashboard() {
             if (appointmentBranch) params.set("branch_id", appointmentBranch);
 
             const result = await apiRequest<AppointmentList>(
-                `/api/appointments?${params.toString()}`,
-                {},
-                accessToken
+                `/api/appointments?${params.toString()}`
             );
 
             setData((current) => ({
@@ -248,12 +256,12 @@ export function AdminDashboard() {
     );
 
     const loadAll = useCallback(
-        async (accessToken: string, quiet = false) => {
+        async (quiet = false) => {
             quiet ? setRefreshing(true) : setLoading(true);
             setError("");
 
             try {
-                await Promise.all([loadStaticData(accessToken), loadAppointments(accessToken, appointmentPage)]);
+                await Promise.all([loadStaticData(), loadAppointments(appointmentPage)]);
             } catch (loadError) {
                 setError(getApiErrorMessage(loadError, "Không thể tải dữ liệu quản trị."));
             } finally {
@@ -265,9 +273,9 @@ export function AdminDashboard() {
     );
 
     useEffect(() => {
-        if (!ready || !token) return;
-        void loadAll(token);
-    }, [loadAll, ready, token]);
+        if (!ready) return;
+        void loadAll();
+    }, [loadAll, ready]);
 
     useEffect(() => {
         if (!toast) return;
@@ -276,14 +284,12 @@ export function AdminDashboard() {
     }, [toast]);
 
     async function refresh(message?: string) {
-        const accessToken = getAccessToken();
-        if (!accessToken) return;
-        await loadAll(accessToken, true);
+        await loadAll(true);
         if (message) setToast(message);
     }
 
-    function logout() {
-        clearSession();
+    async function logout() {
+        await logoutSession();
         router.replace("/admin/login");
         router.refresh();
     }
@@ -310,9 +316,6 @@ export function AdminDashboard() {
     }, [data.appointments]);
 
     async function updateAppointmentStatus(appointment: Appointment, status: string) {
-        const accessToken = getAccessToken();
-        if (!accessToken) return;
-
         setSubmitting(true);
         try {
             await apiRequest<Appointment>(
@@ -320,8 +323,7 @@ export function AdminDashboard() {
                 {
                     method: "PUT",
                     body: JSON.stringify({ status }),
-                },
-                accessToken
+                }
             );
             await refresh("Đã cập nhật trạng thái lịch hẹn.");
         } catch (statusError) {
@@ -333,9 +335,6 @@ export function AdminDashboard() {
 
     async function saveBranch(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
-        const accessToken = getAccessToken();
-        if (!accessToken) return;
-
         const form = new FormData(event.currentTarget);
         const payload = {
             name: String(form.get("name") || "").trim(),
@@ -350,8 +349,7 @@ export function AdminDashboard() {
                 {
                     method: editingBranch ? "PUT" : "POST",
                     body: JSON.stringify(payload),
-                },
-                accessToken
+                }
             );
             setModal(null);
             setEditingBranch(null);
@@ -364,9 +362,6 @@ export function AdminDashboard() {
     }
 
     async function toggleBranch(branch: Branch) {
-        const accessToken = getAccessToken();
-        if (!accessToken) return;
-
         setSubmitting(true);
         try {
             await apiRequest<Branch>(
@@ -374,8 +369,7 @@ export function AdminDashboard() {
                 {
                     method: "PUT",
                     body: JSON.stringify({ is_active: !branch.is_active }),
-                },
-                accessToken
+                }
             );
             await refresh(branch.is_active ? "Đã tạm ngưng chi nhánh." : "Đã kích hoạt chi nhánh.");
         } catch (toggleError) {
@@ -387,9 +381,6 @@ export function AdminDashboard() {
 
     async function saveService(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
-        const accessToken = getAccessToken();
-        if (!accessToken) return;
-
         const form = new FormData(event.currentTarget);
         const base = {
             name: String(form.get("name") || "").trim(),
@@ -408,8 +399,7 @@ export function AdminDashboard() {
                 {
                     method: editingService ? "PUT" : "POST",
                     body: JSON.stringify(payload),
-                },
-                accessToken
+                }
             );
             setModal(null);
             setEditingService(null);
@@ -422,18 +412,14 @@ export function AdminDashboard() {
     }
 
     async function deactivateService(service: Service) {
-        const accessToken = getAccessToken();
-        if (!accessToken) return;
-
         setSubmitting(true);
         try {
             if (service.is_active) {
-                await apiRequest<Service>(`/api/services/${service.id}`, { method: "DELETE" }, accessToken);
+                await apiRequest<Service>(`/api/services/${service.id}`, { method: "DELETE" });
             } else {
                 await apiRequest<Service>(
                     `/api/services/${service.id}`,
-                    { method: "PUT", body: JSON.stringify({ is_active: true }) },
-                    accessToken
+                    { method: "PUT", body: JSON.stringify({ is_active: true }) }
                 );
             }
             await refresh(service.is_active ? "Đã ngưng dịch vụ." : "Đã kích hoạt dịch vụ.");
@@ -446,9 +432,6 @@ export function AdminDashboard() {
 
     async function saveStaff(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
-        const accessToken = getAccessToken();
-        if (!accessToken) return;
-
         const form = new FormData(event.currentTarget);
         const payload = {
             full_name: String(form.get("full_name") || "").trim(),
@@ -462,8 +445,7 @@ export function AdminDashboard() {
         try {
             await apiRequest<AdminStaff>(
                 "/api/staffs",
-                { method: "POST", body: JSON.stringify(payload) },
-                accessToken
+                { method: "POST", body: JSON.stringify(payload) }
             );
             setModal(null);
             await refresh("Đã thêm nhân viên.");
@@ -475,15 +457,11 @@ export function AdminDashboard() {
     }
 
     async function updateStaff(staff: AdminStaff, payload: { branch_id?: number; is_active?: boolean }) {
-        const accessToken = getAccessToken();
-        if (!accessToken) return;
-
         setSubmitting(true);
         try {
             await apiRequest<AdminStaff>(
                 `/api/staffs/${staff.id}`,
-                { method: "PUT", body: JSON.stringify(payload) },
-                accessToken
+                { method: "PUT", body: JSON.stringify(payload) }
             );
             await refresh("Đã cập nhật nhân viên.");
         } catch (staffError) {
@@ -495,9 +473,6 @@ export function AdminDashboard() {
 
     async function saveOffer(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
-        const accessToken = getAccessToken();
-        if (!accessToken) return;
-
         const form = new FormData(event.currentTarget);
         const payload = {
             name: String(form.get("name") || "").trim(),
@@ -515,8 +490,7 @@ export function AdminDashboard() {
                 {
                     method: editingOffer ? "PUT" : "POST",
                     body: JSON.stringify(payload),
-                },
-                accessToken
+                }
             );
             setModal(null);
             setEditingOffer(null);
@@ -530,12 +504,9 @@ export function AdminDashboard() {
 
     async function deleteOffer(offer: Offer) {
         if (!window.confirm(`Xóa vĩnh viễn ưu đãi “${offer.name}”?`)) return;
-        const accessToken = getAccessToken();
-        if (!accessToken) return;
-
         setSubmitting(true);
         try {
-            await apiRequest<Offer>(`/api/offers/${offer.id}`, { method: "DELETE" }, accessToken);
+            await apiRequest<Offer>(`/api/offers/${offer.id}`, { method: "DELETE" });
             await refresh("Đã xóa ưu đãi.");
         } catch (offerError) {
             setToast(getApiErrorMessage(offerError, "Không thể xóa ưu đãi."));
