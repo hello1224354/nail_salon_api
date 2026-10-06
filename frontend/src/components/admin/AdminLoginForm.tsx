@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { useState } from "react";
+import type { FormEvent } from "react";
 import { apiRequest, getApiErrorMessage } from "@/lib/api";
 import { saveSession, type AuthUser } from "@/lib/auth";
 
