@@ -156,6 +156,24 @@ export type ServiceList = {
     total_pages: number;
 };
 
+export type Offer = {
+    id: string;
+    name: string;
+    details: string;
+    start_date: string;
+    end_date: string;
+    image: string;
+    sort_order: number;
+};
+
+export type OfferList = {
+    offers: Offer[];
+    total: number;
+    page: number;
+    limit: number;
+    total_pages: number;
+};
+
 export type Availability = {
     branch_id: number;
     duration_minutes: number;
