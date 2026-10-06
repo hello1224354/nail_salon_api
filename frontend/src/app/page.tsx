@@ -4,8 +4,8 @@ import { HomeShowcase } from "@/components/home/HomeShowcase";
 import { apiRequest, type OfferList } from "@/lib/api";
 
 export const metadata: Metadata = {
-    title: "NS Nail Studio",
-    description: "Khám phá ưu đãi, mẫu nail và trải nghiệm chăm sóc móng tại NS Nail Studio.",
+    title: "Serpente Nail Room",
+    description: "Khám phá ưu đãi, mẫu nail và trải nghiệm chăm sóc móng tại Serpente Nail Room.",
 };
 
 function formatOfferDate(date: string) {
