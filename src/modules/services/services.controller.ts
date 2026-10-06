@@ -8,29 +8,28 @@ import { parseUuidParam } from "../../common/validators";
 export const getAllServices = async (req: Request, res: Response) => {
     const data = await serviceService.getAllServices(parseGetServicesQuery(req.query));
     return res.status(200).json({
-        success: {
-            message: "Get all services successfully",
-            data,
-        }
+        success: { message: "Get all services successfully", data }
+    });
+};
+
+export const getAllServicesForAdmin = async (req: Request, res: Response) => {
+    const data = await serviceService.getAllServicesForAdmin(parseGetServicesQuery(req.query));
+    return res.status(200).json({
+        success: { message: "Get all services for admin successfully", data }
     });
 };
 
 export const getService = async (req: Request, res: Response) => {
     const serviceId = parseUuidParam(req.params.id, "Service id");
-
     const data = await serviceService.getService(serviceId);
 
     if (!data || !data.is_active) throw new AppError("Service not found", 404, "SERVICE_NOT_FOUND");
 
     const branch = await branchService.getBranch(data.branch_id);
-
     if (!branch || !branch.is_active) throw new AppError("Service not found", 404, "SERVICE_NOT_FOUND");
 
     return res.status(200).json({
-        success: {
-            message: `Get service ${req.params.id} successfully`,
-            data,
-        }
+        success: { message: `Get service ${req.params.id} successfully`, data }
     });
 };
 
@@ -38,40 +37,28 @@ export const createService = async (req: Request, res: Response) => {
     const data = await serviceService.createService(parseCreateServiceDto(req.body));
 
     return res.status(201).json({
-        success: {
-            message: `Create new service successfully`,
-            data,
-        }
+        success: { message: "Create new service successfully", data }
     });
 };
 
 export const updateService = async (req: Request, res: Response) => {
     const serviceId = parseUuidParam(req.params.id, "Service id");
-
     const data = await serviceService.updateService(serviceId, parseUpdateServiceDto(req.body));
 
     if (!data) throw new AppError("Service not found", 404, "SERVICE_NOT_FOUND");
 
     return res.status(200).json({
-        success: {
-            message: "Update service successfully",
-            data,
-        }
+        success: { message: "Update service successfully", data }
     });
 };
 
 export const deleteService = async (req: Request, res: Response) => {
     const serviceId = parseUuidParam(req.params.id, "Service id");
-
     const data = await serviceService.deleteService(serviceId);
-    
+
     if (!data) throw new AppError("Service not found", 404, "SERVICE_NOT_FOUND");
 
     return res.status(200).json({
-        success: {
-            message: "Delete service successfully",
-            data,
-        }
+        success: { message: "Delete service successfully", data }
     });
 };
-
