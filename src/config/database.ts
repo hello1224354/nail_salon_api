@@ -12,6 +12,7 @@ import { SecurityEvent } from "../modules/audit/security-event.entity";
 import { Offer } from "../modules/offers/offer.entity";
 import { RefreshSession } from "../modules/users/refresh-session.entity";
 import { PasswordResetChallenge } from "../modules/users/password-reset-challenge.entity";
+import { LoginMfaChallenge } from "../modules/users/login-mfa-challenge.entity";
 
 export const AppDataSource = new DataSource({
     type: "mysql",
@@ -35,6 +36,7 @@ export const AppDataSource = new DataSource({
         Offer,
         RefreshSession,
         PasswordResetChallenge,
+        LoginMfaChallenge,
     ],
     migrations: [__dirname + "/../migrations/**/*{.js,.ts}"],
     timezone: "Z",
