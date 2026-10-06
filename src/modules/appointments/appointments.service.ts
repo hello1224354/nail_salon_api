@@ -386,7 +386,7 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
 };
 
 export const getAllAppointments = async (userId: string, role: UserRole, query: GetAppointmentsQueryDto) => {
-    const queryBuilder = appointmentRepo.createQueryBuilder("appointment").leftJoinAndSelect("appointment.staff", "staff").leftJoinAndSelect("appointment.appointment_services", "appointment_services");
+    const queryBuilder = appointmentRepo.createQueryBuilder("appointment")\n        .leftJoinAndSelect("appointment.user", "customer")\n        .leftJoinAndSelect("appointment.staff", "staff")\n        .leftJoinAndSelect("staff.user", "staff_user")\n        .leftJoinAndSelect("appointment.branch", "branch")\n        .leftJoinAndSelect("appointment.appointment_services", "appointment_services");
 
     if (role === UserRole.CUSTOMER) {
         queryBuilder.andWhere("appointment.user_id = :user_id", {
@@ -461,7 +461,11 @@ export const getAppointment = async (id: string, userId: string, role: UserRole)
                 user_id: userId,
             },
             relations: {
-                staff: true,
+                user: true,
+                branch: true,
+                staff: {
+                    user: true,
+                },
                 appointment_services: true,
             },
         });
@@ -474,7 +478,11 @@ export const getAppointment = async (id: string, userId: string, role: UserRole)
                 staff_id: userId,
             },
             relations: {
-                staff: true,
+                user: true,
+                branch: true,
+                staff: {
+                    user: true,
+                },
                 appointment_services: true,
             },
         });
@@ -512,7 +520,11 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
                             id,
                         },
             relations: {
-                staff: true,
+                user: true,
+                branch: true,
+                staff: {
+                    user: true,
+                },
                 appointment_services: true,
             },
             lock: {
