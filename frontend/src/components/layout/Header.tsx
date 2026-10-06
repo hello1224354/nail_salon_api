@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { AUTH_CHANGED_EVENT, clearSession, getAuthUser, type AuthUser } from "@/lib/auth";
+import { AUTH_CHANGED_EVENT, getAuthUser, logoutSession, restoreSession, type AuthUser } from "@/lib/auth";
 
 const navigation = [
     { href: "/", label: "Trang chủ" },
@@ -29,10 +29,21 @@ export function Header() {
     const [authUser, setAuthUser] = useState<AuthUser | null>(null);
 
     useEffect(() => {
-        const syncAuth = () => setAuthUser(getAuthUser());
+        let cancelled = false;
+
+        const syncAuth = () => {
+            if (!cancelled) setAuthUser(getAuthUser());
+        };
+
         syncAuth();
+        void restoreSession().then(syncAuth);
+
         window.addEventListener(AUTH_CHANGED_EVENT, syncAuth);
-        return () => window.removeEventListener(AUTH_CHANGED_EVENT, syncAuth);
+
+        return () => {
+            cancelled = true;
+            window.removeEventListener(AUTH_CHANGED_EVENT, syncAuth);
+        };
     }, []);
 
     useEffect(() => {
@@ -46,8 +57,8 @@ export function Header() {
         return () => document.removeEventListener("mousedown", closeAccountMenu);
     }, []);
 
-    function logOut() {
-        clearSession();
+    async function logOut() {
+        await logoutSession();
         setAccountOpen(false);
         setMobileOpen(false);
         router.push("/");

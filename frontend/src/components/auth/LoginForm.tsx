@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import type { FormEvent } from "react";
 import { useState } from "react";
 import { apiRequest, getApiErrorMessage } from "@/lib/api";
-import { saveSession, type AuthUser } from "@/lib/auth";
+import { logoutSession, saveSession, type AuthUser } from "@/lib/auth";
 
 type LoginData = {
     access_token: string;
@@ -35,6 +35,7 @@ export function LoginForm() {
             });
 
             if (data.user.role.toLowerCase() !== "customer") {
+                await logoutSession();
                 throw new Error("Trang đặt lịch này chỉ dành cho tài khoản khách hàng.");
             }
 
