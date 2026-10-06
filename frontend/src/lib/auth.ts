@@ -48,24 +48,46 @@ export function clearSession() {
     emitAuthChanged();
 }
 
+async function requestRefreshOnce() {
+    const response = await fetch("/api/users/session/refresh", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+            Accept: "application/json",
+        },
+        cache: "no-store",
+    });
+
+    const body = (await response.json().catch(() => null)) as
+        | RefreshResponse
+        | { error?: { code?: string } }
+        | null;
+
+    return { response, body };
+}
+
 async function performRefresh() {
     if (typeof window === "undefined") return false;
 
     try {
-        const response = await fetch("/api/users/session/refresh", {
-            method: "POST",
-            credentials: "include",
-            headers: {
-                Accept: "application/json",
-            },
-            cache: "no-store",
-        });
-
-        const body = (await response.json().catch(() => null)) as RefreshResponse | null;
-        const data = body?.success?.data;
+        let result = await requestRefreshOnce();
 
         if (
-            !response.ok ||
+            result.response.status === 409 &&
+            "error" in (result.body ?? {}) &&
+            result.body?.error?.code === "REFRESH_RACE"
+        ) {
+            await new Promise((resolve) => window.setTimeout(resolve, 150));
+            result = await requestRefreshOnce();
+        }
+
+        const data =
+            result.body && "success" in result.body
+                ? result.body.success?.data
+                : undefined;
+
+        if (
+            !result.response.ok ||
             !data ||
             typeof data.access_token !== "string" ||
             !data.user
