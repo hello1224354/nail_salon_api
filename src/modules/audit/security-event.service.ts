@@ -63,3 +63,18 @@ export async function countRecentIdentifierEvents(eventType: string, identifier:
         },
     });
 }
+
+
+export async function countRecentIpEvents(eventType: string, ip: string, since: Date) {
+    const ipHash = hashSensitive(ip);
+
+    if (!ipHash) return 0;
+
+    return await securityEventRepo.count({
+        where: {
+            event_type: eventType,
+            ip_hash: ipHash,
+            created_at: MoreThan(since),
+        },
+    });
+}
