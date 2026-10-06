@@ -113,11 +113,26 @@ export async function refreshSession(refreshToken: string, fingerprint: SessionF
                 kind: "error" as const,
                 code: "INVALID_REFRESH_SESSION",
                 message: "Invalid refresh session",
+                status: 401,
             };
         }
 
         if (session.revoked_at) {
             if (session.replaced_by) {
+                const rotationAgeMs = Date.now() - session.revoked_at.getTime();
+                const sameFingerprint =
+                    session.ip_hash === fingerprint.ipHash &&
+                    session.user_agent_hash === fingerprint.userAgentHash;
+
+                if (sameFingerprint && rotationAgeMs >= 0 && rotationAgeMs <= 5_000) {
+                    return {
+                        kind: "error" as const,
+                        code: "REFRESH_RACE",
+                        message: "Refresh session was just rotated",
+                        status: 409,
+                    };
+                }
+
                 await sessionRepo.update(
                     { family_id: session.family_id, revoked_at: IsNull() },
                     { revoked_at: new Date() }
@@ -127,6 +142,7 @@ export async function refreshSession(refreshToken: string, fingerprint: SessionF
                     kind: "error" as const,
                     code: "REFRESH_TOKEN_REUSE",
                     message: "Refresh token reuse detected",
+                    status: 401,
                 };
             }
 
@@ -134,6 +150,7 @@ export async function refreshSession(refreshToken: string, fingerprint: SessionF
                 kind: "error" as const,
                 code: "INVALID_REFRESH_SESSION",
                 message: "Refresh session is revoked",
+                status: 401,
             };
         }
 
@@ -145,6 +162,7 @@ export async function refreshSession(refreshToken: string, fingerprint: SessionF
                 kind: "error" as const,
                 code: "INVALID_REFRESH_SESSION",
                 message: "Refresh session expired",
+                status: 401,
             };
         }
 
@@ -159,6 +177,7 @@ export async function refreshSession(refreshToken: string, fingerprint: SessionF
                 kind: "error" as const,
                 code: "INVALID_REFRESH_SESSION",
                 message: "Refresh session is no longer valid",
+                status: 401,
             };
         }
 
@@ -193,7 +212,7 @@ export async function refreshSession(refreshToken: string, fingerprint: SessionF
     });
 
     if (result.kind === "error") {
-        throw new AppError(result.message, 401, result.code);
+        throw new AppError(result.message, result.status, result.code);
     }
 
     return result;
