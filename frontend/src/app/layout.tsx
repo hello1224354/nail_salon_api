@@ -6,21 +6,21 @@ import { Footer } from "@/components/layout/Footer";
 import { RouteMotion } from "@/components/layout/RouteMotion";
 
 export const metadata: Metadata = {
-    applicationName: "NS Nail Studio",
+    applicationName: "Serpente Nail Room",
     title: {
-        default: "NS Nail Studio",
-        template: "%s | NS Nail Studio",
+        default: "Serpente Nail Room",
+        template: "%s | Serpente Nail Room",
     },
-    description: "Khám phá dịch vụ và đặt lịch chăm sóc móng tại NS Nail Studio.",
+    description: "Khám phá dịch vụ và đặt lịch chăm sóc móng tại Serpente Nail Room.",
     keywords: ["nail studio", "chăm sóc móng", "sơn gel", "nail art", "đặt lịch làm móng"],
     robots: {
         index: true,
         follow: true,
     },
     openGraph: {
-        title: "NS Nail Studio",
-        description: "Khám phá dịch vụ và đặt lịch chăm sóc móng tại NS Nail Studio.",
-        siteName: "NS Nail Studio",
+        title: "Serpente Nail Room",
+        description: "Khám phá dịch vụ và đặt lịch chăm sóc móng tại Serpente Nail Room.",
+        siteName: "Serpente Nail Room",
         locale: "vi_VN",
         type: "website",
     },
