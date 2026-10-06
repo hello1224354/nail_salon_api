@@ -8,12 +8,11 @@ function baseCookieAttributes() {
         `${REFRESH_COOKIE_NAME}=`,
         "HttpOnly",
         "Path=/api/users/session",
-        env.NODE_ENV === "production" ? "SameSite=None" : "SameSite=Lax",
+        "SameSite=Lax",
     ];
 
     if (env.NODE_ENV === "production") {
         attributes.push("Secure");
-        attributes.push("Partitioned");
     }
 
     return attributes;
