@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -14,7 +15,13 @@ const navigation = [
 function Logo() {
     return (
         <span className="flex items-center gap-3">
-            <span className="flex size-9 items-center justify-center rounded-full border border-accent/65 font-serif text-[11px] leading-none">SR</span>
+            <Image
+                src="/brand/serpente-logo.png"
+                alt=""
+                width={36}
+                height={36}
+                className="size-9 shrink-0 object-contain"
+            />
             <span className="font-serif text-[22px] tracking-[-0.025em] sm:text-[25px]">Serpente Nail Room</span>
         </span>
     );
