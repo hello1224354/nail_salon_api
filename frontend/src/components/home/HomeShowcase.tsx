@@ -12,6 +12,17 @@ type LinkedHotTrendItem = {
     instagram: InstagramShowcaseItem | null;
 };
 
+const HOT_TREND_POST_CODE_BY_DRIVE_ID: Record<string, string> = {
+    "1DtS5RGDSSeLd0J9KYaZk4PA5je8cj8UX": "DeGQeQvynTm",
+    "1dwTteuoTGfVvijHDYS8C1E4Ko2ZjYfMc": "DdLGgOuicGs",
+    "1pg5xQFyq5Yx4jjqDuDcvAIBBM3iC4W6g": "DddH7VSpqk7",
+    "1a2H_0PJmRFW2G0dA-pT_A-YCN4-u0Fxh": "DddH7VSpqk7",
+    "15c9T9QBS-MO1EZ5AL4oV2sJDB-F6IyIn": "DeGQeQvynTm",
+    "1EJKxKhza6gfg5OZkkt_cKqbyy3dPhVPv": "DdITMpxib29",
+    "1jQn9zhQrVXYBzNKcxEjwZiHrC4kgklIC": "DdITMpxib29",
+    "1HHeURR4Vfuxg-4b3yBcuSF2nY3bP05Zh": "DdITMpxib29",
+};
+
 function useAutoCarousel(itemCount: number, delay: number) {
     const [autoplay] = useState(() =>
         Autoplay({
@@ -172,7 +183,7 @@ function HotTrendCarousel({ items }: { items: LinkedHotTrendItem[] }) {
 
 function ReviewCard({ review }: { review: CustomerReview }) {
     return (
-        <article className="flex min-h-[290px] flex-col justify-between rounded-[24px] border border-line bg-surface p-6 shadow-[0_14px_42px_rgba(48,40,35,0.04)] sm:p-7">
+        <article className="flex h-full min-h-[290px] flex-col justify-between rounded-[24px] border border-line bg-surface p-6 shadow-[0_14px_42px_rgba(48,40,35,0.04)] sm:p-7">
             <blockquote className="whitespace-pre-line font-serif text-[23px] leading-[1.25] tracking-[-0.015em] sm:text-[27px]">
                 “{review.content}”
             </blockquote>
@@ -204,7 +215,7 @@ function ReviewsCarousel({ reviews }: { reviews: CustomerReview[] }) {
                     {reviews.map((review) => (
                         <div
                             key={review.source_url}
-                            className="min-w-0 shrink-0 grow-0 basis-1/2 pl-4 lg:basis-1/3"
+                            className="flex min-w-0 shrink-0 grow-0 basis-1/2 pl-4 lg:basis-1/3"
                         >
                             <ReviewCard review={review} />
                         </div>
@@ -234,10 +245,14 @@ export function HomeShowcase({ content }: { content: SalonContent | null }) {
 
     const hotTrendImages = content.hot_trend_images ?? [];
     const instagramItems = [...content.instagram_showcase].sort((a, b) => a.sort_order - b.sort_order);
-    const linkedHotTrendItems: LinkedHotTrendItem[] = hotTrendImages.map((image, index) => ({
-        image,
-        instagram: instagramItems[index] ?? null,
-    }));
+    const linkedHotTrendItems: LinkedHotTrendItem[] = hotTrendImages.map((image) => {
+        const postCode = HOT_TREND_POST_CODE_BY_DRIVE_ID[image.id];
+        const instagram = postCode
+            ? instagramItems.find((item) => item.instagram_url.includes(`/p/${postCode}/`)) ?? null
+            : null;
+
+        return { image, instagram };
+    });
     const reviews = content.customer_reviews;
     const instagramUrl = getInstagramUrl(content.instagram_handle);
     const mapsUrl = getMapsUrl(content.google_maps_url, content.google_maps_location);
