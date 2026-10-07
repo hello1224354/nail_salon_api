@@ -77,7 +77,7 @@ export function AdminLoginForm() {
             setError(
                 getApiErrorMessage(
                     submitError,
-                    submitError instanceof Error ? submitError.message : "Không thể đăng nhập."
+                    submitError instanceof Error ? submitError.message : "Chưa đăng nhập được."
                 )
             );
         } finally {
