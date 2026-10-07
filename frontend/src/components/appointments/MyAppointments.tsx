@@ -266,13 +266,13 @@ export function MyAppointments() {
                                     <div className="flex items-start justify-between gap-4">
                                         <div>
                                             <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-muted">
-                                                {appointment.party_size > 1 ? "Mã nhóm" : "Mã lịch hẹn"}
+                                                Mã lịch hẹn
                                             </p>
                                             <p className="mt-1 font-mono text-xs font-semibold tracking-[0.05em]">
                                                 {(appointment.booking_group_id ?? appointment.id).slice(0, 8).toUpperCase()}
                                             </p>
                                             {appointment.party_size > 1 ? (
-                                                <p className="mt-1 text-[10px] font-semibold text-accent">Nhóm {appointment.party_size} người</p>
+                                                <p className="mt-1 text-[10px] font-semibold text-accent">{appointment.party_size} người</p>
                                             ) : null}
                                         </div>
                                         <span className={`shrink-0 rounded-full border px-3 py-1.5 text-[10px] font-semibold ${statusClasses[status] ?? "border-line bg-cream text-muted"}`}>
