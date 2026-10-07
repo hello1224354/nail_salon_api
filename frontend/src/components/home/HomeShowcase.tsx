@@ -104,7 +104,7 @@ function HotTrendCard({ item, index }: { item: LinkedHotTrendItem; index: number
                 src={item.image.image_url}
                 alt={item.instagram?.title?.trim() || `Mẫu nail hot trend ${index + 1} tại Serpente Nail Room`}
                 fill
-                sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 33vw"
+                sizes="(max-width: 1023px) 50vw, 33vw"
                 className="motion-image object-cover transition-transform duration-500 group-hover:scale-[1.025]"
             />
             <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/65 via-black/20 to-transparent px-5 pb-5 pt-20 text-white">
@@ -154,7 +154,7 @@ function HotTrendCarousel({ items }: { items: LinkedHotTrendItem[] }) {
                     {items.map((item, index) => (
                         <div
                             key={item.image.id}
-                            className="min-w-0 shrink-0 grow-0 basis-full pl-4 sm:basis-1/2 lg:basis-1/3"
+                            className="min-w-0 shrink-0 grow-0 basis-1/2 pl-4 lg:basis-1/3"
                         >
                             <HotTrendCard item={item} index={index} />
                         </div>
@@ -204,7 +204,7 @@ function ReviewsCarousel({ reviews }: { reviews: CustomerReview[] }) {
                     {reviews.map((review) => (
                         <div
                             key={review.source_url}
-                            className="min-w-0 shrink-0 grow-0 basis-full pl-4 sm:basis-1/2 lg:basis-1/3"
+                            className="min-w-0 shrink-0 grow-0 basis-1/2 pl-4 lg:basis-1/3"
                         >
                             <ReviewCard review={review} />
                         </div>
