@@ -18,7 +18,7 @@ import {
     type ServiceList,
 } from "@/lib/api";
 import { getAuthUser, logoutSession, restoreSession, type AuthUser } from "@/lib/auth";
-import { formatAppointmentStatus, formatVnd, localizeBranchName } from "@/lib/studio-data";
+import { formatAppointmentStatus, formatServicePrice, formatVnd, localizeBranchName } from "@/lib/studio-data";
 
 type TabKey = "overview" | "appointments" | "services" | "staff" | "branches" | "offers";
 
@@ -382,7 +382,7 @@ export function AdminDashboard() {
     }
 
     async function deleteBranch(branch: Branch) {
-        if (!window.confirm(`Xóa vĩnh viễn chi nhánh “${branch.name}”? Dịch vụ và nhân viên hiện tại thuộc chi nhánh cũng sẽ bị xóa; lịch hẹn cũ vẫn giữ snapshot.`)) return;
+        if (!window.confirm(`Xóa vĩnh viễn chi nhánh “${branch.name}”? Dịch vụ và nhân viên thuộc chi nhánh này cũng sẽ bị xóa. Thông tin trên lịch hẹn cũ vẫn được giữ lại.`)) return;
 
         setSubmitting(true);
         try {
@@ -427,7 +427,7 @@ export function AdminDashboard() {
     }
 
     async function deleteService(service: Service) {
-        if (!window.confirm(`Xóa vĩnh viễn dịch vụ “${service.name}”? Lịch hẹn cũ vẫn giữ snapshot dịch vụ.`)) return;
+        if (!window.confirm(`Xóa vĩnh viễn dịch vụ “${service.display_name || service.name}”? Thông tin dịch vụ trên các lịch hẹn cũ vẫn được giữ lại.`)) return;
 
         setSubmitting(true);
         try {
@@ -482,7 +482,7 @@ export function AdminDashboard() {
     }
 
     async function deleteStaff(staff: AdminStaff) {
-        if (!window.confirm(`Xóa vĩnh viễn nhân viên “${staff.full_name}”? Tài khoản nhân viên cũng sẽ bị xóa; lịch hẹn cũ vẫn giữ snapshot.`)) return;
+        if (!window.confirm(`Xóa vĩnh viễn nhân viên “${staff.full_name}”? Tài khoản của nhân viên này cũng sẽ bị xóa. Thông tin trên lịch hẹn cũ vẫn được giữ lại.`)) return;
 
         setSubmitting(true);
         try {
@@ -556,7 +556,7 @@ export function AdminDashboard() {
                             <span className="flex size-9 items-center justify-center rounded-full border border-[#c9aa96]/60 font-serif text-[11px]">SR</span>
                             <div>
                                 <p className="font-serif text-lg leading-none">Serpente Nail Room</p>
-                                <p className="mt-1 text-[9px] uppercase tracking-[0.18em] text-white/40">Admin Console</p>
+                                <p className="mt-1 text-[9px] uppercase tracking-[0.18em] text-white/40">Trang quản trị</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-2 lg:hidden">
@@ -900,10 +900,10 @@ function Overview({
     setTab: (tab: TabKey) => void;
 }) {
     const cards = [
-        { label: "Lịch đang tải", value: data.appointmentTotal, note: "Tổng lịch theo dữ liệu hiện có" },
+        { label: "Lịch đang tải", value: data.appointmentTotal, note: "Tất cả lịch hẹn trong hệ thống" },
         { label: "Chờ xác nhận hôm nay", value: todayStats.pending, note: `${todayStats.total} lịch trong ngày` },
-        { label: "Nhân viên", value: staffCount, note: "Hồ sơ nhân viên hiện tại" },
-        { label: "Dịch vụ", value: serviceCount, note: `${branchCount} chi nhánh hiện tại` },
+        { label: "Nhân viên", value: staffCount, note: "Nhân viên đang có trong hệ thống" },
+        { label: "Dịch vụ", value: serviceCount, note: `${branchCount} chi nhánh` },
     ];
 
     const upcoming = data.appointments
@@ -1102,7 +1102,7 @@ function AppointmentsPanel({
                 </table>
             </div>
 
-            {!appointments.length ? <p className="px-5 py-12 text-center text-xs text-muted">Không có lịch phù hợp bộ lọc.</p> : null}
+            {!appointments.length ? <p className="px-5 py-12 text-center text-xs text-muted">Không có lịch hẹn nào khớp với bộ lọc đã chọn.</p> : null}
 
             <div className="flex items-center justify-between border-t border-line px-5 py-4">
                 <p className="text-[10px] text-muted">Trang {page}/{pages}</p>
@@ -1147,10 +1147,15 @@ function ServicesPanel({
                     <tbody className="divide-y divide-line">
                         {services.map((service) => (
                             <tr key={service.id}>
-                                <td className="px-5 py-4 font-medium">{service.name}</td>
+                                <td className="px-5 py-4 font-medium">
+                                    <p>{service.display_name || service.name}</p>
+                                    {!service.booking_enabled ? (
+                                        <p className="mt-1 text-[10px] font-semibold text-[#8a6a58]">Chưa mở đặt trực tuyến</p>
+                                    ) : null}
+                                </td>
                                 <td className="px-5 py-4">{localizeBranchName(branches.find((branch) => branch.id === service.branch_id)?.name || `#${service.branch_id}`)}</td>
-                                <td className="px-5 py-4">{formatVnd(service.price)} VND</td>
-                                <td className="px-5 py-4">{service.duration_minutes} phút</td>
+                                <td className="px-5 py-4">{formatServicePrice(service)}</td>
+                                <td className="px-5 py-4">{service.duration_minutes ? `${service.duration_minutes} phút` : "Chưa có"}</td>
                                 <td className="px-5 py-4">
                                     <div className="flex gap-3">
                                         <button onClick={() => onEdit(service)} className="font-semibold text-accent">Sửa</button>
