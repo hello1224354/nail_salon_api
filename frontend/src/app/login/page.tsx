@@ -5,7 +5,7 @@ import { studio } from "@/lib/studio-data";
 
 export const metadata: Metadata = {
     title: "Đăng nhập",
-    description: "Đăng nhập tài khoản NS Nail Studio để đặt lịch.",
+    description: "Đăng nhập tài khoản Serpente Nail Room để đặt lịch.",
 };
 
 export default function LoginPage() {
@@ -32,7 +32,7 @@ export default function LoginPage() {
                     <div className="relative min-h-[430px] overflow-hidden bg-tint lg:min-h-[690px]">
                     <Image
                         src="/nails/nail-02.png"
-                        alt="Bộ móng tự nhiên tại NS Nail Studio"
+                        alt="Bộ móng tự nhiên tại Serpente Nail Room"
                         fill
                         priority
                         sizes="(max-width: 1024px) 100vw, 55vw"
@@ -40,7 +40,7 @@ export default function LoginPage() {
                     />
                     <div className="absolute inset-x-5 bottom-5 rounded-[20px] border border-white/70 bg-white/90 p-5 shadow-lg backdrop-blur-sm sm:inset-x-7 sm:bottom-7 sm:p-6">
                         <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-accent">
-                            Quận 1
+                            {studio.branch}
                         </p>
                         <div className="mt-2 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between sm:gap-5">
                             <div>

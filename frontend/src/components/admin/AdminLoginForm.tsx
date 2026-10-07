@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { FormEvent } from "react";
@@ -224,6 +225,12 @@ export function AdminLoginForm() {
             >
                 {submitting ? "Đang kiểm tra…" : "Tiếp tục"}
             </button>
+
+            <div className="text-right">
+                <Link href="/forgot-password" className="text-xs font-semibold text-[#d5b9a7] transition hover:text-white">
+                    Quên mật khẩu?
+                </Link>
+            </div>
         </form>
     );
 }
