@@ -17,7 +17,7 @@ export default function AccountSecurityPage() {
                         Đổi mật khẩu.
                     </h1>
                     <p className="mt-5 text-sm leading-6 text-muted">
-                        Sau khi đổi mật khẩu, mọi phiên đăng nhập hiện tại sẽ bị thu hồi.
+                        Sau khi đổi mật khẩu, bạn sẽ được đăng xuất khỏi tất cả thiết bị đang đăng nhập.
                     </p>
                     <ChangePasswordForm />
                 </div>
