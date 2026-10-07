@@ -16,11 +16,32 @@ export class Service {
     @Column({ type: "varchar" })
     name: string;
 
+    @Column({ type: "varchar", nullable: true })
+    display_name: string | null;
+
+    @Column({ type: "varchar", nullable: true })
+    category: string | null;
+
+    @Column({ type: "varchar", nullable: true })
+    subcategory: string | null;
+
+    @Column({ type: "text", nullable: true })
+    description: string | null;
+
     @Column({ type: "int" })
     price: number;
 
-    @Column({ type: "int" })
-    duration_minutes: number;
+    @Column({ type: "int", nullable: true })
+    price_min: number | null;
+
+    @Column({ type: "int", nullable: true })
+    price_max: number | null;
+
+    @Column({ type: "int", nullable: true })
+    duration_minutes: number | null;
+
+    @Column({ type: "boolean", default: true })
+    booking_enabled: boolean;
 
     @CreateDateColumn()
     created_at: Date;
