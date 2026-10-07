@@ -30,7 +30,7 @@ function hashesMatch(actualHex: string, expectedHex: string) {
 export async function requestPasswordReset(email: string) {
     const user = await userRepo.findOneBy({ email });
 
-    if (!user || !user.is_active || !user.email) {
+    if (!user || !user.email) {
         return;
     }
 
@@ -73,7 +73,7 @@ export async function requestPasswordReset(email: string) {
 export async function resetPassword(email: string, code: string, newPassword: string) {
     const user = await userRepo.findOneBy({ email });
 
-    if (!user || !user.is_active) {
+    if (!user) {
         throw new AppError("Invalid or expired reset code", 400, "INVALID_RESET_CODE");
     }
 
