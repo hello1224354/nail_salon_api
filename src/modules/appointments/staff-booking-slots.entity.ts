@@ -9,7 +9,7 @@ export class StaffBookingSlot {
     @PrimaryColumn({ type: "datetime" })
     slot_start: Date;
 
-    @ManyToOne(() => Staff, { onDelete: "RESTRICT" })
+    @ManyToOne(() => Staff, { onDelete: "CASCADE" })
     @JoinColumn({ name: "staff_id" })
     staff: Staff;
 }
