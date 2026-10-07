@@ -10,6 +10,7 @@ import {
     passwordRecoveryRateLimiter,
     refreshRateLimiter,
     registerRateLimiter,
+    sensitiveAccountActionRateLimiter,
 } from "../../common/middleware/rate-limit.middleware";
 
 const router = Router();
@@ -44,11 +45,12 @@ router.post(
 router.post(
     "/password/change",
     authenticate,
+    sensitiveAccountActionRateLimiter,
     controller.changePassword
 );
 
 router.get("/me", authenticate, controller.getMe);
-router.delete("/me", authenticate, controller.deleteMe);
+router.delete("/me", authenticate, sensitiveAccountActionRateLimiter, controller.deleteMe);
 router.get("/admin-test", authenticate, requireRole(UserRole.ADMIN), controller.adminTest);
 
 export default router;
