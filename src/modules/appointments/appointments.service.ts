@@ -656,11 +656,31 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
             }
 
             if (status === AppointmentStatus.CONFIRMED && data.status === AppointmentStatus.IN_PROGRESS) {
-                actualStartedAt = new Date();
+                const now = new Date();
+
+                if (now.getTime() < appointment.start_time.getTime()) {
+                    throw new AppError(
+                        "Appointment cannot start before its scheduled time",
+                        409,
+                        "APPOINTMENT_NOT_STARTED_YET"
+                    );
+                }
+
+                actualStartedAt = now;
             }
 
             if (status === AppointmentStatus.IN_PROGRESS && data.status === AppointmentStatus.COMPLETED) {
-                actualCompletedAt = new Date();
+                const now = new Date();
+
+                if (now.getTime() < appointment.start_time.getTime()) {
+                    throw new AppError(
+                        "Appointment cannot complete before its scheduled time",
+                        409,
+                        "APPOINTMENT_NOT_STARTED_YET"
+                    );
+                }
+
+                actualCompletedAt = now;
             }
 
             status = data.status;
@@ -679,6 +699,31 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
             });
 
             endTime = new Date(startTime.getTime() + totalDurationMinutes * 60 * 1000);
+        }
+
+        if (
+            hasScheduleChanges &&
+            (status === AppointmentStatus.PENDING || status === AppointmentStatus.CONFIRMED)
+        ) {
+            const customerOverlapAppointment = await transactionAppointmentRepo.findOneBy({
+                id: Not(appointment.id),
+                customer_phone: appointment.customer_phone,
+                status: In([
+                    AppointmentStatus.PENDING,
+                    AppointmentStatus.CONFIRMED,
+                    AppointmentStatus.IN_PROGRESS,
+                ]),
+                start_time: LessThan(endTime),
+                end_time: MoreThan(startTime),
+            });
+
+            if (customerOverlapAppointment) {
+                throw new AppError(
+                    "Customer already has an appointment during this time",
+                    409,
+                    "CUSTOMER_APPOINTMENT_CONFLICT"
+                );
+            }
         }
 
         if (status === AppointmentStatus.PENDING || status === AppointmentStatus.CONFIRMED) {
@@ -729,10 +774,12 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
             }
         }
 
-        if (
+        const becameTerminal =
+            appointment.status !== AppointmentStatus.COMPLETED &&
             appointment.status !== AppointmentStatus.CANCELLED &&
-            status === AppointmentStatus.CANCELLED
-        ) {
+            (status === AppointmentStatus.COMPLETED || status === AppointmentStatus.CANCELLED);
+
+        if (becameTerminal) {
             await releaseStaffSlots(
                 manager,
                 appointment.staff_id,

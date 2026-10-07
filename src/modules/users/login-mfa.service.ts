@@ -8,7 +8,6 @@ import { User } from "./users.entity";
 import { isEmailDeliveryConfigured, sendPlainTextEmail } from "./email.service";
 
 const challengeRepo = AppDataSource.getRepository(LoginMfaChallenge);
-const userRepo = AppDataSource.getRepository(User);
 
 const OTP_TTL_MS = 5 * 60 * 1000;
 const OTP_ATTEMPTS = 5;
@@ -42,27 +41,48 @@ export async function createLoginMfaChallenge(user: User) {
         throw new AppError("Admin MFA email delivery is not configured", 503, "MFA_NOT_CONFIGURED");
     }
 
-    await challengeRepo.update(
-        { user_id: user.id, consumed_at: IsNull() },
-        { consumed_at: new Date() }
-    );
-
     const id = randomUUID();
     const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
-    const challenge = challengeRepo.create({
-        id,
-        user_id: user.id,
-        code_hash: hashCode(id, code),
-        expires_at: new Date(Date.now() + OTP_TTL_MS),
-        attempts_remaining: OTP_ATTEMPTS,
-        consumed_at: null,
-    });
+    const expiresAt = new Date(Date.now() + OTP_TTL_MS);
 
-    await challengeRepo.save(challenge);
+    const issued = await AppDataSource.transaction(async (manager) => {
+        const transactionUserRepo = manager.getRepository(User);
+        const transactionChallengeRepo = manager.getRepository(LoginMfaChallenge);
+
+        const lockedUser = await transactionUserRepo.findOne({
+            where: { id: user.id },
+            lock: { mode: "pessimistic_write" },
+        });
+
+        if (!lockedUser || !lockedUser.email) {
+            throw new AppError("Admin account requires an email address for MFA", 403, "MFA_EMAIL_REQUIRED");
+        }
+
+        await transactionChallengeRepo.update(
+            { user_id: lockedUser.id, consumed_at: IsNull() },
+            { consumed_at: new Date() }
+        );
+
+        const challenge = transactionChallengeRepo.create({
+            id,
+            user_id: lockedUser.id,
+            code_hash: hashCode(id, code),
+            expires_at: expiresAt,
+            attempts_remaining: OTP_ATTEMPTS,
+            consumed_at: null,
+        });
+
+        await transactionChallengeRepo.save(challenge);
+
+        return {
+            challenge,
+            email: lockedUser.email,
+        };
+    });
 
     try {
         await sendPlainTextEmail(
-            user.email,
+            issued.email,
             "Mã xác nhận đăng nhập quản trị Serpente Nail Room",
             [
                 `Mã OTP đăng nhập quản trị của bạn là: ${code}`,
@@ -72,15 +92,17 @@ export async function createLoginMfaChallenge(user: User) {
             ].join("\n")
         );
     } catch (error) {
-        challenge.consumed_at = new Date();
-        await challengeRepo.save(challenge);
+        await challengeRepo.update(
+            { id: issued.challenge.id },
+            { consumed_at: new Date() }
+        );
         throw error;
     }
 
     return {
-        challengeId: challenge.id,
-        expiresAt: challenge.expires_at,
-        maskedEmail: maskEmail(user.email),
+        challengeId: issued.challenge.id,
+        expiresAt: issued.challenge.expires_at,
+        maskedEmail: maskEmail(issued.email),
     };
 }
 

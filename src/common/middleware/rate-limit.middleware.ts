@@ -1,6 +1,5 @@
 import { ipKeyGenerator, rateLimit } from "express-rate-limit";
 import { AppError } from "../errors";
-import { AuditEventType, createAuditLog } from "../../modules/audit/audit-log.service";
 
 export const loginRateLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
@@ -8,21 +7,8 @@ export const loginRateLimiter = rateLimit({
     skipSuccessfulRequests: true,
     standardHeaders: true,
     legacyHeaders: false,
-    handler: (req, res, next) => {
-        void createAuditLog({
-            event_type: AuditEventType.LOGIN_RATE_LIMITED,
-            request_id: res.locals.requestId,
-            identifier: typeof req.body?.phone === "string" ? req.body.phone : null,
-            ip: req.ip,
-            user_agent: req.get("user-agent") ?? null,
-            detail: "ip_limit",
-        })
-            .catch((error) => {
-                console.error(`[${res.locals.requestId}] Failed to audit login rate limit`, error);
-            })
-            .finally(() => {
-                next(new AppError("Too many login attempts. Try again later", 429, "RATE_LIMIT_EXCEEDED"));
-            });
+    handler: () => {
+        throw new AppError("Too many login attempts. Try again later", 429, "RATE_LIMIT_EXCEEDED");
     },
 });
 
