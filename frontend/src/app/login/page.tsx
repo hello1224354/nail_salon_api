@@ -26,7 +26,7 @@ export default async function LoginPage() {
                             để đặt lịch.
                         </h1>
                         <p className="mt-5 max-w-md text-sm leading-6 text-muted">
-                            Dùng số điện thoại đã đăng ký để tiếp tục. Lịch hẹn của bạn sẽ được lưu trong tài khoản này.
+                            Đặt lịch dễ hơn khi bạn đã có tài khoản. Lịch hẹn của bạn sẽ được lưu trong tài khoản này.
                         </p>
 
                         <LoginForm />

@@ -72,7 +72,7 @@ export function Footer() {
 
                     <div>
                         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#bba18e]">
-                            Đi nhanh
+                            Khám phá
                         </p>
                         <nav className="mt-4 flex flex-col gap-2.5 text-sm">
                             <Link className="w-fit hover:text-[#d8c2b5]" href="/">Trang chủ</Link>
