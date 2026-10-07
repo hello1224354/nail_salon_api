@@ -30,7 +30,7 @@ async function getCurrentOffers(): Promise<OfferCard[]> {
             image: offer.image,
         }));
     } catch (error) {
-        console.error("Không tải được ưu đãi hiện tại", error);
+        console.error("Chưa tải được ưu đãi", error);
         return [];
     }
 }
@@ -39,7 +39,7 @@ async function getSalonContent(): Promise<SalonContent | null> {
     try {
         return await apiRequest<SalonContent>("/api/site-content", { cache: "no-store" });
     } catch (error) {
-        console.error("Không tải được nội dung salon", error);
+        console.error("Chưa tải được thông tin tiệm", error);
         return null;
     }
 }
