@@ -49,5 +49,6 @@ router.post(
 
 router.get("/me", authenticate, controller.getMe);
 router.get("/admin-test", authenticate, requireRole(UserRole.ADMIN), controller.adminTest);
+router.delete("/:id", authenticate, requireRole(UserRole.ADMIN), controller.deleteUser);
 
 export default router;
