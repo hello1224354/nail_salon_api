@@ -1,6 +1,5 @@
 import { Column, Entity, JoinColumn, ManyToOne, PrimaryColumn } from "typeorm";
 import { Appointment } from "./appointments.entity";
-import { Service } from "../services/service.entity";
 
 @Entity("appointment_services")
 export class AppointmentService {
@@ -13,10 +12,6 @@ export class AppointmentService {
 
     @PrimaryColumn("uuid")
     service_id: string;
-
-    @ManyToOne(() => Service, { onDelete: "RESTRICT" })
-    @JoinColumn({ name: "service_id" })
-    service: Service;
 
     @Column({ type: "varchar" })
     service_name: string;
