@@ -769,7 +769,7 @@ export function AdminDashboard() {
                             <Field label="Chi nhánh">
                                 <select name="branch_id" className={selectClass} required defaultValue="">
                                     <option value="" disabled>Chọn chi nhánh</option>
-                                    {activeBranches.map((branch) => (
+                                    {data.branches.map((branch) => (
                                         <option key={branch.id} value={branch.id}>{localizeBranchName(branch.name)}</option>
                                     ))}
                                 </select>
@@ -809,7 +809,7 @@ export function AdminDashboard() {
                         <Field label="Chi nhánh">
                             <select name="branch_id" className={selectClass} required defaultValue="">
                                 <option value="" disabled>Chọn chi nhánh</option>
-                                {activeBranches.map((branch) => (
+                                {data.branches.map((branch) => (
                                     <option key={branch.id} value={branch.id}>{localizeBranchName(branch.name)}</option>
                                 ))}
                             </select>
