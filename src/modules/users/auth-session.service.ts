@@ -69,39 +69,67 @@ export function getAccessTokenVerifyOptions(): VerifyOptions {
 }
 
 export async function createLoginSession(user: User, fingerprint: SessionFingerprint) {
-    const id = randomUUID();
-    const familyId = randomUUID();
-    const refreshToken = buildRefreshToken(id);
-    const expiresAt = new Date(Date.now() + env.REFRESH_SESSION_DAYS * 24 * 60 * 60 * 1000);
+    return await AppDataSource.transaction(async (manager) => {
+        const transactionUserRepo = manager.getRepository(User);
+        const transactionSessionRepo = manager.getRepository(RefreshSession);
 
-    const session = refreshSessionRepo.create({
-        id,
-        user_id: user.id,
-        family_id: familyId,
-        token_hash: hashToken(refreshToken),
-        expires_at: expiresAt,
-        revoked_at: null,
-        replaced_by: null,
-        ip_hash: fingerprint.ipHash,
-        user_agent_hash: fingerprint.userAgentHash,
+        const currentUser = await transactionUserRepo.findOne({
+            where: { id: user.id },
+            lock: { mode: "pessimistic_read" },
+        });
+
+        if (!currentUser || currentUser.token_version !== user.token_version) {
+            throw new AppError(
+                "Authentication state changed. Please sign in again",
+                401,
+                "AUTHENTICATION_RESTART_REQUIRED"
+            );
+        }
+
+        const id = randomUUID();
+        const familyId = randomUUID();
+        const refreshToken = buildRefreshToken(id);
+        const expiresAt = new Date(Date.now() + env.REFRESH_SESSION_DAYS * 24 * 60 * 60 * 1000);
+
+        const session = transactionSessionRepo.create({
+            id,
+            user_id: currentUser.id,
+            family_id: familyId,
+            token_hash: hashToken(refreshToken),
+            expires_at: expiresAt,
+            revoked_at: null,
+            replaced_by: null,
+            ip_hash: fingerprint.ipHash,
+            user_agent_hash: fingerprint.userAgentHash,
+        });
+
+        await transactionSessionRepo.save(session);
+
+        return {
+            accessToken: signAccessToken(currentUser),
+            refreshToken,
+            refreshExpiresAt: expiresAt,
+        };
     });
-
-    await refreshSessionRepo.save(session);
-
-    return {
-        accessToken: signAccessToken(user),
-        refreshToken,
-        refreshExpiresAt: expiresAt,
-    };
 }
 
 export async function refreshSession(refreshToken: string, fingerprint: SessionFingerprint) {
     const sessionId = getSessionId(refreshToken);
     if (!sessionId) throw new AppError("Invalid refresh session", 401, "INVALID_REFRESH_SESSION");
 
+    const sessionHint = await refreshSessionRepo.findOneBy({ id: sessionId });
+    if (!sessionHint || !tokenHashMatches(refreshToken, sessionHint.token_hash)) {
+        throw new AppError("Invalid refresh session", 401, "INVALID_REFRESH_SESSION");
+    }
+
     const result = await AppDataSource.transaction(async (manager) => {
         const sessionRepo = manager.getRepository(RefreshSession);
         const transactionUserRepo = manager.getRepository(User);
+
+        const user = await transactionUserRepo.findOne({
+            where: { id: sessionHint.user_id },
+            lock: { mode: "pessimistic_write" },
+        });
 
         const session = await sessionRepo.findOne({
             where: { id: sessionId },
@@ -166,8 +194,7 @@ export async function refreshSession(refreshToken: string, fingerprint: SessionF
             };
         }
 
-        const user = await transactionUserRepo.findOneBy({ id: session.user_id });
-        if (!user) {
+        if (!user || user.id !== session.user_id) {
             await sessionRepo.update(
                 { family_id: session.family_id, revoked_at: IsNull() },
                 { revoked_at: new Date() }
@@ -222,8 +249,17 @@ export async function revokeRefreshSession(refreshToken: string) {
     const sessionId = getSessionId(refreshToken);
     if (!sessionId) return null;
 
+    const sessionHint = await refreshSessionRepo.findOneBy({ id: sessionId });
+    if (!sessionHint || !tokenHashMatches(refreshToken, sessionHint.token_hash)) return null;
+
     return await AppDataSource.transaction(async (manager) => {
         const sessionRepo = manager.getRepository(RefreshSession);
+        const transactionUserRepo = manager.getRepository(User);
+
+        await transactionUserRepo.findOne({
+            where: { id: sessionHint.user_id },
+            lock: { mode: "pessimistic_write" },
+        });
 
         const session = await sessionRepo.findOne({
             where: { id: sessionId },
