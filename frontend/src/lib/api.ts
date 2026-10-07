@@ -103,7 +103,6 @@ export async function apiRequest<T>(
 
 const errorMessagesByCode: Record<string, string> = {
     INVALID_CREDENTIALS: "Số điện thoại hoặc mật khẩu không đúng.",
-    USER_INACTIVE: "Tài khoản hiện đang bị khóa.",
     AUTHENTICATION_REQUIRED: "Vui lòng đăng nhập để tiếp tục.",
     INVALID_TOKEN: "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
     TOKEN_REVOKED: "Phiên đăng nhập đã bị thu hồi. Vui lòng đăng nhập lại.",
@@ -119,9 +118,7 @@ const errorMessagesByCode: Record<string, string> = {
     FORBIDDEN: "Bạn không có quyền thực hiện thao tác này.",
     VALIDATION_ERROR: "Thông tin chưa hợp lệ. Vui lòng kiểm tra lại.",
     BRANCH_NOT_FOUND: "Không tìm thấy chi nhánh.",
-    BRANCH_INACTIVE: "Chi nhánh hiện không hoạt động.",
     SERVICE_NOT_FOUND: "Không tìm thấy một hoặc nhiều dịch vụ.",
-    SERVICE_INACTIVE: "Một hoặc nhiều dịch vụ hiện không hoạt động.",
     BRANCH_MISMATCH: "Các dịch vụ đã chọn không thuộc cùng một chi nhánh.",
     SLOT_UNAVAILABLE: "Khung giờ này vừa hết chỗ. Vui lòng chọn khung giờ khác.",
     CUSTOMER_APPOINTMENT_CONFLICT: "Bạn đã có lịch hẹn trùng với khung giờ này.",
@@ -153,7 +150,6 @@ export type Branch = {
     id: number;
     name: string;
     address: string;
-    is_active: boolean;
     created_at?: string;
     updated_at?: string;
 };
@@ -172,7 +168,6 @@ export type Service = {
     name: string;
     price: number;
     duration_minutes: number;
-    is_active: boolean;
     created_at?: string;
     updated_at?: string;
 };
@@ -221,6 +216,12 @@ export type Appointment = {
     user_id: string;
     staff_id: string;
     branch_id: number;
+    customer_full_name?: string;
+    customer_phone?: string;
+    customer_email?: string | null;
+    staff_full_name?: string;
+    branch_name?: string;
+    branch_address?: string;
     start_time: string;
     end_time: string;
     actual_started_at?: string | null;
@@ -259,7 +260,6 @@ export type AdminStaff = {
     full_name: string;
     phone: string;
     email: string | null;
-    is_active: boolean;
     created_at?: string;
     updated_at?: string;
 };
