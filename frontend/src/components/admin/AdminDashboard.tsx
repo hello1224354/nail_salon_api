@@ -265,7 +265,7 @@ export function AdminDashboard() {
             try {
                 await Promise.all([loadStaticData(), loadAppointments(appointmentPage)]);
             } catch (loadError) {
-                setError(getApiErrorMessage(loadError, "Không thể tải dữ liệu quản trị."));
+                setError(getApiErrorMessage(loadError, "Chưa tải được dữ liệu quản trị."));
             } finally {
                 setLoading(false);
                 setRefreshing(false);
@@ -334,7 +334,7 @@ export function AdminDashboard() {
             );
             await refresh("Đã cập nhật trạng thái lịch hẹn.");
         } catch (statusError) {
-            setToast(getApiErrorMessage(statusError, "Không thể cập nhật lịch hẹn."));
+            setToast(getApiErrorMessage(statusError, "Chưa cập nhật được lịch hẹn."));
         } finally {
             setSubmitting(false);
         }
@@ -348,7 +348,7 @@ export function AdminDashboard() {
             await apiRequest<Appointment>(`/api/appointments/${appointment.id}`, { method: "DELETE" });
             await refresh("Đã xóa lịch hẹn.");
         } catch (appointmentError) {
-            setToast(getApiErrorMessage(appointmentError, "Không thể xóa lịch hẹn."));
+            setToast(getApiErrorMessage(appointmentError, "Chưa xóa được lịch hẹn."));
         } finally {
             setSubmitting(false);
         }
@@ -375,7 +375,7 @@ export function AdminDashboard() {
             setEditingBranch(null);
             await refresh(editingBranch ? "Đã cập nhật chi nhánh." : "Đã thêm chi nhánh.");
         } catch (saveError) {
-            setToast(getApiErrorMessage(saveError, "Không thể lưu chi nhánh."));
+            setToast(getApiErrorMessage(saveError, "Chưa lưu được chi nhánh."));
         } finally {
             setSubmitting(false);
         }
@@ -389,7 +389,7 @@ export function AdminDashboard() {
             await apiRequest<Branch>(`/api/branches/${branch.id}`, { method: "DELETE" });
             await refresh("Đã xóa chi nhánh.");
         } catch (branchError) {
-            setToast(getApiErrorMessage(branchError, "Không thể xóa chi nhánh."));
+            setToast(getApiErrorMessage(branchError, "Chưa xóa được chi nhánh."));
         } finally {
             setSubmitting(false);
         }
@@ -420,7 +420,7 @@ export function AdminDashboard() {
             setEditingService(null);
             await refresh(editingService ? "Đã cập nhật dịch vụ." : "Đã thêm dịch vụ.");
         } catch (saveError) {
-            setToast(getApiErrorMessage(saveError, "Không thể lưu dịch vụ."));
+            setToast(getApiErrorMessage(saveError, "Chưa lưu được dịch vụ."));
         } finally {
             setSubmitting(false);
         }
@@ -434,7 +434,7 @@ export function AdminDashboard() {
             await apiRequest<Service>(`/api/services/${service.id}`, { method: "DELETE" });
             await refresh("Đã xóa dịch vụ.");
         } catch (serviceError) {
-            setToast(getApiErrorMessage(serviceError, "Không thể xóa dịch vụ."));
+            setToast(getApiErrorMessage(serviceError, "Chưa xóa được dịch vụ."));
         } finally {
             setSubmitting(false);
         }
@@ -460,7 +460,7 @@ export function AdminDashboard() {
             setModal(null);
             await refresh("Đã thêm nhân viên.");
         } catch (saveError) {
-            setToast(getApiErrorMessage(saveError, "Không thể thêm nhân viên."));
+            setToast(getApiErrorMessage(saveError, "Chưa thêm được nhân viên."));
         } finally {
             setSubmitting(false);
         }
@@ -475,7 +475,7 @@ export function AdminDashboard() {
             );
             await refresh("Đã cập nhật nhân viên.");
         } catch (staffError) {
-            setToast(getApiErrorMessage(staffError, "Không thể cập nhật nhân viên."));
+            setToast(getApiErrorMessage(staffError, "Chưa cập nhật được nhân viên."));
         } finally {
             setSubmitting(false);
         }
@@ -489,7 +489,7 @@ export function AdminDashboard() {
             await apiRequest<AdminStaff>(`/api/staffs/${staff.id}`, { method: "DELETE" });
             await refresh("Đã xóa nhân viên.");
         } catch (staffError) {
-            setToast(getApiErrorMessage(staffError, "Không thể xóa nhân viên."));
+            setToast(getApiErrorMessage(staffError, "Chưa xóa được nhân viên."));
         } finally {
             setSubmitting(false);
         }
@@ -520,7 +520,7 @@ export function AdminDashboard() {
             setEditingOffer(null);
             await refresh(editingOffer ? "Đã cập nhật ưu đãi." : "Đã thêm ưu đãi.");
         } catch (saveError) {
-            setToast(getApiErrorMessage(saveError, "Không thể lưu ưu đãi."));
+            setToast(getApiErrorMessage(saveError, "Chưa lưu được ưu đãi."));
         } finally {
             setSubmitting(false);
         }
@@ -533,7 +533,7 @@ export function AdminDashboard() {
             await apiRequest<Offer>(`/api/offers/${offer.id}`, { method: "DELETE" });
             await refresh("Đã xóa ưu đãi.");
         } catch (offerError) {
-            setToast(getApiErrorMessage(offerError, "Không thể xóa ưu đãi."));
+            setToast(getApiErrorMessage(offerError, "Chưa xóa được ưu đãi."));
         } finally {
             setSubmitting(false);
         }
@@ -840,7 +840,7 @@ export function AdminDashboard() {
             {modal === "offer" ? (
                 <Modal
                     title={editingOffer ? "Sửa ưu đãi" : "Thêm ưu đãi"}
-                    description="Ưu đãi tự xuất hiện trên website khi ngày hiện tại nằm trong khoảng áp dụng."
+                    description="Ưu đãi sẽ hiện trên website trong đúng khoảng ngày bạn đã đặt."
                     onClose={() => {
                         setModal(null);
                         setEditingOffer(null);
@@ -1006,7 +1006,7 @@ function AppointmentsPanel({
             <div className="flex flex-col gap-4 border-b border-line p-5 lg:flex-row lg:items-end lg:justify-between">
                 <div>
                     <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-accent">Quản lý lịch hẹn</p>
-                    <h2 className="mt-1 font-serif text-3xl">Lịch salon</h2>
+                    <h2 className="mt-1 font-serif text-3xl">Lịch hẹn</h2>
                 </div>
                 <div className="flex flex-col gap-2 sm:flex-row">
                     <select value={branchFilter} onChange={(event) => setBranchFilter(event.target.value)} className="h-10 rounded-xl border border-line bg-cream px-3 text-xs outline-none">
