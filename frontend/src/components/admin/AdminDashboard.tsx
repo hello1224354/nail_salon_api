@@ -301,10 +301,6 @@ export function AdminDashboard() {
         router.refresh();
     }
 
-    const activeBranches = useMemo(() => data.branches.filter((branch) => branch.is_active), [data.branches]);
-    const activeServices = useMemo(() => data.services.filter((service) => service.is_active), [data.services]);
-    const activeStaff = useMemo(() => data.staff.filter((staff) => staff.is_active), [data.staff]);
-
     const todayStats = useMemo(() => {
         const formatter = new Intl.DateTimeFormat("en-CA", {
             timeZone: "Asia/Ho_Chi_Minh",
@@ -340,13 +336,26 @@ export function AdminDashboard() {
         }
     }
 
+    async function deleteAppointment(appointment: Appointment) {
+        if (!window.confirm("Xóa vĩnh viễn lịch hẹn này? Snapshot lịch hẹn sẽ bị xóa hoàn toàn.")) return;
+
+        setSubmitting(true);
+        try {
+            await apiRequest<Appointment>(`/api/appointments/${appointment.id}`, { method: "DELETE" });
+            await refresh("Đã xóa vĩnh viễn lịch hẹn.");
+        } catch (deleteError) {
+            setToast(getApiErrorMessage(deleteError, "Không thể xóa lịch hẹn."));
+        } finally {
+            setSubmitting(false);
+        }
+    }
+
     async function saveBranch(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
         const form = new FormData(event.currentTarget);
         const payload = {
             name: String(form.get("name") || "").trim(),
             address: String(form.get("address") || "").trim(),
-            is_active: form.get("is_active") === "on",
         };
 
         setSubmitting(true);
@@ -368,19 +377,15 @@ export function AdminDashboard() {
         }
     }
 
-    async function toggleBranch(branch: Branch) {
+    async function deleteBranch(branch: Branch) {
+        if (!window.confirm(`Xóa vĩnh viễn chi nhánh “${branch.name}”? Nhân viên và dịch vụ hiện tại thuộc chi nhánh cũng sẽ bị xóa. Lịch hẹn cũ vẫn giữ snapshot.`)) return;
+
         setSubmitting(true);
         try {
-            await apiRequest<Branch>(
-                `/api/branches/${branch.id}`,
-                {
-                    method: "PUT",
-                    body: JSON.stringify({ is_active: !branch.is_active }),
-                }
-            );
-            await refresh(branch.is_active ? "Đã tạm ngưng chi nhánh." : "Đã kích hoạt chi nhánh.");
-        } catch (toggleError) {
-            setToast(getApiErrorMessage(toggleError, "Không thể cập nhật chi nhánh."));
+            await apiRequest<Branch>(`/api/branches/${branch.id}`, { method: "DELETE" });
+            await refresh("Đã xóa vĩnh viễn chi nhánh.");
+        } catch (deleteError) {
+            setToast(getApiErrorMessage(deleteError, "Không thể xóa chi nhánh."));
         } finally {
             setSubmitting(false);
         }
@@ -393,7 +398,6 @@ export function AdminDashboard() {
             name: String(form.get("name") || "").trim(),
             price: Number(form.get("price")),
             duration_minutes: Number(form.get("duration_minutes")),
-            is_active: form.get("is_active") === "on",
         };
         const payload = editingService
             ? base
@@ -418,20 +422,15 @@ export function AdminDashboard() {
         }
     }
 
-    async function deactivateService(service: Service) {
+    async function deleteService(service: Service) {
+        if (!window.confirm(`Xóa vĩnh viễn dịch vụ “${service.name}”? Các lịch hẹn đã tạo vẫn giữ snapshot dịch vụ.`)) return;
+
         setSubmitting(true);
         try {
-            if (service.is_active) {
-                await apiRequest<Service>(`/api/services/${service.id}`, { method: "DELETE" });
-            } else {
-                await apiRequest<Service>(
-                    `/api/services/${service.id}`,
-                    { method: "PUT", body: JSON.stringify({ is_active: true }) }
-                );
-            }
-            await refresh(service.is_active ? "Đã ngưng dịch vụ." : "Đã kích hoạt dịch vụ.");
+            await apiRequest<Service>(`/api/services/${service.id}`, { method: "DELETE" });
+            await refresh("Đã xóa vĩnh viễn dịch vụ.");
         } catch (serviceError) {
-            setToast(getApiErrorMessage(serviceError, "Không thể cập nhật dịch vụ."));
+            setToast(getApiErrorMessage(serviceError, "Không thể xóa dịch vụ."));
         } finally {
             setSubmitting(false);
         }
@@ -463,7 +462,7 @@ export function AdminDashboard() {
         }
     }
 
-    async function updateStaff(staff: AdminStaff, payload: { branch_id?: number; is_active?: boolean }) {
+    async function updateStaff(staff: AdminStaff, payload: { branch_id: number }) {
         setSubmitting(true);
         try {
             await apiRequest<AdminStaff>(
@@ -473,6 +472,20 @@ export function AdminDashboard() {
             await refresh("Đã cập nhật nhân viên.");
         } catch (staffError) {
             setToast(getApiErrorMessage(staffError, "Không thể cập nhật nhân viên."));
+        } finally {
+            setSubmitting(false);
+        }
+    }
+
+    async function deleteStaff(staff: AdminStaff) {
+        if (!window.confirm(`Xóa vĩnh viễn nhân viên “${staff.full_name}”? Tài khoản nhân viên cũng bị xóa; lịch hẹn cũ vẫn giữ snapshot.`)) return;
+
+        setSubmitting(true);
+        try {
+            await apiRequest<AdminStaff>(`/api/staffs/${staff.id}`, { method: "DELETE" });
+            await refresh("Đã xóa vĩnh viễn nhân viên.");
+        } catch (staffError) {
+            setToast(getApiErrorMessage(staffError, "Không thể xóa nhân viên."));
         } finally {
             setSubmitting(false);
         }
