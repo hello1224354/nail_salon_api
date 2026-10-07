@@ -30,19 +30,19 @@ export const REAL_SALON_DATA = {
       sort_order: 1,
     },
     {
-      title: "French tip kim tuyến ngọc trai",
+      title: null,
       instagram_url: "https://www.instagram.com/p/DdLGgOuicGs/?utm_source=ig_web_copy_link&stkn=MzRlODBiNWFlZA==",
       image_source: null,
       sort_order: 2,
     },
     {
-      title: "French tip sữa đính hoa 3D",
+      title: null,
       instagram_url: "https://www.instagram.com/p/DddH7VSpqk7/?utm_source=ig_web_copy_link&stkn=MzRlODBiNWFlZA==",
       image_source: null,
       sort_order: 3,
     },
     {
-      title: "Ngọc trai xà cừ",
+      title: null,
       instagram_url: "https://www.instagram.com/p/DdITMpxib29/?utm_source=ig_web_copy_link&stkn=MzRlODBiNWFlZA==",
       image_source: null,
       sort_order: 4,
