@@ -4,6 +4,7 @@ import "./globals.css";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { RouteMotion } from "@/components/layout/RouteMotion";
+import { BranchProvider } from "@/components/branch/BranchProvider";
 
 export const metadata: Metadata = {
     applicationName: "Serpente Nail Room",
@@ -35,11 +36,13 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
     return (
         <html lang="vi" className="h-full antialiased">
             <body className="flex min-h-screen flex-col bg-cream text-ink">
-                <Header />
-                <main className="flex-1">
-                    <RouteMotion>{children}</RouteMotion>
-                </main>
-                <Footer />
+                <BranchProvider>
+                    <Header />
+                    <main className="flex-1">
+                        <RouteMotion>{children}</RouteMotion>
+                    </main>
+                    <Footer />
+                </BranchProvider>
             </body>
         </html>
     );

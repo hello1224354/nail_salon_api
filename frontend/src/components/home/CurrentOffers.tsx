@@ -189,7 +189,7 @@ export function CurrentOffers({ offers, instagramHandle }: CurrentOffersProps) {
                     <button
                         type="button"
                         aria-label="Ưu đãi trước"
-                        className="focus-ring pointer-events-auto flex size-11 items-center justify-center rounded-full border border-line bg-surface/95 text-lg font-semibold text-ink shadow-[0_10px_30px_rgba(48,40,35,0.12)] backdrop-blur-sm transition hover:bg-tint"
+                        className="focus-ring pointer-events-auto flex size-14 items-center justify-center rounded-full border border-line bg-surface/95 text-2xl font-semibold text-ink shadow-[0_12px_34px_rgba(48,40,35,0.14)] backdrop-blur-sm transition hover:bg-tint"
                         onClick={() => emblaApi?.scrollPrev()}
                     >
                         ←
@@ -197,7 +197,7 @@ export function CurrentOffers({ offers, instagramHandle }: CurrentOffersProps) {
                     <button
                         type="button"
                         aria-label="Ưu đãi tiếp theo"
-                        className="focus-ring pointer-events-auto flex size-11 items-center justify-center rounded-full border border-line bg-surface/95 text-lg font-semibold text-ink shadow-[0_10px_30px_rgba(48,40,35,0.12)] backdrop-blur-sm transition hover:bg-tint"
+                        className="focus-ring pointer-events-auto flex size-14 items-center justify-center rounded-full border border-line bg-surface/95 text-2xl font-semibold text-ink shadow-[0_12px_34px_rgba(48,40,35,0.14)] backdrop-blur-sm transition hover:bg-tint"
                         onClick={() => emblaApi?.scrollNext()}
                     >
                         →

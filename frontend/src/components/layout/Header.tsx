@@ -5,6 +5,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { AUTH_CHANGED_EVENT, getAuthUser, logoutSession, restoreSession, type AuthUser } from "@/lib/auth";
+import { useBranch } from "@/components/branch/BranchProvider";
+import { localizeBranchName } from "@/lib/studio-data";
 
 const navigation = [
     { href: "/", label: "Trang chủ" },
@@ -34,6 +36,7 @@ export function Header() {
     const [mobileOpen, setMobileOpen] = useState(false);
     const [accountOpen, setAccountOpen] = useState(false);
     const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+    const { branches, selectedBranchId, setSelectedBranchId, loading: branchesLoading } = useBranch();
 
     useEffect(() => {
         let cancelled = false;
@@ -101,6 +104,21 @@ export function Header() {
                 </nav>
 
                 <div className="col-start-3 row-start-1 hidden items-center justify-self-end gap-1.5 xl:flex 2xl:gap-2">
+                    <select
+                        value={selectedBranchId ?? ""}
+                        onChange={(event) => setSelectedBranchId(Number(event.target.value))}
+                        disabled={branchesLoading || branches.length === 0}
+                        aria-label="Chọn chi nhánh"
+                        className="focus-ring h-10 max-w-[180px] rounded-full border border-line bg-surface px-3 text-xs font-semibold text-ink outline-none disabled:cursor-not-allowed disabled:opacity-50 2xl:max-w-[210px] 2xl:px-4"
+                    >
+                        {branches.length === 0 ? <option value="">Chưa có chi nhánh</option> : null}
+                        {branches.map((branch) => (
+                            <option key={branch.id} value={branch.id}>
+                                {localizeBranchName(branch.name)}
+                            </option>
+                        ))}
+                    </select>
+
                     {authUser ? (
                         <>
                             <Link href="/book" className="focus-ring rounded-full bg-ink px-5 py-2.5 text-xs font-semibold text-white shadow-[0_6px_18px_rgba(45,39,35,0.12)] transition-all hover:-translate-y-0.5 hover:shadow-[0_9px_22px_rgba(45,39,35,0.16)]">
@@ -208,6 +226,26 @@ export function Header() {
                                 </Link>
                             );
                         })}
+
+                        <div className="mt-3 rounded-2xl border border-line bg-surface p-3">
+                            <label htmlFor="mobile-branch-select" className="mb-2 block px-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-accent">
+                                Chi nhánh
+                            </label>
+                            <select
+                                id="mobile-branch-select"
+                                value={selectedBranchId ?? ""}
+                                onChange={(event) => setSelectedBranchId(Number(event.target.value))}
+                                disabled={branchesLoading || branches.length === 0}
+                                className="focus-ring h-11 w-full rounded-full border border-line bg-cream px-4 text-xs font-semibold text-ink outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                {branches.length === 0 ? <option value="">Chưa có chi nhánh</option> : null}
+                                {branches.map((branch) => (
+                                    <option key={branch.id} value={branch.id}>
+                                        {localizeBranchName(branch.name)}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
 
                         {authUser ? (
                             <Link
