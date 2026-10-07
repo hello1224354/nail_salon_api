@@ -68,7 +68,6 @@ export const loginUser = async (data: LoginUserDto) => {
     const passwordMatches = await bcrypt.compare(data.password, user.password_hash);
 
     if (!passwordMatches) throw new AppError("Invalid phone or password", 401, "INVALID_CREDENTIALS");
-    if (!user.is_active) throw new AppError("User account is inactive", 403, "USER_INACTIVE");
 
     return user;
 };
@@ -95,20 +94,12 @@ export const changePassword = async (userId: string, data: ChangePasswordDto) =>
     return saved;
 };
 
-export const setUserActive = async (id: string, isActive: boolean) => {
-    const user = await getUser(id);
+export const deleteUser = async (id: string, manager?: EntityManager) => {
+    const repo = manager ? manager.getRepository(User) : userRepo;
+    const user = await repo.findOneBy({ id });
+
     if (!user) return null;
 
-    if (user.is_active && !isActive) {
-        user.token_version += 1;
-    }
-
-    user.is_active = isActive;
-    const saved = await userRepo.save(user);
-
-    if (!isActive) {
-        await revokeAllUserSessions(user.id);
-    }
-
-    return saved;
+    await repo.remove(user);
+    return user;
 };
