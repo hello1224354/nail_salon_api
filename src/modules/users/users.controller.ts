@@ -35,7 +35,6 @@ function publicUser(user: {
     phone: string;
     email: string | null;
     role: string;
-    is_active: boolean;
     created_at?: Date;
     updated_at?: Date;
 }) {
@@ -45,7 +44,6 @@ function publicUser(user: {
         phone: user.phone,
         email: user.email,
         role: user.role,
-        is_active: user.is_active,
         created_at: user.created_at,
         updated_at: user.updated_at,
     };
@@ -194,7 +192,7 @@ export const loginUser = async (req: Request, res: Response) => {
             }
         });
     } catch (error) {
-        if (error instanceof AppError && ["INVALID_CREDENTIALS", "USER_INACTIVE"].includes(error.code)) {
+        if (error instanceof AppError && error.code === "INVALID_CREDENTIALS") {
             await createAuditLog({
                 event_type: AuditEventType.LOGIN_FAILED,
                 request_id: context.requestId,
@@ -423,6 +421,22 @@ export const resetPassword = async (req: Request, res: Response) => {
         success: {
             message: "Password reset successfully. Please sign in again.",
             data: null,
+        }
+    });
+};
+
+export const deleteMe = async (req: Request, res: Response) => {
+    if (!req.user) throw new AppError("Authentication required", 401, "AUTHENTICATION_REQUIRED");
+
+    const user = await userService.deleteUser(req.user.id);
+    if (!user) throw new AppError("User not found", 404, "USER_NOT_FOUND");
+
+    clearRefreshCookie(res);
+
+    return res.status(200).json({
+        success: {
+            message: "Delete user successfully",
+            data: publicUser(user),
         }
     });
 };
