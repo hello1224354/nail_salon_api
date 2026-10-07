@@ -8,6 +8,7 @@ import { AppointmentService } from "../modules/appointments/appointment-services
 import { Branch } from "../modules/branches/branches.entity";
 import { StaffBookingSlot } from "../modules/appointments/staff-booking-slots.entity";
 import { AuditLog } from "../modules/audit/audit-log.entity";
+import { Offer } from "../modules/offers/offer.entity";
 
 export const AppDataSource = new DataSource({
     type: "mysql",
@@ -18,7 +19,7 @@ export const AppDataSource = new DataSource({
     database: env.DB_NAME,
     synchronize: env.DB_SYNCHRONIZE,
     logging: env.DB_LOGGING,
-    entities: [Service, Staff, Appointment, AppointmentService, User, Branch, StaffBookingSlot, AuditLog],
+    entities: [Service, Staff, Appointment, AppointmentService, User, Branch, StaffBookingSlot, AuditLog, Offer],
     migrations: [__dirname + "/../migrations/**/*{.js,.ts}"],
     timezone: "Z",
 });
