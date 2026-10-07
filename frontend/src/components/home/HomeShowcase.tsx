@@ -4,8 +4,9 @@ import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
 import useEmblaCarousel from "embla-carousel-react";
 import Autoplay from "embla-carousel-autoplay";
-import type { CustomerReview, InstagramTrendItem, SalonContent } from "@/lib/api";
+import { apiRequest, type CustomerReview, type InstagramTrendItem, type SalonContent } from "@/lib/api";
 import { getInstagramUrl, getMapsUrl } from "@/lib/studio-data";
+import { useBranch } from "@/components/branch/BranchProvider";
 
 function useAutoCarousel(itemCount: number, delay: number) {
     const [autoplay] = useState(() =>
@@ -71,7 +72,7 @@ function CarouselArrows({
     label: string;
 }) {
     const buttonClass =
-        "focus-ring pointer-events-auto flex size-11 items-center justify-center rounded-full border border-line bg-surface/95 text-lg font-semibold text-ink shadow-[0_10px_30px_rgba(48,40,35,0.12)] backdrop-blur-sm transition hover:bg-tint";
+        "focus-ring pointer-events-auto flex size-14 items-center justify-center rounded-full border border-line bg-surface/95 text-2xl font-semibold text-ink shadow-[0_12px_34px_rgba(48,40,35,0.14)] backdrop-blur-sm transition hover:bg-tint";
 
     return (
         <div className="pointer-events-none absolute inset-x-2 top-1/2 z-20 flex -translate-y-1/2 items-center justify-between sm:inset-x-3">
@@ -262,8 +263,34 @@ function ReviewsCarousel({ reviews }: { reviews: CustomerReview[] }) {
 }
 
 export function HomeShowcase({ content }: { content: SalonContent | null }) {
+    const { selectedBranchId } = useBranch();
+    const [resolvedContent, setResolvedContent] = useState<SalonContent | null>(content);
 
-    if (!content) {
+    useEffect(() => {
+        if (selectedBranchId === null) return;
+
+        let cancelled = false;
+
+        async function loadBranchContent() {
+            try {
+                const nextContent = await apiRequest<SalonContent>(
+                    `/api/site-content?branch_id=${selectedBranchId}`
+                );
+
+                if (!cancelled) setResolvedContent(nextContent);
+            } catch (error) {
+                console.error("Chưa tải được đánh giá theo chi nhánh", error);
+            }
+        }
+
+        void loadBranchContent();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [selectedBranchId]);
+
+    if (!resolvedContent) {
         return (
             <section className="border-t border-line">
                 <div className="site-shell py-14 lg:py-20">
@@ -273,30 +300,30 @@ export function HomeShowcase({ content }: { content: SalonContent | null }) {
         );
     }
 
-    const trendItems = [...content.instagram_showcase].sort((a, b) => a.sort_order - b.sort_order);
-    const reviews = content.customer_reviews;
-    const instagramUrl = getInstagramUrl(content.instagram_handle);
-    const mapsUrl = getMapsUrl(content.google_maps_url, content.google_maps_location);
+    const trendItems = [...resolvedContent.instagram_showcase].sort((a, b) => a.sort_order - b.sort_order);
+    const reviews = resolvedContent.customer_reviews;
+    const instagramUrl = getInstagramUrl(resolvedContent.instagram_handle);
+    const mapsUrl = getMapsUrl(resolvedContent.google_maps_url, resolvedContent.google_maps_location);
 
     const details = [
-        content.has_refreshments
+        resolvedContent.has_refreshments
             ? {
                   eyebrow: "Tại tiệm",
                   title: "Có bánh và đồ uống",
                   body: "Bạn có thể dùng bánh và đồ uống trong lúc làm móng.",
               }
             : null,
-        content.has_warranty && content.warranty_days
+        resolvedContent.has_warranty && resolvedContent.warranty_days
             ? {
                   eyebrow: "Sau khi làm móng",
-                  title: `Bảo hành ${content.warranty_days} ngày`,
-                  body: `Serpente áp dụng chính sách bảo hành móng trong ${content.warranty_days} ngày.`,
+                  title: `Bảo hành ${resolvedContent.warranty_days} ngày`,
+                  body: `Serpente áp dụng chính sách bảo hành móng trong ${resolvedContent.warranty_days} ngày.`,
               }
             : null,
-        content.instagram_handle
+        resolvedContent.instagram_handle
             ? {
                   eyebrow: "Theo dõi Instagram",
-                  title: `@${content.instagram_handle.replace(/^@/, "")}`,
+                  title: `@${resolvedContent.instagram_handle.replace(/^@/, "")}`,
                   body: "Mẫu móng mới và thông tin từ tiệm được cập nhật trên Instagram.",
               }
             : null,
@@ -323,7 +350,7 @@ export function HomeShowcase({ content }: { content: SalonContent | null }) {
                                     rel="noreferrer"
                                     className="focus-ring group w-fit rounded-sm text-xs font-semibold text-accent"
                                 >
-                                    @{content.instagram_handle}{" "}
+                                    @{resolvedContent.instagram_handle}{" "}
                                     <span className="ml-2 inline-block transition-transform duration-300 group-hover:translate-x-1">
                                         →
                                     </span>
