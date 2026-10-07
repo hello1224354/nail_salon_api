@@ -11,8 +11,8 @@ export const metadata: Metadata = {
         default: "Serpente Nail Room",
         template: "%s | Serpente Nail Room",
     },
-    description: "Khám phá dịch vụ và đặt lịch chăm sóc móng tại Serpente Nail Room.",
-    keywords: ["nail studio", "chăm sóc móng", "sơn gel", "nail art", "đặt lịch làm móng"],
+    description: "Xem bảng giá, mẫu móng và đặt lịch tại Serpente Nail Room, Quận 8.",
+    keywords: ["Serpente Nail Room", "tiệm nail Quận 8", "bảng giá nail", "đặt lịch làm móng", "sơn gel"],
     robots: {
         index: true,
         follow: true,
