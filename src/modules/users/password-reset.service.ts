@@ -10,7 +10,6 @@ import { User } from "./users.entity";
 import { sendPlainTextEmail } from "./email.service";
 
 const challengeRepo = AppDataSource.getRepository(PasswordResetChallenge);
-const userRepo = AppDataSource.getRepository(User);
 
 const OTP_TTL_MS = 5 * 60 * 1000;
 const OTP_ATTEMPTS = 5;
