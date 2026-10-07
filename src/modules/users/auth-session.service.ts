@@ -222,15 +222,23 @@ export async function revokeRefreshSession(refreshToken: string) {
     const sessionId = getSessionId(refreshToken);
     if (!sessionId) return null;
 
-    const session = await refreshSessionRepo.findOneBy({ id: sessionId });
-    if (!session || !tokenHashMatches(refreshToken, session.token_hash)) return null;
+    return await AppDataSource.transaction(async (manager) => {
+        const sessionRepo = manager.getRepository(RefreshSession);
 
-    if (!session.revoked_at) {
-        session.revoked_at = new Date();
-        await refreshSessionRepo.save(session);
-    }
+        const session = await sessionRepo.findOne({
+            where: { id: sessionId },
+            lock: { mode: "pessimistic_write" },
+        });
 
-    return session;
+        if (!session || !tokenHashMatches(refreshToken, session.token_hash)) return null;
+
+        await sessionRepo.update(
+            { family_id: session.family_id, revoked_at: IsNull() },
+            { revoked_at: new Date() }
+        );
+
+        return session;
+    });
 }
 
 export async function revokeAllUserSessions(userId: string) {
