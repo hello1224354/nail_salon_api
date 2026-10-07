@@ -6,25 +6,33 @@ import { Appointment } from "./appointments.entity";
 import { parseUuidParam } from "../../common/validators";
 
 function toAppointmentResponse(appointment: Appointment) {
-    const { staff, user, branch, ...data } = appointment;
+    const {
+        customer_full_name,
+        customer_phone,
+        customer_email,
+        staff_full_name,
+        branch_name,
+        branch_address,
+        ...data
+    } = appointment;
 
     return {
         ...data,
-        customer: user ? {
-            id: user.id,
-            full_name: user.full_name,
-            phone: user.phone,
-            email: user.email,
-        } : undefined,
-        staff: staff ? {
-            id: staff.user_id,
-            full_name: staff.user?.full_name ?? null,
-        } : undefined,
-        branch: branch ? {
-            id: branch.id,
-            name: branch.name,
-            address: branch.address,
-        } : undefined,
+        customer: {
+            id: appointment.user_id,
+            full_name: customer_full_name,
+            phone: customer_phone,
+            email: customer_email,
+        },
+        staff: {
+            id: appointment.staff_id,
+            full_name: staff_full_name,
+        },
+        branch: {
+            id: appointment.branch_id,
+            name: branch_name,
+            address: branch_address,
+        },
     };
 }
 
@@ -36,7 +44,7 @@ export const createAppointment = async (req: Request, res: Response) => {
     return res.status(201).json({
         success: {
             message: "Create new appointment successfully",
-            data,
+            data: toAppointmentResponse(data),
         }
     });
 };
@@ -101,6 +109,22 @@ export const updateAppointment = async (req: Request, res: Response) => {
     return res.status(200).json({
         success: {
             message: `Update appointment ${req.params.id} successfully`,
+            data: toAppointmentResponse(data),
+        }
+    });
+};
+
+export const deleteAppointment = async (req: Request, res: Response) => {
+    if (!req.user) throw new AppError("Authentication required", 401, "AUTHENTICATION_REQUIRED");
+
+    const appointmentId = parseUuidParam(req.params.id, "Appointment id");
+    const data = await appointmentService.deleteAppointment(appointmentId);
+
+    if (!data) throw new AppError("Appointment not found", 404, "APPOINTMENT_NOT_FOUND");
+
+    return res.status(200).json({
+        success: {
+            message: `Delete appointment ${appointmentId} permanently successfully`,
             data: toAppointmentResponse(data),
         }
     });
