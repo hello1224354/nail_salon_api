@@ -16,7 +16,6 @@ function toPublicStaff(staff: Awaited<ReturnType<typeof staffService.getStaff>>)
         full_name: staff.user.full_name,
         phone: staff.user.phone,
         email: staff.user.email,
-        is_active: staff.user.is_active,
     };
 }
 
@@ -28,7 +27,6 @@ function toAdminStaff(staff: NonNullable<Awaited<ReturnType<typeof staffService.
         full_name: staff.user.full_name,
         phone: staff.user.phone,
         email: staff.user.email,
-        is_active: staff.user.is_active,
         created_at: staff.created_at,
         updated_at: staff.updated_at,
     };
@@ -77,7 +75,7 @@ export const getMyStaff = async (req: Request, res: Response) => {
 
     const data = await staffService.getStaff(req.user.id);
 
-    if (!data || !data.user.is_active) {
+    if (!data) {
         throw new AppError("Staff not found", 404, "STAFF_NOT_FOUND");
     }
 
@@ -127,10 +125,6 @@ export const updateStaff = async (req: Request, res: Response) => {
 
     if (!data) throw new AppError("Staff not found", 404, "STAFF_NOT_FOUND");
 
-    if (input.is_active === false) {
-        await auditStaffEvent(req, res, AuditEventType.STAFF_DISABLED, staffId);
-    }
-
     const staff = await staffService.getStaff(staffId);
 
     return res.status(200).json({
@@ -147,14 +141,12 @@ export const deleteStaff = async (req: Request, res: Response) => {
 
     if (!data) throw new AppError("Staff not found", 404, "STAFF_NOT_FOUND");
 
-    await auditStaffEvent(req, res, AuditEventType.STAFF_DISABLED, staffId);
-
-    const staff = await staffService.getStaff(staffId);
+    await auditStaffEvent(req, res, AuditEventType.STAFF_DELETED, staffId);
 
     return res.status(200).json({
         success: {
-            message: "Delete staff successfully",
-            data: staff ? toAdminStaff(staff) : data,
+            message: "Delete staff permanently successfully",
+            data: toAdminStaff(data),
         }
     });
 };
