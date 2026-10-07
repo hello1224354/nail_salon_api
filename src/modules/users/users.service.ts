@@ -7,6 +7,7 @@ import { User, UserRole } from "./users.entity";
 import { revokeAllUserSessions } from "./auth-session.service";
 
 const userRepo = AppDataSource.getRepository(User);
+const DUMMY_PASSWORD_HASH = bcrypt.hashSync("timing-equalization-password", 12);
 
 export const createUser = async (data: RegisterUserDto, role: UserRole, manager?: EntityManager) => {
     const repo = manager ? manager.getRepository(User) : userRepo;
@@ -63,7 +64,10 @@ export const registerUser = async (data: RegisterUserDto) => {
 export const loginUser = async (data: LoginUserDto) => {
     const user = await userRepo.findOneBy({ phone: data.phone });
 
-    if (!user) throw new AppError("Invalid phone or password", 401, "INVALID_CREDENTIALS");
+    if (!user) {
+        await bcrypt.compare(data.password, DUMMY_PASSWORD_HASH);
+        throw new AppError("Invalid phone or password", 401, "INVALID_CREDENTIALS");
+    }
 
     const passwordMatches = await bcrypt.compare(data.password, user.password_hash);
 
