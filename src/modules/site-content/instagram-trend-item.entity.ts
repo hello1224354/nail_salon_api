@@ -1,13 +1,18 @@
-import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+import { Column, CreateDateColumn, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+import { SalonContent } from "./salon-content.entity";
 
 @Entity("instagram_trend_items")
-@Index(["salon_content_id", "sort_order"])
+@Index("IDX_instagram_trend_salon_sort", ["salon_content_id", "sort_order"])
 export class InstagramTrendItem {
     @PrimaryGeneratedColumn({ type: "int" })
     id: number;
 
     @Column({ type: "int" })
     salon_content_id: number;
+
+    @ManyToOne(() => SalonContent, { onDelete: "CASCADE" })
+    @JoinColumn({ name: "salon_content_id" })
+    salon_content: SalonContent;
 
     @Column({ type: "varchar", nullable: true })
     title: string | null;
