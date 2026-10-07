@@ -389,7 +389,7 @@ export const getAllAppointments = async (userId: string, role: UserRole, query: 
     const queryBuilder = appointmentRepo.createQueryBuilder("appointment")
         .leftJoinAndSelect("appointment.user", "customer")
         .leftJoinAndSelect("appointment.staff", "staff")
-        .leftJoinAndSelect("staff.user", "staff_user")
+        .leftJoinAndSelect("staff.user", "staff_account")
         .leftJoinAndSelect("appointment.branch", "branch")
         .leftJoinAndSelect("appointment.appointment_services", "appointment_services");
 
