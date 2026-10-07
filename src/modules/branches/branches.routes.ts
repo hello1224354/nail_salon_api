@@ -11,5 +11,6 @@ router.get("/admin", authenticate, requireRole(UserRole.ADMIN), controller.getAl
 router.get("/:id", controller.getBranch);
 router.post("/", authenticate, requireRole(UserRole.ADMIN), controller.createBranch);
 router.put("/:id", authenticate, requireRole(UserRole.ADMIN), controller.updateBranch);
+router.delete("/:id", authenticate, requireRole(UserRole.ADMIN), controller.deleteBranch);
 
 export default router;
