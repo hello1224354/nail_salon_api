@@ -61,6 +61,40 @@ function useAutoCarousel(itemCount: number, delay: number) {
     return { emblaRef, emblaApi, selectedIndex };
 }
 
+function CarouselArrows({
+    onPrevious,
+    onNext,
+    label,
+}: {
+    onPrevious: () => void;
+    onNext: () => void;
+    label: string;
+}) {
+    const buttonClass =
+        "focus-ring pointer-events-auto flex size-11 items-center justify-center rounded-full border border-line bg-surface/95 text-lg font-semibold text-ink shadow-[0_10px_30px_rgba(48,40,35,0.12)] backdrop-blur-sm transition hover:bg-tint";
+
+    return (
+        <div className="pointer-events-none absolute inset-x-2 top-1/2 z-20 flex -translate-y-1/2 items-center justify-between sm:inset-x-3">
+            <button
+                type="button"
+                aria-label={`${label} trước`}
+                className={buttonClass}
+                onClick={onPrevious}
+            >
+                ←
+            </button>
+            <button
+                type="button"
+                aria-label={`${label} tiếp theo`}
+                className={buttonClass}
+                onClick={onNext}
+            >
+                →
+            </button>
+        </div>
+    );
+}
+
 function CarouselDots({
     count,
     selectedIndex,
@@ -141,7 +175,7 @@ function HotTrendCarousel({ items }: { items: InstagramTrendItem[] }) {
     const carousel = useAutoCarousel(items.length, 4600);
 
     return (
-        <div className="mt-8">
+        <div className="relative mt-8">
             <div ref={carousel.emblaRef} className="overflow-hidden">
                 <div className="-ml-4 flex">
                     {items.map((item, index) => (
@@ -154,6 +188,13 @@ function HotTrendCarousel({ items }: { items: InstagramTrendItem[] }) {
                     ))}
                 </div>
             </div>
+            {items.length > 1 ? (
+                <CarouselArrows
+                    label="Mẫu hot trend"
+                    onPrevious={() => carousel.emblaApi?.scrollPrev()}
+                    onNext={() => carousel.emblaApi?.scrollNext()}
+                />
+            ) : null}
             <CarouselDots
                 count={items.length}
                 selectedIndex={carousel.selectedIndex}
@@ -191,7 +232,7 @@ function ReviewsCarousel({ reviews }: { reviews: CustomerReview[] }) {
     const carousel = useAutoCarousel(reviews.length, 7200);
 
     return (
-        <div className="mt-8">
+        <div className="relative mt-8">
             <div ref={carousel.emblaRef} className="overflow-hidden">
                 <div className="-ml-4 flex">
                     {reviews.map((review) => (
@@ -204,6 +245,13 @@ function ReviewsCarousel({ reviews }: { reviews: CustomerReview[] }) {
                     ))}
                 </div>
             </div>
+            {reviews.length > 1 ? (
+                <CarouselArrows
+                    label="Đánh giá"
+                    onPrevious={() => carousel.emblaApi?.scrollPrev()}
+                    onNext={() => carousel.emblaApi?.scrollNext()}
+                />
+            ) : null}
             <CarouselDots
                 count={reviews.length}
                 selectedIndex={carousel.selectedIndex}
