@@ -35,7 +35,6 @@ function publicUser(user: {
     phone: string;
     email: string | null;
     role: string;
-    is_active: boolean;
     created_at?: Date;
     updated_at?: Date;
 }) {
@@ -45,7 +44,6 @@ function publicUser(user: {
         phone: user.phone,
         email: user.email,
         role: user.role,
-        is_active: user.is_active,
         created_at: user.created_at,
         updated_at: user.updated_at,
     };
@@ -194,7 +192,7 @@ export const loginUser = async (req: Request, res: Response) => {
             }
         });
     } catch (error) {
-        if (error instanceof AppError && ["INVALID_CREDENTIALS", "USER_INACTIVE"].includes(error.code)) {
+        if (error instanceof AppError && error.code === "INVALID_CREDENTIALS") {
             await createAuditLog({
                 event_type: AuditEventType.LOGIN_FAILED,
                 request_id: context.requestId,
@@ -432,6 +430,36 @@ export const adminTest = async (req: Request, res: Response) => {
         success: {
             message: "Admin access granted",
             data: req.user,
+        }
+    });
+};
+
+export const deleteUser = async (req: Request, res: Response) => {
+    if (!req.user) throw new AppError("Authentication required", 401, "AUTHENTICATION_REQUIRED");
+
+    const userId = req.params.id;
+    if (!/^[0-9a-f-]{36}$/i.test(userId)) {
+        throw new AppError("User id must be a valid UUID", 400, "VALIDATION_ERROR");
+    }
+
+    const context = requestSecurityContext(req, res);
+    const data = await userService.deleteUser(userId);
+
+    if (!data) throw new AppError("User not found", 404, "USER_NOT_FOUND");
+
+    await createAuditLog({
+        event_type: AuditEventType.USER_DELETED,
+        request_id: context.requestId,
+        user_id: req.user.id,
+        ip: context.ip,
+        user_agent: context.userAgent,
+        detail: `target_user=${userId}`,
+    });
+
+    return res.status(200).json({
+        success: {
+            message: "Delete user permanently successfully",
+            data: publicUser(data),
         }
     });
 };
