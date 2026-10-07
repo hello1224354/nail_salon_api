@@ -450,7 +450,7 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
 
         return savedAppointments[0];
     });
-
+};
 
 export const getAllAppointments = async (userId: string, role: UserRole, query: GetAppointmentsQueryDto) => {
     const queryBuilder = appointmentRepo.createQueryBuilder("appointment")
