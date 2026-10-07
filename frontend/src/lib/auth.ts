@@ -4,7 +4,6 @@ export type AuthUser = {
     phone: string;
     email: string | null;
     role: string;
-    is_active: boolean;
 };
 
 type RefreshResponse = {
