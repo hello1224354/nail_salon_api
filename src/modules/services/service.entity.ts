@@ -1,5 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, ManyToOne, JoinColumn } from "typeorm";
-import { AppointmentService } from "../appointments/appointment-services.entity";
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from "typeorm";
 import { Branch } from "../branches/branches.entity";
 
 @Entity("services")
@@ -23,15 +22,9 @@ export class Service {
     @Column({ type: "int" })
     duration_minutes: number;
 
-    @Column({ type: "boolean", default: true })
-    is_active: boolean;
-
     @CreateDateColumn()
     created_at: Date;
 
     @UpdateDateColumn()
     updated_at: Date;
-
-    @OneToMany(() => AppointmentService, (appointmentService) => appointmentService.service)
-    appointment_services: AppointmentService[];
 }
