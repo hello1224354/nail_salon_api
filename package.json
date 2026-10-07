@@ -26,6 +26,7 @@
     "migration:run": "typeorm migration:run -d dist/config/database.js",
     "migration:show": "typeorm migration:show -d dist/config/database.js",
     "typecheck": "tsc --noEmit",
-    "seed:production": "node dist/scripts/seed-production.js"
+    "seed:production": "node dist/scripts/seed-production.js",
+    "admin:create": "node dist/scripts/create-admin.js"
   }
 }

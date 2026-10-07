@@ -1,4 +1,5 @@
 import { config } from "@/lib/config";
+import { getAccessToken, refreshSession } from "@/lib/auth";
 
 export type ApiErrorPayload = {
     error?: {
@@ -25,11 +26,11 @@ type ApiSuccess<T> = {
     };
 };
 
-export async function apiRequest<T>(
+async function executeRequest<T>(
     path: string,
-    init: RequestInit = {},
-    accessToken?: string | null
-): Promise<T> {
+    init: RequestInit,
+    token: string | null | undefined
+) {
     const headers = new Headers(init.headers);
     headers.set("Accept", "application/json");
 
@@ -37,13 +38,15 @@ export async function apiRequest<T>(
         headers.set("Content-Type", "application/json");
     }
 
-    if (accessToken) {
-        headers.set("Authorization", `Bearer ${accessToken}`);
+    if (token) {
+        headers.set("Authorization", `Bearer ${token}`);
     }
 
-    const response = await fetch(`${config.API_BASE_URL}${path}`, {
+    const baseUrl = typeof window === "undefined" ? config.API_BASE_URL : "";
+    const response = await fetch(`${baseUrl}${path}`, {
         ...init,
         headers,
+        credentials: "include",
     });
 
     let body: ApiSuccess<T> | ApiErrorPayload | null = null;
@@ -52,6 +55,38 @@ export async function apiRequest<T>(
         body = (await response.json()) as ApiSuccess<T> | ApiErrorPayload;
     } catch {
         body = null;
+    }
+
+    return { response, body };
+}
+
+function canAttemptSessionRefresh(path: string) {
+    if (typeof window === "undefined") return false;
+
+    return ![
+        "/api/users/login",
+        "/api/users/register",
+        "/api/users/session/refresh",
+        "/api/users/session/logout",
+        "/api/users/password/forgot",
+        "/api/users/password/reset",
+    ].includes(path);
+}
+
+export async function apiRequest<T>(
+    path: string,
+    init: RequestInit = {},
+    accessToken?: string | null
+): Promise<T> {
+    const token = accessToken === undefined ? getAccessToken() : accessToken;
+    let { response, body } = await executeRequest<T>(path, init, token);
+
+    if (response.status === 401 && canAttemptSessionRefresh(path)) {
+        const restored = await refreshSession();
+
+        if (restored) {
+            ({ response, body } = await executeRequest<T>(path, init, getAccessToken()));
+        }
     }
 
     if (!response.ok || !body || !("success" in body)) {
@@ -70,9 +105,19 @@ const errorMessagesByCode: Record<string, string> = {
     INVALID_CREDENTIALS: "Số điện thoại hoặc mật khẩu không đúng.",
     USER_INACTIVE: "Tài khoản hiện đang bị khóa.",
     AUTHENTICATION_REQUIRED: "Vui lòng đăng nhập để tiếp tục.",
+    INVALID_TOKEN: "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
+    TOKEN_REVOKED: "Phiên đăng nhập đã bị thu hồi. Vui lòng đăng nhập lại.",
+    INVALID_REFRESH_SESSION: "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
+    REFRESH_TOKEN_REUSE: "Phiên đăng nhập không còn an toàn. Vui lòng đăng nhập lại.",
+    INVALID_CURRENT_PASSWORD: "Mật khẩu hiện tại không đúng.",
+    INVALID_RESET_CODE: "Mã xác nhận không đúng hoặc đã hết hạn.",
+    INVALID_MFA_CODE: "Mã OTP không đúng hoặc đã hết hạn.",
+    MFA_EMAIL_REQUIRED: "Tài khoản quản trị chưa có email để nhận OTP.",
+    MFA_NOT_CONFIGURED: "Hệ thống OTP quản trị chưa được cấu hình.",
+    REGISTRATION_UNAVAILABLE: "Không thể tạo tài khoản với thông tin đã cung cấp.",
+    USER_NOT_FOUND: "Không tìm thấy tài khoản.",
     FORBIDDEN: "Bạn không có quyền thực hiện thao tác này.",
     VALIDATION_ERROR: "Thông tin chưa hợp lệ. Vui lòng kiểm tra lại.",
-    USER_NOT_FOUND: "Không tìm thấy tài khoản.",
     BRANCH_NOT_FOUND: "Không tìm thấy chi nhánh.",
     BRANCH_INACTIVE: "Chi nhánh hiện không hoạt động.",
     SERVICE_NOT_FOUND: "Không tìm thấy một hoặc nhiều dịch vụ.",
@@ -92,33 +137,13 @@ export function getApiErrorMessage(error: unknown, fallback: string) {
             return errorMessagesByCode[error.code];
         }
 
-        if (error.status === 400) {
-            return "Thông tin chưa hợp lệ. Vui lòng kiểm tra lại.";
-        }
-
-        if (error.status === 401) {
-            return "Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại.";
-        }
-
-        if (error.status === 403) {
-            return "Bạn không có quyền thực hiện thao tác này.";
-        }
-
-        if (error.status === 404) {
-            return "Không tìm thấy dữ liệu được yêu cầu.";
-        }
-
-        if (error.status === 409) {
-            return "Dữ liệu vừa thay đổi hoặc đang bị trùng. Vui lòng thử lại.";
-        }
-
-        if (error.status === 429) {
-            return "Bạn thao tác quá nhiều lần. Vui lòng thử lại sau.";
-        }
-
-        if (error.status >= 500) {
-            return "Hệ thống đang gặp sự cố. Vui lòng thử lại sau.";
-        }
+        if (error.status === 400) return "Thông tin chưa hợp lệ. Vui lòng kiểm tra lại.";
+        if (error.status === 401) return "Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại.";
+        if (error.status === 403) return "Bạn không có quyền thực hiện thao tác này.";
+        if (error.status === 404) return "Không tìm thấy dữ liệu được yêu cầu.";
+        if (error.status === 409) return "Dữ liệu vừa thay đổi hoặc đang bị trùng. Vui lòng thử lại.";
+        if (error.status === 429) return "Bạn thao tác quá nhiều lần. Vui lòng thử lại sau.";
+        if (error.status >= 500) return "Hệ thống đang gặp sự cố. Vui lòng thử lại sau.";
     }
 
     return fallback;
@@ -226,7 +251,6 @@ export type AppointmentList = {
     limit: number;
     total_pages: number;
 };
-
 
 export type AdminStaff = {
     id: string;

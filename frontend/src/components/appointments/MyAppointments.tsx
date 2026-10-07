@@ -12,7 +12,7 @@ import {
     type Branch,
     type BranchList,
 } from "@/lib/api";
-import { clearSession, getAccessToken, type AuthUser } from "@/lib/auth";
+import { clearSession, restoreSession, type AuthUser } from "@/lib/auth";
 import { formatAppointmentStatus, formatVnd, localizeBranchName } from "@/lib/studio-data";
 
 const BUSINESS_TIMEZONE = "Asia/Ho_Chi_Minh";
@@ -56,10 +56,10 @@ function formatAppointmentTime(value: string) {
     }).format(new Date(value));
 }
 
-async function fetchAppointmentContext(token: string) {
+async function fetchAppointmentContext() {
     return await Promise.all([
-        apiRequest<AuthUser>("/api/users/me", {}, token),
-        apiRequest<AppointmentList>("/api/appointments?page=1&limit=100", {}, token),
+        apiRequest<AuthUser>("/api/users/me"),
+        apiRequest<AppointmentList>("/api/appointments?page=1&limit=100"),
         apiRequest<BranchList>("/api/branches?page=1&limit=100"),
     ]);
 }
@@ -85,16 +85,17 @@ export function MyAppointments() {
 
     useEffect(() => {
         let cancelled = false;
-        const token = getAccessToken();
-
-        if (!token) {
-            router.replace("/login");
-            return;
-        }
 
         async function loadInitial() {
             try {
-                const [currentUser, appointmentData, branchData] = await fetchAppointmentContext(token as string);
+                const restored = await restoreSession();
+
+                if (!restored) {
+                    if (!cancelled) router.replace("/login");
+                    return;
+                }
+
+                const [currentUser, appointmentData, branchData] = await fetchAppointmentContext();
                 if (cancelled) return;
 
                 if (currentUser.role.toLowerCase() !== CUSTOMER_ROLE) {
@@ -129,17 +130,18 @@ export function MyAppointments() {
     }, [router]);
 
     async function refreshAppointments() {
-        const token = getAccessToken();
-        if (!token) {
-            router.replace("/login");
-            return;
-        }
-
         setRefreshing(true);
         setError("");
 
         try {
-            const [currentUser, appointmentData, branchData] = await fetchAppointmentContext(token);
+            const restored = await restoreSession();
+
+            if (!restored) {
+                router.replace("/login");
+                return;
+            }
+
+            const [currentUser, appointmentData, branchData] = await fetchAppointmentContext();
 
             if (currentUser.role.toLowerCase() !== CUSTOMER_ROLE) {
                 setError("Trang này chỉ dành cho tài khoản khách hàng.");

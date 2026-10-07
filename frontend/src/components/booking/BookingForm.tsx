@@ -13,7 +13,7 @@ import {
     type BranchList,
     type ServiceList,
 } from "@/lib/api";
-import { clearSession, getAccessToken, type AuthUser } from "@/lib/auth";
+import { clearSession, restoreSession, type AuthUser } from "@/lib/auth";
 import {
     decorateService,
     formatVnd,
@@ -142,7 +142,6 @@ function SectionHeading({ number, title, helper }: { number: string; title: stri
 export function BookingForm() {
     const router = useRouter();
     const dates = useMemo(() => getBusinessDates(), []);
-    const [accessToken, setAccessToken] = useState<string | null>(null);
     const [user, setUser] = useState<AuthUser | null>(null);
     const [branches, setBranches] = useState<Branch[]>([]);
     const [selectedBranchId, setSelectedBranchId] = useState<number | null>(null);
@@ -172,23 +171,22 @@ export function BookingForm() {
 
     useEffect(() => {
         let cancelled = false;
-        const token = getAccessToken();
-
-        if (!token) {
-            router.replace("/login");
-            return;
-        }
 
         async function loadBookingContext() {
             try {
+                const restored = await restoreSession();
+
+                if (!restored) {
+                    if (!cancelled) router.replace("/login");
+                    return;
+                }
+
                 const [currentUser, branchData] = await Promise.all([
-                    apiRequest<AuthUser>("/api/users/me", {}, token),
+                    apiRequest<AuthUser>("/api/users/me"),
                     apiRequest<BranchList>("/api/branches?page=1&limit=100"),
                 ]);
 
                 if (cancelled) return;
-
-                setAccessToken(token);
 
                 if (currentUser.role.toLowerCase() !== CUSTOMER_ROLE) {
                     setFormError("Trang đặt lịch này chỉ dành cho tài khoản khách hàng.");
@@ -257,7 +255,7 @@ export function BookingForm() {
     }, [selectedBranchId, user]);
 
     useEffect(() => {
-        if (!accessToken || selectedServiceIds.length === 0 || !selectedDate) {
+        if (!user || user.role.toLowerCase() !== CUSTOMER_ROLE || selectedServiceIds.length === 0 || !selectedDate) {
             return;
         }
 
@@ -270,9 +268,7 @@ export function BookingForm() {
                     date: `${selectedDate}T00:00:00+07:00`,
                 });
                 const data = await apiRequest<Availability>(
-                    `/api/appointments/availability?${params.toString()}`,
-                    {},
-                    accessToken
+                    `/api/appointments/availability?${params.toString()}`
                 );
 
                 if (cancelled) return;
@@ -306,7 +302,7 @@ export function BookingForm() {
         return () => {
             cancelled = true;
         };
-    }, [accessToken, availabilityRefreshKey, router, selectedDate, selectedServiceIds]);
+    }, [availabilityRefreshKey, router, selectedDate, selectedServiceIds, user]);
 
     useEffect(() => {
         if (!createdAppointment) return;
@@ -370,7 +366,7 @@ export function BookingForm() {
         if (submitting) return;
         setFormError("");
 
-        if (!accessToken || !user) {
+        if (!user) {
             router.replace("/login");
             return;
         }
@@ -402,8 +398,7 @@ export function BookingForm() {
                         service_ids: selectedServiceIds,
                         start_time: startTime,
                     }),
-                },
-                accessToken
+                }
             );
 
             setCreatedAppointment(appointment);
