@@ -985,6 +985,7 @@ function AppointmentsPanel({
     pages,
     setPage,
     updateStatus,
+    onDelete,
     submitting,
 }: {
     appointments: Appointment[];
@@ -997,6 +998,7 @@ function AppointmentsPanel({
     pages: number;
     setPage: (page: number) => void;
     updateStatus: (appointment: Appointment, status: string) => Promise<void>;
+    onDelete: (appointment: Appointment) => Promise<void>;
     submitting: boolean;
 }) {
     return (
@@ -1066,23 +1068,32 @@ function AppointmentsPanel({
                                         </span>
                                     </td>
                                     <td className="px-5 py-4">
-                                        {allowed.length ? (
-                                            <select
-                                                defaultValue=""
+                                        <div className="flex items-center gap-3">
+                                            {allowed.length ? (
+                                                <select
+                                                    defaultValue=""
+                                                    disabled={submitting}
+                                                    onChange={(event) => {
+                                                        const value = event.target.value;
+                                                        if (value) void updateStatus(appointment, value);
+                                                        event.target.value = "";
+                                                    }}
+                                                    className="h-8 rounded-lg border border-line bg-white px-2 text-[10px] outline-none"
+                                                >
+                                                    <option value="">Cập nhật…</option>
+                                                    {allowed.map((status) => <option key={status} value={status}>{formatAppointmentStatus(status)}</option>)}
+                                                </select>
+                                            ) : (
+                                                <span className="text-[10px] text-muted">Đã khóa</span>
+                                            )}
+                                            <button
                                                 disabled={submitting}
-                                                onChange={(event) => {
-                                                    const value = event.target.value;
-                                                    if (value) void updateStatus(appointment, value);
-                                                    event.target.value = "";
-                                                }}
-                                                className="h-8 rounded-lg border border-line bg-white px-2 text-[10px] outline-none"
+                                                onClick={() => void onDelete(appointment)}
+                                                className="font-semibold text-[#8a5147]"
                                             >
-                                                <option value="">Cập nhật…</option>
-                                                {allowed.map((status) => <option key={status} value={status}>{formatAppointmentStatus(status)}</option>)}
-                                            </select>
-                                        ) : (
-                                            <span className="text-[10px] text-muted">Đã khóa</span>
-                                        )}
+                                                Xóa
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             );
@@ -1109,24 +1120,28 @@ function ServicesPanel({
     branches,
     onAdd,
     onEdit,
-    onToggle,
+    onDelete,
     submitting,
 }: {
     services: Service[];
     branches: Branch[];
     onAdd: () => void;
     onEdit: (service: Service) => void;
-    onToggle: (service: Service) => Promise<void>;
+    onDelete: (service: Service) => Promise<void>;
     submitting: boolean;
 }) {
     return (
         <section className="overflow-hidden rounded-[22px] border border-line bg-white">
             <PanelHeading eyebrow="Danh mục" title="Dịch vụ" action="Thêm dịch vụ" onAction={onAdd} />
             <div className="overflow-x-auto">
-                <table className="min-w-[800px] w-full text-left text-xs">
+                <table className="min-w-[720px] w-full text-left text-xs">
                     <thead className="bg-[#f8f5f1] text-[9px] uppercase tracking-[0.14em] text-muted">
                         <tr>
-                            <th className="px-5 py-3">Tên</th><th className="px-5 py-3">Chi nhánh</th><th className="px-5 py-3">Giá</th><th className="px-5 py-3">Thời lượng</th><th className="px-5 py-3">Trạng thái</th><th className="px-5 py-3">Thao tác</th>
+                            <th className="px-5 py-3">Tên</th>
+                            <th className="px-5 py-3">Chi nhánh</th>
+                            <th className="px-5 py-3">Giá</th>
+                            <th className="px-5 py-3">Thời lượng</th>
+                            <th className="px-5 py-3">Thao tác</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-line">
@@ -1136,13 +1151,10 @@ function ServicesPanel({
                                 <td className="px-5 py-4">{localizeBranchName(branches.find((branch) => branch.id === service.branch_id)?.name || `#${service.branch_id}`)}</td>
                                 <td className="px-5 py-4">{formatVnd(service.price)} VND</td>
                                 <td className="px-5 py-4">{service.duration_minutes} phút</td>
-                                <td className="px-5 py-4"><ActiveBadge active={service.is_active} /></td>
                                 <td className="px-5 py-4">
                                     <div className="flex gap-3">
                                         <button onClick={() => onEdit(service)} className="font-semibold text-accent">Sửa</button>
-                                        <button disabled={submitting} onClick={() => void onToggle(service)} className={service.is_active ? "font-semibold text-[#8a5147]" : "font-semibold text-[#3f6b4c]"}>
-                                            {service.is_active ? "Ngưng" : "Bật lại"}
-                                        </button>
+                                        <button disabled={submitting} onClick={() => void onDelete(service)} className="font-semibold text-[#8a5147]">Xóa</button>
                                     </div>
                                 </td>
                             </tr>
@@ -1159,22 +1171,27 @@ function StaffPanel({
     branches,
     onAdd,
     onUpdate,
+    onDelete,
     submitting,
 }: {
     staff: AdminStaff[];
     branches: Branch[];
     onAdd: () => void;
-    onUpdate: (staff: AdminStaff, payload: { branch_id?: number; is_active?: boolean }) => Promise<void>;
+    onUpdate: (staff: AdminStaff, payload: { branch_id: number }) => Promise<void>;
+    onDelete: (staff: AdminStaff) => Promise<void>;
     submitting: boolean;
 }) {
     return (
         <section className="overflow-hidden rounded-[22px] border border-line bg-white">
             <PanelHeading eyebrow="Nhân sự" title="Nhân viên" action="Thêm nhân viên" onAction={onAdd} />
             <div className="overflow-x-auto">
-                <table className="min-w-[900px] w-full text-left text-xs">
+                <table className="min-w-[760px] w-full text-left text-xs">
                     <thead className="bg-[#f8f5f1] text-[9px] uppercase tracking-[0.14em] text-muted">
                         <tr>
-                            <th className="px-5 py-3">Nhân viên</th><th className="px-5 py-3">Liên hệ</th><th className="px-5 py-3">Chi nhánh</th><th className="px-5 py-3">Trạng thái</th><th className="px-5 py-3">Thao tác</th>
+                            <th className="px-5 py-3">Nhân viên</th>
+                            <th className="px-5 py-3">Liên hệ</th>
+                            <th className="px-5 py-3">Chi nhánh</th>
+                            <th className="px-5 py-3">Thao tác</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-line">
@@ -1188,21 +1205,20 @@ function StaffPanel({
                                 <td className="px-5 py-4">
                                     <select
                                         value={person.branch_id}
-                                        disabled={submitting || !person.is_active}
+                                        disabled={submitting}
                                         onChange={(event) => void onUpdate(person, { branch_id: Number(event.target.value) })}
                                         className="h-9 rounded-lg border border-line bg-white px-2 text-[11px]"
                                     >
                                         {branches.map((branch) => <option key={branch.id} value={branch.id}>{localizeBranchName(branch.name)}</option>)}
                                     </select>
                                 </td>
-                                <td className="px-5 py-4"><ActiveBadge active={person.is_active} /></td>
                                 <td className="px-5 py-4">
                                     <button
                                         disabled={submitting}
-                                        onClick={() => void onUpdate(person, { is_active: !person.is_active })}
-                                        className={person.is_active ? "font-semibold text-[#8a5147]" : "font-semibold text-[#3f6b4c]"}
+                                        onClick={() => void onDelete(person)}
+                                        className="font-semibold text-[#8a5147]"
                                     >
-                                        {person.is_active ? "Khóa tài khoản" : "Kích hoạt"}
+                                        Xóa
                                     </button>
                                 </td>
                             </tr>
@@ -1218,13 +1234,13 @@ function BranchesPanel({
     branches,
     onAdd,
     onEdit,
-    onToggle,
+    onDelete,
     submitting,
 }: {
     branches: Branch[];
     onAdd: () => void;
     onEdit: (branch: Branch) => void;
-    onToggle: (branch: Branch) => Promise<void>;
+    onDelete: (branch: Branch) => Promise<void>;
     submitting: boolean;
 }) {
     return (
@@ -1233,19 +1249,14 @@ function BranchesPanel({
             <div className="grid gap-4 p-5 md:grid-cols-2 xl:grid-cols-3">
                 {branches.map((branch) => (
                     <article key={branch.id} className="rounded-2xl border border-line bg-[#faf8f5] p-5">
-                        <div className="flex items-start justify-between gap-4">
-                            <div>
-                                <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-accent">Chi nhánh #{branch.id}</p>
-                                <h3 className="mt-2 font-serif text-2xl">{localizeBranchName(branch.name)}</h3>
-                            </div>
-                            <ActiveBadge active={branch.is_active} />
+                        <div>
+                            <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-accent">Chi nhánh #{branch.id}</p>
+                            <h3 className="mt-2 font-serif text-2xl">{localizeBranchName(branch.name)}</h3>
                         </div>
                         <p className="mt-4 min-h-10 text-xs leading-5 text-muted">{branch.address}</p>
                         <div className="mt-5 flex gap-4 border-t border-line pt-4 text-[11px]">
                             <button onClick={() => onEdit(branch)} className="font-semibold text-accent">Chỉnh sửa</button>
-                            <button disabled={submitting} onClick={() => void onToggle(branch)} className={branch.is_active ? "font-semibold text-[#8a5147]" : "font-semibold text-[#3f6b4c]"}>
-                                {branch.is_active ? "Tạm ngưng" : "Kích hoạt"}
-                            </button>
+                            <button disabled={submitting} onClick={() => void onDelete(branch)} className="font-semibold text-[#8a5147]">Xóa</button>
                         </div>
                     </article>
                 ))}
@@ -1319,10 +1330,3 @@ function PanelHeading({
     );
 }
 
-function ActiveBadge({ active }: { active: boolean }) {
-    return (
-        <span className={`inline-flex rounded-full border px-2.5 py-1 text-[9px] font-semibold ${active ? "border-[#a7c8b2] bg-[#edf7f0] text-[#356245]" : "border-[#d8aaa0] bg-[#faeeeb] text-[#854d42]"}`}>
-            {active ? "Hoạt động" : "Tạm ngưng"}
-        </span>
-    );
-}
