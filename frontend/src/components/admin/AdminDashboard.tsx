@@ -741,12 +741,6 @@ export function AdminDashboard() {
                         <Field label="Tên chi nhánh">
                             <input name="name" defaultValue={editingBranch?.name || ""} className={inputClass} required maxLength={255} />
                         </Field>
-                        <Field label="Trạng thái">
-                            <label className="flex h-11 items-center gap-3 rounded-xl border border-line bg-white px-3.5 text-sm">
-                                <input name="is_active" type="checkbox" defaultChecked={editingBranch?.is_active ?? true} />
-                                Đang hoạt động
-                            </label>
-                        </Field>
                         <Field label="Địa chỉ" span>
                             <input name="address" defaultValue={editingBranch?.address || ""} className={inputClass} required maxLength={255} />
                         </Field>
