@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     },
     openGraph: {
         title: "Serpente Nail Room",
-        description: "Khám phá dịch vụ và đặt lịch chăm sóc móng tại Serpente Nail Room.",
+        description: "Xem bảng giá, mẫu móng và đặt lịch tại Serpente Nail Room, Quận 8.",
         siteName: "Serpente Nail Room",
         locale: "vi_VN",
         type: "website",
