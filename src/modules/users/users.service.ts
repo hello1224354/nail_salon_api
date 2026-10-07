@@ -36,9 +36,18 @@ export const registerUser = async (data: RegisterUserDto) => {
     try {
         return await createUser(data, UserRole.CUSTOMER);
     } catch (error) {
+        const duplicateQueryError =
+            error instanceof QueryFailedError &&
+            typeof error.driverError === "object" &&
+            error.driverError !== null &&
+            (
+                (error.driverError as { code?: unknown }).code === "ER_DUP_ENTRY" ||
+                (error.driverError as { errno?: unknown }).errno === 1062
+            );
+
         if (
             (error instanceof AppError && ["PHONE_ALREADY_EXISTS", "EMAIL_ALREADY_EXISTS"].includes(error.code)) ||
-            error instanceof QueryFailedError
+            duplicateQueryError
         ) {
             throw new AppError(
                 "Unable to create account with the supplied information",
