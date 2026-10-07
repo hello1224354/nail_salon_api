@@ -108,7 +108,7 @@ export async function verifyLoginMfaChallenge(challengeId: string, code: string)
 
     const user = await userRepo.findOneBy({ id: challenge.user_id });
 
-    if (!user || !user.is_active) {
+    if (!user) {
         challenge.consumed_at = new Date();
         await challengeRepo.save(challenge);
         throw new AppError("Invalid or expired MFA code", 401, "INVALID_MFA_CODE");
