@@ -52,7 +52,7 @@ export function Footer() {
                     <div className="md:col-span-2 lg:col-span-1">
                         <div className="flex items-center gap-3">
                             <Image
-                                src="/brand/serpente-logo.png"
+                                src="/brand/serpente-logo.svg"
                                 alt=""
                                 width={32}
                                 height={32}
