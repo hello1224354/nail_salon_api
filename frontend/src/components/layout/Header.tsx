@@ -16,7 +16,7 @@ function Logo() {
     return (
         <span className="flex items-center gap-3">
             <Image
-                src="/brand/serpente-logo.png"
+                src="/brand/serpente-logo.svg"
                 alt=""
                 width={36}
                 height={36}
