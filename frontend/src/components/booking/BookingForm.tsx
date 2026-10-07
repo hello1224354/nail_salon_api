@@ -16,10 +16,10 @@ import {
 import { clearSession, restoreSession, type AuthUser } from "@/lib/auth";
 import {
     decorateService,
+    formatServicePrice,
     formatVnd,
     localizeAddress,
     localizeBranchName,
-    studio,
     type StudioService,
 } from "@/lib/studio-data";
 
@@ -74,7 +74,7 @@ function buildTimeGroups(): TimeGroup[] {
         { label: "Buổi tối", times: [] },
     ];
 
-    for (let minuteOfDay = 9 * 60; minuteOfDay < 21 * 60; minuteOfDay += 15) {
+    for (let minuteOfDay = 9 * 60; minuteOfDay < 20 * 60 + 30; minuteOfDay += 15) {
         const hour = Math.floor(minuteOfDay / 60);
         const minute = minuteOfDay % 60;
         const label = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
@@ -165,7 +165,7 @@ export function BookingForm() {
         () => services.filter((service) => selectedServiceIds.includes(service.id)),
         [selectedServiceIds, services]
     );
-    const totalDuration = selectedServices.reduce((sum, service) => sum + service.duration_minutes, 0);
+    const totalDuration = selectedServices.reduce((sum, service) => sum + (service.duration_minutes ?? 0), 0);
     const pricePerPerson = selectedServices.reduce((sum, service) => sum + service.price, 0);
     const totalPrice = pricePerPerson * partySize;
     const endTime = selectedTime && totalDuration > 0 ? addMinutes(selectedTime, totalDuration) : "";
@@ -213,7 +213,7 @@ export function BookingForm() {
                     return;
                 }
 
-                setFormError(getApiErrorMessage(loadError, "Không thể tải thông tin đặt lịch."));
+                setFormError(getApiErrorMessage(loadError, "Chưa tải được thông tin để đặt lịch."));
             } finally {
                 if (!cancelled) setInitialLoading(false);
             }
@@ -240,12 +240,16 @@ export function BookingForm() {
                 );
 
                 if (!cancelled) {
-                    setServices(data.services.map(decorateService));
+                    setServices(
+                        data.services
+                            .filter((service) => service.booking_enabled && service.duration_minutes !== null)
+                            .map(decorateService)
+                    );
                 }
             } catch (loadError) {
                 if (!cancelled) {
                     setServices([]);
-                    setFormError(getApiErrorMessage(loadError, "Không thể tải danh sách dịch vụ."));
+                    setFormError(getApiErrorMessage(loadError, "Chưa tải được danh sách dịch vụ có thể đặt trực tuyến."));
                 }
             } finally {
                 if (!cancelled) setServicesLoading(false);
@@ -298,7 +302,7 @@ export function BookingForm() {
 
                 setAvailableSlots(new Map());
                 setSelectedTime("");
-                setFormError(getApiErrorMessage(loadError, "Không thể tải các khung giờ còn trống."));
+                setFormError(getApiErrorMessage(loadError, "Chưa kiểm tra được các giờ còn trống."));
             } finally {
                 if (!cancelled) setAvailabilityLoading(false);
             }
@@ -436,7 +440,7 @@ export function BookingForm() {
                 return;
             }
 
-            setFormError(getApiErrorMessage(submitError, "Không thể tạo yêu cầu đặt lịch."));
+            setFormError(getApiErrorMessage(submitError, "Chưa đặt được lịch. Vui lòng thử lại."));
         } finally {
             setSubmitting(false);
         }
@@ -463,7 +467,7 @@ export function BookingForm() {
         <form onSubmit={handleSubmit} className="grid gap-7 xl:grid-cols-[minmax(0,1fr)_420px] xl:items-start xl:gap-10">
             <div className="overflow-hidden rounded-[22px] border border-line bg-surface">
                 <section className="p-5 sm:p-7 lg:p-8">
-                    <SectionHeading number="01" title="Chi nhánh" helper="Chọn chi nhánh đang hoạt động của salon." />
+                    <SectionHeading number="01" title="Chi nhánh" helper="Chọn nơi bạn muốn làm móng." />
                     <div className="mt-6 grid gap-3 sm:grid-cols-2 sm:pl-[60px]">
                         {branches.length > 0 ? (
                             branches.map((branch) => {
@@ -500,7 +504,7 @@ export function BookingForm() {
                 <div className="mx-5 h-px bg-line sm:mx-7 lg:mx-8" />
 
                 <section className="p-5 sm:p-7 lg:p-8">
-                    <SectionHeading number="02" title="Dịch vụ" helper="Chọn một hoặc nhiều dịch vụ cho buổi hẹn của bạn." />
+                    <SectionHeading number="02" title="Dịch vụ" helper="Chọn dịch vụ bạn muốn làm trong lần hẹn này." />
                     <div className="mt-6 space-y-2 sm:pl-[60px]">
                         {servicesLoading ? (
                             Array.from({ length: 5 }, (_, index) => (
@@ -532,7 +536,7 @@ export function BookingForm() {
                             })
                         ) : (
                             <p className="rounded-[12px] border border-line bg-cream px-4 py-5 text-xs text-muted">
-                                Chi nhánh này hiện chưa có dịch vụ đang hoạt động.
+                                Hiện chưa có dịch vụ nào đủ thông tin thời lượng để đặt trực tuyến.
                             </p>
                         )}
                     </div>
@@ -544,7 +548,7 @@ export function BookingForm() {
                     <SectionHeading
                         number="03"
                         title="Số người"
-                        helper="Dịch vụ đã chọn áp dụng cho tất cả người trong lịch hẹn. Mỗi người được tự động gán một nhân viên khác nhau đang rảnh trong cùng khung giờ."
+                        helper="Nếu đi nhiều người, hệ thống sẽ tìm đủ nhân viên rảnh trong cùng khung giờ và tự sắp xếp cho từng người."
                     />
                     <div className="mt-6 sm:pl-[60px]">
                         <div className="flex max-w-sm items-center justify-between rounded-[14px] border border-line bg-cream p-3">
@@ -552,9 +556,9 @@ export function BookingForm() {
                                 <p className="text-sm font-semibold">{partySize} người</p>
                                 <p className="mt-1 text-[11px] leading-4 text-muted">
                                     {maxPartySize === null
-                                        ? "Chọn dịch vụ để kiểm tra sức chứa nhân viên."
+                                        ? "Chọn dịch vụ để kiểm tra số nhân viên còn nhận lịch."
                                         : maxPartySize > 0
-                                          ? `Có ${maxPartySize} nhân viên phù hợp với dịch vụ đã chọn tại chi nhánh.`
+                                          ? `Khung giờ phù hợp có thể nhận tối đa ${maxPartySize} người cùng lúc.`
                                           : "Hiện chưa có nhân viên phù hợp tại chi nhánh này."}
                                 </p>
                             </div>
@@ -619,11 +623,11 @@ export function BookingForm() {
                 <div className="mx-5 h-px bg-line sm:mx-7 lg:mx-8" />
 
                 <section className="p-5 sm:p-7 lg:p-8">
-                    <SectionHeading number="05" title="Giờ còn trống" helper={`Chỉ hiện các giờ còn đủ ${partySize} nhân viên khác nhau.`} />
+                    <SectionHeading number="05" title="Giờ còn trống" helper={`Chỉ hiện những giờ còn đủ nhân viên cho ${partySize} người.`} />
                     <div className="mt-6 sm:pl-[60px]">
                         {selectedServiceIds.length === 0 ? (
                             <div className="rounded-[14px] border border-line bg-cream px-4 py-5 text-xs leading-5 text-muted">
-                                Chọn ít nhất một dịch vụ để xem các khung giờ còn trống.
+                                Chọn dịch vụ trước để xem giờ còn nhận lịch.
                             </div>
                         ) : availabilityLoading ? (
                             <div className="space-y-3" aria-label="Đang tải khung giờ">
@@ -633,8 +637,8 @@ export function BookingForm() {
                             </div>
                         ) : availableSlots.size === 0 ? (
                             <div className="rounded-[14px] border border-line bg-cream px-4 py-5">
-                                <p className="text-sm font-semibold">Không còn khung giờ đủ nhân viên cho {partySize} người.</p>
-                                <p className="mt-1 text-xs leading-5 text-muted">Giảm số người hoặc chọn một ngày khác để kiểm tra lại.</p>
+                                <p className="text-sm font-semibold">Ngày này chưa còn giờ phù hợp cho {partySize} người.</p>
+                                <p className="mt-1 text-xs leading-5 text-muted">Bạn có thể giảm số người hoặc chọn ngày khác.</p>
                             </div>
                         ) : (
                             <div className="space-y-5">
@@ -678,7 +682,7 @@ export function BookingForm() {
                 <div className="mx-5 h-px bg-line sm:mx-7 lg:mx-8" />
 
                 <section className="p-5 sm:p-7 lg:p-8">
-                    <SectionHeading number="06" title="Thông tin tài khoản" helper="Mỗi người sẽ có một lịch riêng dưới cùng tài khoản đặt lịch." />
+                    <SectionHeading number="06" title="Thông tin tài khoản" helper="Serpente sẽ dùng thông tin này để xác nhận lịch với bạn." />
                     <div className="mt-6 grid gap-4 sm:grid-cols-2 sm:pl-[60px]">
                         <div className="rounded-[12px] border border-line bg-cream px-4 py-3">
                             <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">Họ và tên</p>
@@ -698,8 +702,8 @@ export function BookingForm() {
 
             <aside className="space-y-5 xl:sticky xl:top-[98px]">
                 <section className="rounded-[22px] border-2 border-accent bg-surface p-5 shadow-[0_16px_40px_rgba(48,40,35,0.06)] sm:p-6">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-accent">Tóm tắt đặt lịch</p>
-                    <h2 className="mt-2 font-serif text-3xl">Yêu cầu của bạn</h2>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-accent">Lịch bạn đang chọn</p>
+                    <h2 className="mt-2 font-serif text-3xl">Xem lại trước khi đặt</h2>
                     <div className="my-5 h-px bg-line" />
 
                     <div className="space-y-5">
@@ -709,13 +713,13 @@ export function BookingForm() {
                         </div>
 
                         <div>
-                            <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-accent">Dịch vụ đã chọn</p>
+                            <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-accent">Dịch vụ</p>
                             <div className="mt-2 space-y-1.5">
                                 {selectedServices.length > 0 ? (
                                     selectedServices.map((service) => (
                                         <div key={service.id} className="flex items-start justify-between gap-4 text-xs">
                                             <span>{service.name}</span>
-                                            <span className="shrink-0 font-semibold tabular-nums">{formatVnd(service.price)}</span>
+                                            <span className="shrink-0 font-semibold tabular-nums">{formatServicePrice(service)}</span>
                                         </div>
                                     ))
                                 ) : (
@@ -730,7 +734,7 @@ export function BookingForm() {
                         </div>
 
                         <div className="flex items-center justify-between text-xs text-muted">
-                            <span>Thời lượng mỗi người</span>
+                            <span>Thời lượng dự kiến</span>
                             <span className="font-semibold text-ink">{totalDuration} phút</span>
                         </div>
 
@@ -755,16 +759,19 @@ export function BookingForm() {
                         disabled={!summaryReady || submitting}
                         className="focus-ring mt-5 w-full rounded-full bg-ink px-5 py-3 text-xs font-semibold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
                     >
-                        {submitting ? "Đang gửi…" : "Gửi"}
+                        {submitting ? "Đang đặt lịch…" : "Đặt lịch"}
                     </button>
                 </section>
 
                 <section className="rounded-[20px] bg-tint p-5 sm:p-6">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-accent">Thông tin cần biết</p>
-                    <p className="mt-3 font-serif text-lg">Hằng ngày 09:00–21:00</p>
-                    <p className="mt-3 text-xs leading-5 text-muted">Cần thay đổi hoặc hủy lịch? Hãy gọi cho salon.</p>
-                    <a href={studio.phoneHref} className="mt-3 block w-fit text-sm font-semibold hover:text-accent">
-                        {studio.phoneDisplay}
+                    <p className="mt-3 font-serif text-lg">{selectedBranch?.opening_hours || "09:00–20:30"}</p>
+                    <p className="mt-3 text-xs leading-5 text-muted">Cần đổi hoặc hủy lịch, bạn có thể gọi trực tiếp cho tiệm.</p>
+                    <a
+                        href={selectedBranch?.phone ? `tel:${selectedBranch.phone.replace(/[^+\d]/g, "")}` : "tel:+84818798098"}
+                        className="mt-3 block w-fit text-sm font-semibold hover:text-accent"
+                    >
+                        {selectedBranch?.phone || "081 879 8098"}
                     </a>
                 </section>
 
@@ -800,12 +807,12 @@ export function BookingForm() {
                         </svg>
                     </div>
 
-                    <p className="mt-5 text-[10px] font-semibold uppercase tracking-[0.18em] text-accent">Đã gửi</p>
+                    <p className="mt-5 text-[10px] font-semibold uppercase tracking-[0.18em] text-accent">Đặt lịch thành công</p>
                     <h2 id="booking-success-title" className="mt-2 pr-10 font-serif text-[34px] leading-[1.05] tracking-[-0.025em] sm:text-[42px]">
-                        Yêu cầu đặt lịch đã được ghi nhận
+                        Serpente đã nhận lịch của bạn
                     </h2>
                     <div className="mt-4 inline-flex rounded-full border border-accent/35 bg-tint px-3 py-1.5 text-[11px] font-semibold text-accent">
-                        Đang chờ xác nhận
+                        Chờ tiệm xác nhận
                     </div>
 
                     <div className="my-6 h-px bg-line" />
@@ -827,7 +834,7 @@ export function BookingForm() {
                             <p className="mt-1 text-sm font-semibold">{createdAppointment.party_size} người</p>
                         </div>
                         <div className="sm:col-span-2">
-                            <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-muted">Dịch vụ mỗi người</p>
+                            <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-muted">Dịch vụ</p>
                             <p className="mt-1 text-sm leading-6">
                                 {(createdServices.length > 0 ? createdServices.map((service) => service.service_name) : selectedServices.map((service) => service.name)).join(" · ")}
                             </p>
