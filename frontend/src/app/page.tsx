@@ -53,7 +53,7 @@ export default async function HomePage() {
     return (
         <>
             <section className="site-shell py-10 sm:py-14 lg:py-16">
-                <CurrentOffers offers={offers} />
+                <CurrentOffers offers={offers} instagramHandle={content?.instagram_handle} />
             </section>
             <HomeShowcase content={content} />
         </>
