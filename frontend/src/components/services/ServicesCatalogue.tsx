@@ -121,7 +121,7 @@ export function ServicesCatalogue() {
                 </select>
             </div>
 
-            <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+            <div>
                 <div
                     className="hide-scrollbar -mx-1 flex max-w-full min-w-0 flex-nowrap gap-2 overflow-x-auto px-1 pb-1 xl:mx-0 xl:px-0 xl:pb-0"
                     role="group"
@@ -146,7 +146,6 @@ export function ServicesCatalogue() {
                         );
                     })}
                 </div>
-                <p className="shrink-0 text-[11px] text-muted sm:text-xs xl:text-right">Giá hiển thị bằng VND</p>
             </div>
 
             {error ? (
@@ -206,7 +205,7 @@ export function ServicesCatalogue() {
                                 </p>
                                 <div className="mt-3 flex items-end justify-between gap-2 border-t border-line pt-3 sm:mt-5 sm:pt-4">
                                     <span className="text-[10px] text-muted sm:text-xs">{service.duration_minutes} phút</span>
-                                    <span className="text-sm font-semibold tabular-nums sm:text-lg">{formatVnd(service.price)}</span>
+                                    <span className="text-sm font-semibold tabular-nums sm:text-lg">{formatVnd(service.price)} VND</span>
                                 </div>
                             </div>
                         </article>
