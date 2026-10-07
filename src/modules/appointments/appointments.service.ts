@@ -542,6 +542,17 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
             if (data.status !== undefined && data.status !== AppointmentStatus.IN_PROGRESS && data.status !== AppointmentStatus.COMPLETED) throw new AppError("Staff can only start or complete assigned appointments", 403, "FORBIDDEN");
         }
 
+        if (
+            data.status === AppointmentStatus.CANCELLED &&
+            (data.staff_id !== undefined || data.service_ids !== undefined || data.start_time !== undefined)
+        ) {
+            throw new AppError(
+                "Cancelling an appointment cannot be combined with staff, service, or start time changes",
+                400,
+                "INVALID_CANCEL_REQUEST"
+            );
+        }
+
         if ((appointment.status === AppointmentStatus.IN_PROGRESS || appointment.status === AppointmentStatus.COMPLETED || appointment.status === AppointmentStatus.CANCELLED) && (data.staff_id !== undefined || data.service_ids !== undefined || data.start_time !== undefined)) throw new AppError("In-progress, completed, or cancelled appointment cannot be modified", 409, "APPOINTMENT_NOT_EDITABLE");
 
         let targetStaffId = appointment.staff_id;

@@ -17,6 +17,10 @@ export interface ChangePasswordDto {
     new_password: string;
 }
 
+export interface DeleteMeDto {
+    current_password: string;
+}
+
 export interface ForgotPasswordDto {
     email: string;
 }
@@ -166,6 +170,26 @@ export function parseChangePasswordDto(body: unknown): ChangePasswordDto {
     return {
         current_password: data.current_password,
         new_password: newPassword,
+    };
+}
+
+export function parseDeleteMeDto(body: unknown): DeleteMeDto {
+    if (body === null || typeof body !== "object" || Array.isArray(body)) {
+        throw new AppError("Request body must be an object", 400, "VALIDATION_ERROR");
+    }
+
+    const data = body as Record<string, unknown>;
+
+    if (typeof data.current_password !== "string" || data.current_password.length === 0) {
+        throw new AppError("Current_password must be a non-empty string", 400, "VALIDATION_ERROR");
+    }
+
+    if (Buffer.byteLength(data.current_password, "utf8") > 72) {
+        throw new AppError("Current_password is too long", 400, "VALIDATION_ERROR");
+    }
+
+    return {
+        current_password: data.current_password,
     };
 }
 

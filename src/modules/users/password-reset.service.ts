@@ -73,7 +73,7 @@ export async function requestPasswordReset(email: string) {
 export async function resetPassword(email: string, code: string, newPassword: string) {
     const nextPasswordHash = await bcrypt.hash(newPassword, 12);
 
-    return await AppDataSource.transaction(async (manager) => {
+    const result = await AppDataSource.transaction(async (manager) => {
         const transactionUserRepo = manager.getRepository(User);
         const transactionChallengeRepo = manager.getRepository(PasswordResetChallenge);
         const transactionRefreshSessionRepo = manager.getRepository(RefreshSession);
@@ -84,7 +84,7 @@ export async function resetPassword(email: string, code: string, newPassword: st
         });
 
         if (!user) {
-            throw new AppError("Invalid or expired reset code", 400, "INVALID_RESET_CODE");
+            return { ok: false as const };
         }
 
         const challenge = await transactionChallengeRepo.findOne({
@@ -99,7 +99,7 @@ export async function resetPassword(email: string, code: string, newPassword: st
         });
 
         if (!challenge || challenge.expires_at.getTime() <= Date.now() || challenge.attempts_remaining <= 0) {
-            throw new AppError("Invalid or expired reset code", 400, "INVALID_RESET_CODE");
+            return { ok: false as const };
         }
 
         const expected = hashCode(challenge.id, code);
@@ -109,7 +109,7 @@ export async function resetPassword(email: string, code: string, newPassword: st
             if (challenge.attempts_remaining <= 0) challenge.consumed_at = new Date();
             await transactionChallengeRepo.save(challenge);
 
-            throw new AppError("Invalid or expired reset code", 400, "INVALID_RESET_CODE");
+            return { ok: false as const };
         }
 
         challenge.consumed_at = new Date();
@@ -123,6 +123,12 @@ export async function resetPassword(email: string, code: string, newPassword: st
             { revoked_at: new Date() }
         );
 
-        return user;
+        return { ok: true as const, user };
     });
+
+    if (!result.ok) {
+        throw new AppError("Invalid or expired reset code", 400, "INVALID_RESET_CODE");
+    }
+
+    return result.user;
 }
