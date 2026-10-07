@@ -96,8 +96,6 @@ async function resolveBookingResources(serviceIds: string[]) {
 
     if (services.length < serviceIds.length) throw new AppError("One or more services were not found", 404, "SERVICE_NOT_FOUND");
 
-    if (!services.every((service) => service.is_active)) throw new AppError("One or more services are inactive", 400, "SERVICE_INACTIVE");
-
     const branchId = services[0].branch_id;
 
     if (!services.every((service) => service.branch_id === branchId)) throw new AppError("All services must belong to the same branch", 400, "BRANCH_MISMATCH");
@@ -106,14 +104,13 @@ async function resolveBookingResources(serviceIds: string[]) {
 
     if (!branch) throw new AppError("Branch not found", 404, "BRANCH_NOT_FOUND");
 
-    if (!branch.is_active) throw new AppError("Branch is inactive", 400, "BRANCH_INACTIVE");
-
     const staffs = await staffService.getAllStaffs({
         branch_id: branchId,
     });
 
     return {
         services,
+        branch,
         branchId,
         staffs,
     };
@@ -225,22 +222,21 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
         if (startTime < now + CUSTOMER_MIN_BOOKING_LEAD_TIME_MS) throw new AppError("Customers must book at least 3 hours in advance", 400, "VALIDATION_ERROR");
 
         if (startTime > now + CUSTOMER_MAX_BOOKING_HORIZON_MS) throw new AppError("Customers cannot book more than 14 days in advance", 400, "VALIDATION_ERROR");
-        } else if (actorRole === UserRole.ADMIN) {
-            if (data.user_id === undefined) throw new AppError("User_id is required when admin creates an appointment", 400, "VALIDATION_ERROR");
+    } else if (actorRole === UserRole.ADMIN) {
+        if (data.user_id === undefined) throw new AppError("User_id is required when admin creates an appointment", 400, "VALIDATION_ERROR");
 
-            const targetUser = await userService.getUser(data.user_id);
+        const targetUser = await userService.getUser(data.user_id);
 
-            if (!targetUser) throw new AppError("User not found", 404, "USER_NOT_FOUND");
+        if (!targetUser) throw new AppError("User not found", 404, "USER_NOT_FOUND");
 
-            if (!targetUser.is_active) throw new AppError("User account is inactive", 400, "USER_INACTIVE");
+        ownerId = data.user_id;
+    } else {
+        throw new AppError("You do not have permission to perform this action", 403, "FORBIDDEN");
+    }
 
-            ownerId = data.user_id;
-        } else {
-            throw new AppError("You do not have permission to perform this action", 403, "FORBIDDEN");
-        }
-
-        const {
+    const {
         services,
+        branch,
         branchId,
         staffs,
     } = await resolveBookingResources(data.service_ids);
@@ -258,8 +254,6 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
 
         if (!staff) throw new AppError("Staff not found", 404, "STAFF_NOT_FOUND");
 
-        if (!staff.user.is_active) throw new AppError("Staff is inactive", 400, "STAFF_INACTIVE");
-
         if (staff.user.role !== UserRole.STAFF) throw new AppError("User is not a staff member", 400, "INVALID_STAFF_ACCOUNT");
 
         if (staff.branch_id !== branchId) throw new AppError("All services must belong to the same branch as the staff", 400, "BRANCH_MISMATCH");
@@ -273,9 +267,7 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
         totalDurationMinutes += service.duration_minutes;
     });
 
-    let endTime: Date;
-
-    endTime = new Date(data.start_time.getTime() + totalDurationMinutes * 60 * 1000);
+    const endTime = new Date(data.start_time.getTime() + totalDurationMinutes * 60 * 1000);
 
     if (actorRole === UserRole.CUSTOMER) {
         const businessStartMinute = getBusinessMinuteOfDay(data.start_time);
@@ -291,7 +283,6 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
     return await AppDataSource.transaction(async (manager) => {
         const transactionAppointmentRepo = manager.getRepository(Appointment);
         const appointmentServiceRepo = manager.getRepository(AppointmentService);
-
         const transactionUserRepo = manager.getRepository(User);
 
         const owner = await transactionUserRepo.findOne({
@@ -353,8 +344,14 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
 
             const newAppointment = transactionAppointmentRepo.create({
                 user_id: ownerId,
+                customer_full_name: owner.full_name,
+                customer_phone: owner.phone,
+                customer_email: owner.email,
                 staff_id: staff.user_id,
+                staff_full_name: staff.user.full_name,
                 branch_id: branchId,
+                branch_name: branch.name,
+                branch_address: branch.address,
                 start_time: data.start_time,
                 end_time: endTime,
                 status: AppointmentStatus.PENDING,
@@ -387,10 +384,6 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
 
 export const getAllAppointments = async (userId: string, role: UserRole, query: GetAppointmentsQueryDto) => {
     const queryBuilder = appointmentRepo.createQueryBuilder("appointment")
-        .leftJoinAndSelect("appointment.user", "customer")
-        .leftJoinAndSelect("appointment.staff", "staff")
-        .leftJoinAndSelect("staff.user", "staff_account")
-        .leftJoinAndSelect("appointment.branch", "branch")
         .leftJoinAndSelect("appointment.appointment_services", "appointment_services");
 
     if (role === UserRole.CUSTOMER) {
@@ -403,8 +396,6 @@ export const getAllAppointments = async (userId: string, role: UserRole, query: 
         const staff = await staffService.getStaff(userId);
 
         if (!staff) throw new AppError("Staff profile not found", 404, "STAFF_NOT_FOUND");
-
-        if (!staff.user.is_active) throw new AppError("Staff is inactive", 403, "FORBIDDEN");
 
         queryBuilder.andWhere("appointment.staff_id = :actor_staff_id", {
             actor_staff_id: staff.user_id,
@@ -462,15 +453,10 @@ export const getAppointment = async (id: string, userId: string, role: UserRole)
     if (role === UserRole.CUSTOMER) {
         return await appointmentRepo.findOne({
             where: {
-                id: id,
+                id,
                 user_id: userId,
             },
             relations: {
-                user: true,
-                branch: true,
-                staff: {
-                    user: true,
-                },
                 appointment_services: true,
             },
         });
@@ -479,15 +465,10 @@ export const getAppointment = async (id: string, userId: string, role: UserRole)
     if (role === UserRole.STAFF) {
         return await appointmentRepo.findOne({
             where: {
-                id: id,
+                id,
                 staff_id: userId,
             },
             relations: {
-                user: true,
-                branch: true,
-                staff: {
-                    user: true,
-                },
                 appointment_services: true,
             },
         });
@@ -495,14 +476,9 @@ export const getAppointment = async (id: string, userId: string, role: UserRole)
 
     return await appointmentRepo.findOne({
         where: {
-            id: id,
+            id,
         },
         relations: {
-            user: true,
-            branch: true,
-            staff: {
-                user: true,
-            },
             appointment_services: true,
         },
     });
@@ -529,11 +505,6 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
                             id,
                         },
             relations: {
-                user: true,
-                branch: true,
-                staff: {
-                    user: true,
-                },
                 appointment_services: true,
             },
             lock: {
@@ -557,8 +528,11 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
 
         if ((appointment.status === AppointmentStatus.IN_PROGRESS || appointment.status === AppointmentStatus.COMPLETED || appointment.status === AppointmentStatus.CANCELLED) && (data.staff_id !== undefined || data.service_ids !== undefined || data.start_time !== undefined)) throw new AppError("In-progress, completed, or cancelled appointment cannot be modified", 409, "APPOINTMENT_NOT_EDITABLE");
 
-        let staff = appointment.staff;
+        let targetStaffId = appointment.staff_id;
+        let targetStaffFullName = appointment.staff_full_name;
         let branchId = appointment.branch_id;
+        let branchName = appointment.branch_name;
+        let branchAddress = appointment.branch_address;
         let appointmentServices = appointment.appointment_services;
         let startTime = appointment.start_time;
         let endTime = appointment.end_time;
@@ -567,35 +541,53 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
         let actualStartedAt = appointment.actual_started_at;
         let actualCompletedAt = appointment.actual_completed_at;
 
-        if (data.staff_id !== undefined) {
-            const staffChecker = await staffService.getStaff(data.staff_id);
+        let liveStaff = hasScheduleChanges
+            ? await staffService.getStaff(data.staff_id ?? appointment.staff_id)
+            : null;
 
-            if (!staffChecker) throw new AppError("Staff not found", 404, "STAFF_NOT_FOUND");
-
-            if (!staffChecker.user.is_active) throw new AppError("Staff is inactive", 400, "STAFF_INACTIVE");
-
-            if (staffChecker.user.role !== UserRole.STAFF) throw new AppError("User is not a staff member", 400, "INVALID_STAFF_ACCOUNT");
-
-            const branch = await branchService.getBranch(staffChecker.branch_id);
-
-            if (!branch) throw new AppError("Branch not found", 404, "BRANCH_NOT_FOUND");
-
-            if (!branch.is_active) throw new AppError("Branch is inactive", 400, "BRANCH_INACTIVE");
-
-            staff = staffChecker;
-            branchId = staffChecker.branch_id;
+        if (hasScheduleChanges && !liveStaff) {
+            throw new AppError("Staff not found", 404, "STAFF_NOT_FOUND");
         }
 
-        if (data.staff_id !== undefined && data.service_ids === undefined && branchId !== appointment.branch_id) throw new AppError("Existing services do not belong to the new staff branch", 400, "BRANCH_MISMATCH");
+        if (liveStaff && liveStaff.user.role !== UserRole.STAFF) {
+            throw new AppError("User is not a staff member", 400, "INVALID_STAFF_ACCOUNT");
+        }
+
+        if (data.staff_id !== undefined && liveStaff) {
+            targetStaffId = liveStaff.user_id;
+            targetStaffFullName = liveStaff.user.full_name;
+
+            const liveBranch = await branchService.getBranch(liveStaff.branch_id);
+            if (!liveBranch) throw new AppError("Branch not found", 404, "BRANCH_NOT_FOUND");
+
+            branchId = liveBranch.id;
+            branchName = liveBranch.name;
+            branchAddress = liveBranch.address;
+        }
+
+        if (data.staff_id !== undefined && data.service_ids === undefined && branchId !== appointment.branch_id) {
+            throw new AppError("Existing services do not belong to the new staff branch", 400, "BRANCH_MISMATCH");
+        }
 
         if (data.service_ids !== undefined) {
+            if (!liveStaff) {
+                liveStaff = await staffService.getStaff(targetStaffId);
+            }
+
+            if (!liveStaff) throw new AppError("Staff not found", 404, "STAFF_NOT_FOUND");
+
             const servicesChecker = await serviceService.getServicesByIds(data.service_ids);
 
             if (servicesChecker.length < data.service_ids.length) throw new AppError("One or more services were not found", 404, "SERVICE_NOT_FOUND");
 
-            if (!servicesChecker.every(service => service.is_active)) throw new AppError("One or more services are inactive", 400, "SERVICE_INACTIVE");
+            if (!servicesChecker.every((service) => service.branch_id === liveStaff.branch_id)) throw new AppError("All services must belong to the same branch as the staff", 400, "BRANCH_MISMATCH");
 
-            if (!servicesChecker.every((service) => service.branch_id === staff.branch_id)) throw new AppError("All services must belong to the same branch as the staff", 400, "BRANCH_MISMATCH");
+            const liveBranch = await branchService.getBranch(liveStaff.branch_id);
+            if (!liveBranch) throw new AppError("Branch not found", 404, "BRANCH_NOT_FOUND");
+
+            branchId = liveBranch.id;
+            branchName = liveBranch.name;
+            branchAddress = liveBranch.address;
 
             appointmentServices = servicesChecker.map((service) => {
                 return {
@@ -624,19 +616,15 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
             }
 
             if (status === AppointmentStatus.PENDING && data.status === AppointmentStatus.CONFIRMED) {
-                const staffChecker = await staffService.getStaff(staff.user_id);
+                const staffChecker = await staffService.getStaff(targetStaffId);
 
                 if (!staffChecker) throw new AppError("Staff not found", 404, "STAFF_NOT_FOUND");
 
-                if (!staffChecker.user.is_active) throw new AppError("Staff is inactive", 409, "STAFF_INACTIVE");
-
                 if (staffChecker.user.role !== UserRole.STAFF) throw new AppError("User is not a staff member", 409, "INVALID_STAFF_ACCOUNT");
 
-                const branch = await branchService.getBranch(branchId);
+                const liveBranch = await branchService.getBranch(branchId);
 
-                if (!branch) throw new AppError("Branch not found", 404, "BRANCH_NOT_FOUND");
-
-                if (!branch.is_active) throw new AppError("Branch is inactive", 409, "BRANCH_INACTIVE");
+                if (!liveBranch) throw new AppError("Branch not found", 404, "BRANCH_NOT_FOUND");
             }
 
             if (status === AppointmentStatus.CONFIRMED && data.status === AppointmentStatus.IN_PROGRESS) {
@@ -667,7 +655,7 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
         if (status === AppointmentStatus.PENDING || status === AppointmentStatus.CONFIRMED) {
             const overlapAppointment = await transactionAppointmentRepo.findOneBy({
                 id: Not(appointment.id),
-                staff_id: staff.user_id,
+                staff_id: targetStaffId,
                 status: In([
                     AppointmentStatus.PENDING,
                     AppointmentStatus.CONFIRMED,
@@ -699,7 +687,7 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
 
             const reserved = await tryReserveStaffSlots(
                 manager,
-                staff.user_id,
+                targetStaffId,
                 newSlotStarts
             );
 
@@ -711,7 +699,7 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
                 );
             }
         }
-        
+
         if (
             appointment.status !== AppointmentStatus.CANCELLED &&
             status === AppointmentStatus.CANCELLED
@@ -723,9 +711,11 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
             );
         }
 
-        appointment.staff_id = staff.user_id;
-        appointment.staff = staff;
+        appointment.staff_id = targetStaffId;
+        appointment.staff_full_name = targetStaffFullName;
         appointment.branch_id = branchId;
+        appointment.branch_name = branchName;
+        appointment.branch_address = branchAddress;
         appointment.start_time = startTime;
         appointment.end_time = endTime;
         appointment.status = status;
@@ -755,5 +745,34 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
         }
 
         return savedAppointment;
+    });
+};
+
+export const deleteAppointment = async (id: string) => {
+    return await AppDataSource.transaction(async (manager) => {
+        const transactionAppointmentRepo = manager.getRepository(Appointment);
+        const appointmentServiceRepo = manager.getRepository(AppointmentService);
+
+        const appointment = await transactionAppointmentRepo.findOne({
+            where: { id },
+            relations: { appointment_services: true },
+            lock: { mode: "pessimistic_write" },
+        });
+
+        if (!appointment) return null;
+
+        await releaseStaffSlots(
+            manager,
+            appointment.staff_id,
+            getRequiredSlotStarts(appointment.start_time, appointment.end_time)
+        );
+
+        await appointmentServiceRepo.delete({
+            appointment_id: appointment.id,
+        });
+
+        await transactionAppointmentRepo.remove(appointment);
+
+        return appointment;
     });
 };
