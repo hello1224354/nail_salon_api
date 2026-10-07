@@ -1,5 +1,4 @@
-import { Entity, PrimaryColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, OneToOne, JoinColumn, ManyToOne } from "typeorm";
-import { Appointment } from "../appointments/appointments.entity";
+import { Entity, PrimaryColumn, Column, CreateDateColumn, UpdateDateColumn, OneToOne, JoinColumn, ManyToOne } from "typeorm";
 import { User } from "../users/users.entity";
 import { Branch } from "../branches/branches.entity";
 
@@ -24,7 +23,4 @@ export class Staff {
 
     @UpdateDateColumn()
     updated_at: Date;
-
-    @OneToMany(() => Appointment, (appointment) => appointment.staff)
-    appointments: Appointment[];
 }
