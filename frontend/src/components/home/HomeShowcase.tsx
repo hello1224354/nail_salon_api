@@ -1,12 +1,24 @@
 "use client";
 
+import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
 import useEmblaCarousel from "embla-carousel-react";
 import Autoplay from "embla-carousel-autoplay";
-import type { CustomerReview, InstagramShowcaseItem, SalonContent } from "@/lib/api";
+import type { CustomerReview, SalonContent } from "@/lib/api";
 import { getInstagramUrl, getMapsSearchUrl } from "@/lib/studio-data";
 
 const MOBILE_QUERY = "(max-width: 767px)";
+
+const HOT_TREND_IMAGES = [
+    "https://drive.google.com/thumbnail?id=1DtS5RGDSSeLd0J9KYaZk4PA5je8cj8UX&sz=w1600",
+    "https://drive.google.com/thumbnail?id=1dwTteuoTGfVvijHDYS8C1E4Ko2ZjYfMc&sz=w1600",
+    "https://drive.google.com/thumbnail?id=1pg5xQFyq5Yx4jjqDuDcvAIBBM3iC4W6g&sz=w1600",
+    "https://drive.google.com/thumbnail?id=1a2H_0PJmRFW2G0dA-pT_A-YCN4-u0Fxh&sz=w1600",
+    "https://drive.google.com/thumbnail?id=15c9T9QBS-MO1EZ5AL4oV2sJDB-F6IyIn&sz=w1600",
+    "https://drive.google.com/thumbnail?id=1EJKxKhza6gfg5OZkkt_cKqbyy3dPhVPv&sz=w1600",
+    "https://drive.google.com/thumbnail?id=1jQn9zhQrVXYBzNKcxEjwZiHrC4kgklIC&sz=w1600",
+    "https://drive.google.com/thumbnail?id=1HHeURR4Vfuxg-4b3yBcuSF2nY3bP05Zh&sz=w1600",
+] as const;
 
 function useIsMobile() {
     const [isMobile, setIsMobile] = useState<boolean | null>(null);
@@ -106,31 +118,21 @@ function CarouselDots({
     );
 }
 
-function InstagramCard({ item, index }: { item: InstagramShowcaseItem; index: number }) {
+function TrendCard({ src, index }: { src: string; index: number }) {
     return (
-        <a
-            href={item.instagram_url}
-            target="_blank"
-            rel="noreferrer"
-            className="focus-ring group flex min-h-[300px] flex-col justify-between overflow-hidden rounded-[24px] border border-line bg-surface p-6 shadow-[0_14px_42px_rgba(48,40,35,0.04)] transition-transform hover:-translate-y-1 sm:min-h-[360px] sm:p-7"
-        >
-            <div>
-                <div className="flex items-center justify-between gap-4">
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-accent">Instagram</span>
-                    <span className="font-serif text-3xl text-accent/35">{String(index + 1).padStart(2, "0")}</span>
-                </div>
-                <h3 className="mt-8 max-w-[15ch] font-serif text-3xl leading-[1.02] tracking-[-0.025em] sm:text-4xl">
-                    {item.title?.trim() || "Một mẫu móng từ Serpente Nail Room"}
-                </h3>
-            </div>
-
-            <div>
-                <div className="h-px bg-line" />
-                <p className="mt-5 text-xs font-semibold text-accent">
-                    Xem bài đăng trên Instagram <span className="ml-1 transition-transform group-hover:translate-x-1">→</span>
-                </p>
-            </div>
-        </a>
+        <figure className="group relative aspect-[3/4] overflow-hidden rounded-[24px] border border-line bg-tint shadow-[0_14px_42px_rgba(48,40,35,0.04)]">
+            <Image
+                src={src}
+                alt={`Mẫu nail hot trend tại Serpente Nail Room ${index + 1}`}
+                fill
+                sizes="(max-width: 767px) 100vw, (max-width: 1023px) 50vw, 25vw"
+                className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.035]"
+            />
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/35 to-transparent" />
+            <span className="absolute bottom-4 left-4 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/90">
+                Hot trend {String(index + 1).padStart(2, "0")}
+            </span>
+        </figure>
     );
 }
 
@@ -158,22 +160,22 @@ function ReviewCard({ review }: { review: CustomerReview }) {
     );
 }
 
-function MobileInstagramCarousel({ items }: { items: InstagramShowcaseItem[] }) {
-    const carousel = useAutoCarousel(items.length, 5200);
+function MobileTrendCarousel() {
+    const carousel = useAutoCarousel(HOT_TREND_IMAGES.length, 4800);
 
     return (
         <div className="mt-8">
             <div ref={carousel.emblaRef} className="overflow-hidden">
                 <div className="flex">
-                    {items.map((item, index) => (
-                        <div key={item.instagram_url} className="min-w-0 flex-[0_0_100%]">
-                            <InstagramCard item={item} index={index} />
+                    {HOT_TREND_IMAGES.map((src, index) => (
+                        <div key={src} className="min-w-0 flex-[0_0_100%]">
+                            <TrendCard src={src} index={index} />
                         </div>
                     ))}
                 </div>
             </div>
             <CarouselDots
-                count={items.length}
+                count={HOT_TREND_IMAGES.length}
                 selectedIndex={carousel.selectedIndex}
                 onSelect={(index) => carousel.emblaApi?.scrollTo(index)}
             />
@@ -217,7 +219,6 @@ export function HomeShowcase({ content }: { content: SalonContent | null }) {
         );
     }
 
-    const instagramItems = [...content.instagram_showcase].sort((a, b) => a.sort_order - b.sort_order);
     const reviews = content.customer_reviews;
     const instagramUrl = getInstagramUrl(content.instagram_handle);
     const mapsUrl = getMapsSearchUrl(content.google_maps_location);
@@ -248,42 +249,43 @@ export function HomeShowcase({ content }: { content: SalonContent | null }) {
 
     return (
         <>
-            {instagramItems.length > 0 ? (
-                <section className="border-t border-line">
-                    <div className="site-shell py-14 lg:py-20">
-                        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                            <div>
-                                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">
-                                    Mẫu móng tại Serpente
-                                </p>
-                                <h2 className="mt-3 font-serif text-4xl tracking-[-0.025em] sm:text-5xl">
-                                    Xem thêm trên Instagram
-                                </h2>
-                            </div>
-                            {instagramUrl ? (
-                                <a
-                                    href={instagramUrl}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="focus-ring group w-fit rounded-sm text-xs font-semibold text-accent"
-                                >
-                                    @{content.instagram_handle} <span className="ml-2 inline-block transition-transform duration-300 group-hover:translate-x-1">→</span>
-                                </a>
-                            ) : null}
+            <section className="border-t border-line">
+                <div className="site-shell py-14 lg:py-20">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                        <div>
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">
+                                Hot trend
+                            </p>
+                            <h2 className="mt-3 max-w-2xl font-serif text-4xl tracking-[-0.025em] sm:text-5xl">
+                                Mẫu nail đang được yêu thích
+                            </h2>
+                            <p className="mt-4 max-w-xl text-sm leading-6 text-muted">
+                                Một vài mẫu nổi bật tại Serpente để bạn tham khảo trước khi đặt lịch.
+                            </p>
                         </div>
-
-                        {isMobile === true ? (
-                            <MobileInstagramCarousel items={instagramItems} />
-                        ) : (
-                            <div className="mt-8 hidden gap-4 md:grid md:grid-cols-2 lg:grid-cols-4">
-                                {instagramItems.map((item, index) => (
-                                    <InstagramCard key={item.instagram_url} item={item} index={index} />
-                                ))}
-                            </div>
-                        )}
+                        {instagramUrl ? (
+                            <a
+                                href={instagramUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="focus-ring group w-fit rounded-sm text-xs font-semibold text-accent"
+                            >
+                                @{content.instagram_handle} <span className="ml-2 inline-block transition-transform duration-300 group-hover:translate-x-1">→</span>
+                            </a>
+                        ) : null}
                     </div>
-                </section>
-            ) : null}
+
+                    {isMobile === true ? (
+                        <MobileTrendCarousel />
+                    ) : (
+                        <div className="mt-8 hidden gap-4 md:grid md:grid-cols-2 lg:grid-cols-4">
+                            {HOT_TREND_IMAGES.map((src, index) => (
+                                <TrendCard key={src} src={src} index={index} />
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </section>
 
             {details.length > 0 ? (
                 <section className="border-t border-line">

@@ -48,8 +48,13 @@ export function getInstagramUrl(handle: string | null | undefined) {
     return handle ? `https://www.instagram.com/${handle.replace(/^@/, "")}/` : null;
 }
 
+export const SERPENTE_GOOGLE_MAPS_URL = "https://maps.app.goo.gl/ymzjq9YAWH7otKPH9";
+
 export function getMapsSearchUrl(location: string | null | undefined) {
-    return location
-        ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`
-        : null;
+    const value = location?.trim();
+
+    if (!value) return null;
+    if (/^https?:\/\//i.test(value)) return value;
+
+    return SERPENTE_GOOGLE_MAPS_URL;
 }

@@ -11,7 +11,7 @@ export const REAL_SALON_DATA = {
     name: "Serpente Nail Room",
     display_name: "Serpente Nail Room",
     instagram_handle: "serpente.nailroom",
-    google_maps_location: "Pega Square (Kingfood đi cầu thang bên trái lên, 1002 Tạ Quang Bửu, Chung cư Pegasuite 1, Bình Đông, Hồ Chí Minh 70000, Việt Nam",
+    google_maps_location: "https://maps.app.goo.gl/ymzjq9YAWH7otKPH9",
     hotline: "081 879 8098",
     contact_email: "serpentectv01@gmail.com",
     facebook_name: "Serpente Nail Room",
