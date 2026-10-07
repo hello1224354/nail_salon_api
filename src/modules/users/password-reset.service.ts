@@ -1,13 +1,13 @@
 import bcrypt from "bcryptjs";
 import { createHmac, randomInt, randomUUID, timingSafeEqual } from "crypto";
 import { IsNull } from "typeorm";
+import { RefreshSession } from "./refresh-session.entity";
 import { AppDataSource } from "../../config/database";
 import { env } from "../../config/env";
 import { AppError } from "../../common/errors";
 import { PasswordResetChallenge } from "./password-reset-challenge.entity";
 import { User } from "./users.entity";
 import { sendPlainTextEmail } from "./email.service";
-import { revokeAllUserSessions } from "./auth-session.service";
 
 const challengeRepo = AppDataSource.getRepository(PasswordResetChallenge);
 const userRepo = AppDataSource.getRepository(User);
@@ -71,46 +71,58 @@ export async function requestPasswordReset(email: string) {
 }
 
 export async function resetPassword(email: string, code: string, newPassword: string) {
-    const user = await userRepo.findOneBy({ email });
+    const nextPasswordHash = await bcrypt.hash(newPassword, 12);
 
-    if (!user) {
-        throw new AppError("Invalid or expired reset code", 400, "INVALID_RESET_CODE");
-    }
+    return await AppDataSource.transaction(async (manager) => {
+        const transactionUserRepo = manager.getRepository(User);
+        const transactionChallengeRepo = manager.getRepository(PasswordResetChallenge);
+        const transactionRefreshSessionRepo = manager.getRepository(RefreshSession);
 
-    const challenge = await challengeRepo.findOne({
-        where: {
-            user_id: user.id,
-            consumed_at: IsNull(),
-        },
-        order: {
-            created_at: "DESC",
-        },
+        const user = await transactionUserRepo.findOne({
+            where: { email },
+            lock: { mode: "pessimistic_write" },
+        });
+
+        if (!user) {
+            throw new AppError("Invalid or expired reset code", 400, "INVALID_RESET_CODE");
+        }
+
+        const challenge = await transactionChallengeRepo.findOne({
+            where: {
+                user_id: user.id,
+                consumed_at: IsNull(),
+            },
+            order: {
+                created_at: "DESC",
+            },
+            lock: { mode: "pessimistic_write" },
+        });
+
+        if (!challenge || challenge.expires_at.getTime() <= Date.now() || challenge.attempts_remaining <= 0) {
+            throw new AppError("Invalid or expired reset code", 400, "INVALID_RESET_CODE");
+        }
+
+        const expected = hashCode(challenge.id, code);
+
+        if (!hashesMatch(expected, challenge.code_hash)) {
+            challenge.attempts_remaining -= 1;
+            if (challenge.attempts_remaining <= 0) challenge.consumed_at = new Date();
+            await transactionChallengeRepo.save(challenge);
+
+            throw new AppError("Invalid or expired reset code", 400, "INVALID_RESET_CODE");
+        }
+
+        challenge.consumed_at = new Date();
+        user.password_hash = nextPasswordHash;
+        user.token_version += 1;
+
+        await transactionChallengeRepo.save(challenge);
+        await transactionUserRepo.save(user);
+        await transactionRefreshSessionRepo.update(
+            { user_id: user.id, revoked_at: IsNull() },
+            { revoked_at: new Date() }
+        );
+
+        return user;
     });
-
-    if (!challenge || challenge.expires_at.getTime() <= Date.now() || challenge.attempts_remaining <= 0) {
-        throw new AppError("Invalid or expired reset code", 400, "INVALID_RESET_CODE");
-    }
-
-    const expected = hashCode(challenge.id, code);
-
-    if (!hashesMatch(expected, challenge.code_hash)) {
-        challenge.attempts_remaining -= 1;
-        if (challenge.attempts_remaining <= 0) challenge.consumed_at = new Date();
-        await challengeRepo.save(challenge);
-
-        throw new AppError("Invalid or expired reset code", 400, "INVALID_RESET_CODE");
-    }
-
-    challenge.consumed_at = new Date();
-    user.password_hash = await bcrypt.hash(newPassword, 12);
-    user.token_version += 1;
-
-    await AppDataSource.transaction(async (manager) => {
-        await manager.getRepository(PasswordResetChallenge).save(challenge);
-        await manager.getRepository(User).save(user);
-    });
-
-    await revokeAllUserSessions(user.id);
-
-    return user;
 }
