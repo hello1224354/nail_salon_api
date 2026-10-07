@@ -28,6 +28,17 @@ const IP_LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const IP_LOGIN_FAILURE_LIMIT = 5;
 const MFA_SEND_WINDOW_MS = 15 * 60 * 1000;
 const MFA_SEND_LIMIT = 5;
+const PASSWORD_RESET_MIN_RESPONSE_MS = 1_500;
+const PASSWORD_RESET_JITTER_MS = 250;
+
+async function waitForMinimumDuration(startedAt: number, minimumMs: number, jitterMs: number) {
+    const jitter = Math.floor(Math.random() * (jitterMs + 1));
+    const remaining = startedAt + minimumMs + jitter - Date.now();
+
+    if (remaining > 0) {
+        await new Promise((resolve) => setTimeout(resolve, remaining));
+    }
+}
 
 function publicUser(user: {
     id: string;
@@ -375,6 +386,7 @@ export const changePassword = async (req: Request, res: Response) => {
 };
 
 export const forgotPassword = async (req: Request, res: Response) => {
+    const startedAt = Date.now();
     const data = parseForgotPasswordDto(req.body);
     const context = requestSecurityContext(req, res);
 
@@ -387,6 +399,11 @@ export const forgotPassword = async (req: Request, res: Response) => {
     });
 
     await passwordResetService.requestPasswordReset(data.email);
+    await waitForMinimumDuration(
+        startedAt,
+        PASSWORD_RESET_MIN_RESPONSE_MS,
+        PASSWORD_RESET_JITTER_MS
+    );
 
     return res.status(202).json({
         success: {
