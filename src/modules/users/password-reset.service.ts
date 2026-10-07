@@ -6,6 +6,7 @@ import { AppDataSource } from "../../config/database";
 import { env } from "../../config/env";
 import { AppError } from "../../common/errors";
 import { PasswordResetChallenge } from "./password-reset-challenge.entity";
+import { LoginMfaChallenge } from "./login-mfa-challenge.entity";
 import { User } from "./users.entity";
 import { sendPlainTextEmail } from "./email.service";
 
@@ -90,11 +91,10 @@ export async function requestPasswordReset(email: string) {
 }
 
 export async function resetPassword(email: string, code: string, newPassword: string) {
-    const nextPasswordHash = await bcrypt.hash(newPassword, 12);
-
     const result = await AppDataSource.transaction(async (manager) => {
         const transactionUserRepo = manager.getRepository(User);
         const transactionChallengeRepo = manager.getRepository(PasswordResetChallenge);
+        const transactionLoginMfaRepo = manager.getRepository(LoginMfaChallenge);
         const transactionRefreshSessionRepo = manager.getRepository(RefreshSession);
 
         const user = await transactionUserRepo.findOne({
@@ -131,15 +131,24 @@ export async function resetPassword(email: string, code: string, newPassword: st
             return { ok: false as const };
         }
 
-        challenge.consumed_at = new Date();
+        const nextPasswordHash = await bcrypt.hash(newPassword, 12);
+        const changedAt = new Date();
+
         user.password_hash = nextPasswordHash;
         user.token_version += 1;
 
-        await transactionChallengeRepo.save(challenge);
         await transactionUserRepo.save(user);
+        await transactionChallengeRepo.update(
+            { user_id: user.id, consumed_at: IsNull() },
+            { consumed_at: changedAt }
+        );
+        await transactionLoginMfaRepo.update(
+            { user_id: user.id, consumed_at: IsNull() },
+            { consumed_at: changedAt }
+        );
         await transactionRefreshSessionRepo.update(
             { user_id: user.id, revoked_at: IsNull() },
-            { revoked_at: new Date() }
+            { revoked_at: changedAt }
         );
 
         return { ok: true as const, user };

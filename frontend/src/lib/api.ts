@@ -81,7 +81,16 @@ export async function apiRequest<T>(
     const token = accessToken === undefined ? getAccessToken() : accessToken;
     let { response, body } = await executeRequest<T>(path, init, token);
 
-    if (response.status === 401 && canAttemptSessionRefresh(path)) {
+    const responseErrorCode =
+        body && "error" in body
+            ? body.error?.code
+            : undefined;
+
+    if (
+        response.status === 401 &&
+        responseErrorCode !== "INVALID_CURRENT_PASSWORD" &&
+        canAttemptSessionRefresh(path)
+    ) {
         const restored = await refreshSession();
 
         if (restored) {

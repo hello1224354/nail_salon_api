@@ -5,6 +5,8 @@ import { AppError } from "../../common/errors";
 import { ChangePasswordDto, LoginUserDto, RegisterUserDto } from "./users.dto";
 import { User, UserRole } from "./users.entity";
 import { RefreshSession } from "./refresh-session.entity";
+import { LoginMfaChallenge } from "./login-mfa-challenge.entity";
+import { PasswordResetChallenge } from "./password-reset-challenge.entity";
 
 const userRepo = AppDataSource.getRepository(User);
 const DUMMY_PASSWORD_HASH = bcrypt.hashSync("timing-equalization-password", 12);
@@ -81,11 +83,11 @@ export const getUser = async (id: string) => {
 };
 
 export const changePassword = async (userId: string, data: ChangePasswordDto) => {
-    const nextPasswordHash = await bcrypt.hash(data.new_password, 12);
-
     return await AppDataSource.transaction(async (manager) => {
         const transactionUserRepo = manager.getRepository(User);
         const transactionRefreshSessionRepo = manager.getRepository(RefreshSession);
+        const transactionLoginMfaRepo = manager.getRepository(LoginMfaChallenge);
+        const transactionPasswordResetRepo = manager.getRepository(PasswordResetChallenge);
 
         const user = await transactionUserRepo.findOne({
             where: { id: userId },
@@ -99,6 +101,9 @@ export const changePassword = async (userId: string, data: ChangePasswordDto) =>
             throw new AppError("Current password is incorrect", 401, "INVALID_CURRENT_PASSWORD");
         }
 
+        const nextPasswordHash = await bcrypt.hash(data.new_password, 12);
+        const changedAt = new Date();
+
         user.password_hash = nextPasswordHash;
         user.token_version += 1;
 
@@ -106,7 +111,15 @@ export const changePassword = async (userId: string, data: ChangePasswordDto) =>
 
         await transactionRefreshSessionRepo.update(
             { user_id: user.id, revoked_at: IsNull() },
-            { revoked_at: new Date() }
+            { revoked_at: changedAt }
+        );
+        await transactionLoginMfaRepo.update(
+            { user_id: user.id, consumed_at: IsNull() },
+            { consumed_at: changedAt }
+        );
+        await transactionPasswordResetRepo.update(
+            { user_id: user.id, consumed_at: IsNull() },
+            { consumed_at: changedAt }
         );
 
         return saved;

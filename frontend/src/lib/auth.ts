@@ -20,6 +20,7 @@ export const AUTH_CHANGED_EVENT = "ns-nail-auth-changed";
 let accessToken: string | null = null;
 let authUser: AuthUser | null = null;
 let refreshPromise: Promise<boolean> | null = null;
+let sessionEpoch = 0;
 
 function emitAuthChanged() {
     if (typeof window !== "undefined") {
@@ -68,8 +69,12 @@ async function requestRefreshOnce() {
 async function performRefresh() {
     if (typeof window === "undefined") return false;
 
+    const refreshEpoch = sessionEpoch;
+
     try {
         let result = await requestRefreshOnce();
+
+        if (refreshEpoch !== sessionEpoch) return false;
 
         const refreshErrorCode =
             result.body && "error" in result.body
@@ -81,7 +86,12 @@ async function performRefresh() {
             refreshErrorCode === "REFRESH_RACE"
         ) {
             await new Promise((resolve) => window.setTimeout(resolve, 150));
+
+            if (refreshEpoch !== sessionEpoch) return false;
+
             result = await requestRefreshOnce();
+
+            if (refreshEpoch !== sessionEpoch) return false;
         }
 
         const data =
@@ -95,14 +105,16 @@ async function performRefresh() {
             typeof data.access_token !== "string" ||
             !data.user
         ) {
-            clearSession();
+            if (refreshEpoch === sessionEpoch) clearSession();
             return false;
         }
+
+        if (refreshEpoch !== sessionEpoch) return false;
 
         saveSession(data.access_token, data.user);
         return true;
     } catch {
-        clearSession();
+        if (refreshEpoch === sessionEpoch) clearSession();
         return false;
     }
 }
@@ -123,6 +135,9 @@ export async function restoreSession() {
 }
 
 export async function logoutSession() {
+    sessionEpoch += 1;
+    clearSession();
+
     if (typeof window !== "undefined") {
         try {
             await fetch("/api/users/session/logout", {
@@ -134,9 +149,7 @@ export async function logoutSession() {
                 cache: "no-store",
             });
         } catch {
-            // Clear local in-memory state even if the network request fails.
+            // Local state is already cleared; server-side revocation can only happen once connectivity returns.
         }
     }
-
-    clearSession();
 }
