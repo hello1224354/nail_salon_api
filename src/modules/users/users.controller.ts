@@ -13,12 +13,12 @@ import * as passwordResetService from "./password-reset.service";
 import * as loginMfaService from "./login-mfa.service";
 import { UserRole } from "./users.entity";
 import {
-    SecurityEventType,
-    countRecentIdentifierEvents,
-    countRecentIpEvents,
-    createSecurityEvent,
+    AuditEventType,
+    countRecentIdentifierAuditEvents,
+    countRecentIpAuditEvents,
+    createAuditLog,
     hashSensitive,
-} from "../audit/security-event.service";
+} from "../audit/audit-log.service";
 import { AppError } from "../../common/errors";
 import { clearRefreshCookie, readRefreshCookie, setRefreshCookie } from "./session-cookie";
 
@@ -82,15 +82,15 @@ export const loginUser = async (req: Request, res: Response) => {
     const context = requestSecurityContext(req, res);
     const since = new Date(Date.now() - ACCOUNT_LOGIN_WINDOW_MS);
 
-    const failedAttempts = await countRecentIdentifierEvents(
-        SecurityEventType.LOGIN_FAILED,
+    const failedAttempts = await countRecentIdentifierAuditEvents(
+        AuditEventType.LOGIN_FAILED,
         credentials.phone,
         since
     );
 
     const ipFailedAttempts = context.ip
-        ? await countRecentIpEvents(
-              SecurityEventType.LOGIN_FAILED,
+        ? await countRecentIpAuditEvents(
+              AuditEventType.LOGIN_FAILED,
               context.ip,
               new Date(Date.now() - IP_LOGIN_WINDOW_MS)
           )
@@ -100,8 +100,8 @@ export const loginUser = async (req: Request, res: Response) => {
         failedAttempts >= ACCOUNT_LOGIN_FAILURE_LIMIT ||
         ipFailedAttempts >= IP_LOGIN_FAILURE_LIMIT
     ) {
-        await createSecurityEvent({
-            event_type: SecurityEventType.LOGIN_RATE_LIMITED,
+        await createAuditLog({
+            event_type: AuditEventType.LOGIN_RATE_LIMITED,
             request_id: context.requestId,
             identifier: credentials.phone,
             ip: context.ip,
@@ -119,15 +119,15 @@ export const loginUser = async (req: Request, res: Response) => {
         const user = await userService.loginUser(credentials);
 
         if (user.role === UserRole.ADMIN) {
-            const recentMfaSends = await countRecentIdentifierEvents(
-                SecurityEventType.MFA_CHALLENGE_SENT,
+            const recentMfaSends = await countRecentIdentifierAuditEvents(
+                AuditEventType.MFA_CHALLENGE_SENT,
                 credentials.phone,
                 new Date(Date.now() - MFA_SEND_WINDOW_MS)
             );
 
             if (recentMfaSends >= MFA_SEND_LIMIT) {
-                await createSecurityEvent({
-                    event_type: SecurityEventType.LOGIN_RATE_LIMITED,
+                await createAuditLog({
+                    event_type: AuditEventType.LOGIN_RATE_LIMITED,
                     request_id: context.requestId,
                     user_id: user.id,
                     identifier: credentials.phone,
@@ -145,8 +145,8 @@ export const loginUser = async (req: Request, res: Response) => {
 
             const challenge = await loginMfaService.createLoginMfaChallenge(user);
 
-            await createSecurityEvent({
-                event_type: SecurityEventType.MFA_CHALLENGE_SENT,
+            await createAuditLog({
+                event_type: AuditEventType.MFA_CHALLENGE_SENT,
                 request_id: context.requestId,
                 user_id: user.id,
                 identifier: credentials.phone,
@@ -175,8 +175,8 @@ export const loginUser = async (req: Request, res: Response) => {
         setRefreshCookie(res, session.refreshToken, session.refreshExpiresAt);
         res.setHeader("Cache-Control", "no-store");
 
-        await createSecurityEvent({
-            event_type: SecurityEventType.LOGIN_SUCCESS,
+        await createAuditLog({
+            event_type: AuditEventType.LOGIN_SUCCESS,
             request_id: context.requestId,
             user_id: user.id,
             identifier: credentials.phone,
@@ -195,8 +195,8 @@ export const loginUser = async (req: Request, res: Response) => {
         });
     } catch (error) {
         if (error instanceof AppError && ["INVALID_CREDENTIALS", "USER_INACTIVE"].includes(error.code)) {
-            await createSecurityEvent({
-                event_type: SecurityEventType.LOGIN_FAILED,
+            await createAuditLog({
+                event_type: AuditEventType.LOGIN_FAILED,
                 request_id: context.requestId,
                 identifier: credentials.phone,
                 ip: context.ip,
@@ -225,8 +225,8 @@ export const verifyLoginMfa = async (req: Request, res: Response) => {
         setRefreshCookie(res, session.refreshToken, session.refreshExpiresAt);
         res.setHeader("Cache-Control", "no-store");
 
-        await createSecurityEvent({
-            event_type: SecurityEventType.LOGIN_SUCCESS,
+        await createAuditLog({
+            event_type: AuditEventType.LOGIN_SUCCESS,
             request_id: context.requestId,
             user_id: user.id,
             ip: context.ip,
@@ -245,8 +245,8 @@ export const verifyLoginMfa = async (req: Request, res: Response) => {
         });
     } catch (error) {
         if (error instanceof AppError && error.code === "INVALID_MFA_CODE") {
-            await createSecurityEvent({
-                event_type: SecurityEventType.MFA_FAILED,
+            await createAuditLog({
+                event_type: AuditEventType.MFA_FAILED,
                 request_id: context.requestId,
                 ip: context.ip,
                 user_agent: context.userAgent,
@@ -270,8 +270,8 @@ export const refreshSession = async (req: Request, res: Response) => {
         setRefreshCookie(res, session.refreshToken, session.refreshExpiresAt);
         res.setHeader("Cache-Control", "no-store");
 
-        await createSecurityEvent({
-            event_type: SecurityEventType.REFRESH_SESSION,
+        await createAuditLog({
+            event_type: AuditEventType.REFRESH_SESSION,
             request_id: context.requestId,
             user_id: session.user.id,
             ip: context.ip,
@@ -293,8 +293,8 @@ export const refreshSession = async (req: Request, res: Response) => {
         }
 
         if (error instanceof AppError && error.code === "REFRESH_TOKEN_REUSE") {
-            await createSecurityEvent({
-                event_type: SecurityEventType.REFRESH_TOKEN_REUSE,
+            await createAuditLog({
+                event_type: AuditEventType.REFRESH_TOKEN_REUSE,
                 request_id: context.requestId,
                 user_id: knownUser?.id ?? null,
                 ip: context.ip,
@@ -314,8 +314,8 @@ export const logoutUser = async (req: Request, res: Response) => {
         const user = await authSessionService.getSessionUser(refreshToken);
         await authSessionService.revokeRefreshSession(refreshToken);
 
-        await createSecurityEvent({
-            event_type: SecurityEventType.LOGOUT,
+        await createAuditLog({
+            event_type: AuditEventType.LOGOUT,
             request_id: context.requestId,
             user_id: user?.id ?? null,
             ip: context.ip,
@@ -360,8 +360,8 @@ export const changePassword = async (req: Request, res: Response) => {
 
     clearRefreshCookie(res);
 
-    await createSecurityEvent({
-        event_type: SecurityEventType.PASSWORD_CHANGED,
+    await createAuditLog({
+        event_type: AuditEventType.PASSWORD_CHANGED,
         request_id: context.requestId,
         user_id: user.id,
         ip: context.ip,
@@ -380,8 +380,8 @@ export const forgotPassword = async (req: Request, res: Response) => {
     const data = parseForgotPasswordDto(req.body);
     const context = requestSecurityContext(req, res);
 
-    await createSecurityEvent({
-        event_type: SecurityEventType.PASSWORD_RESET_REQUESTED,
+    await createAuditLog({
+        event_type: AuditEventType.PASSWORD_RESET_REQUESTED,
         request_id: context.requestId,
         identifier: data.email,
         ip: context.ip,
@@ -410,8 +410,8 @@ export const resetPassword = async (req: Request, res: Response) => {
 
     clearRefreshCookie(res);
 
-    await createSecurityEvent({
-        event_type: SecurityEventType.PASSWORD_RESET_COMPLETED,
+    await createAuditLog({
+        event_type: AuditEventType.PASSWORD_RESET_COMPLETED,
         request_id: context.requestId,
         user_id: user.id,
         identifier: data.email,
