@@ -36,14 +36,14 @@ export function LoginForm() {
 
             if (data.user.role.toLowerCase() !== "customer") {
                 await logoutSession();
-                throw new Error("Trang đặt lịch này chỉ dành cho tài khoản khách hàng.");
+                throw new Error("Tài khoản quản trị hoặc nhân viên không dùng trang đặt lịch dành cho khách.");
             }
 
             saveSession(data.access_token, data.user);
             router.push("/book");
             router.refresh();
         } catch (submitError) {
-            setError(getApiErrorMessage(submitError, submitError instanceof Error ? submitError.message : "Không thể đăng nhập. Vui lòng thử lại."));
+            setError(getApiErrorMessage(submitError, submitError instanceof Error ? submitError.message : "Chưa đăng nhập được. Vui lòng kiểm tra thông tin và thử lại."));
         } finally {
             setSubmitting(false);
         }
