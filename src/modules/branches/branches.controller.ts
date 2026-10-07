@@ -24,7 +24,7 @@ export const getBranch = async (req: Request, res: Response) => {
     const branchId = parsePositiveIntParam(req.params.id, "Branch id");
     const data = await branchService.getBranch(branchId);
 
-    if (!data || !data.is_active) throw new AppError("Branch not found", 404, "BRANCH_NOT_FOUND");
+    if (!data) throw new AppError("Branch not found", 404, "BRANCH_NOT_FOUND");
 
     return res.status(200).json({
         success: { message: `Get branch ${req.params.id} successfully`, data }
@@ -47,5 +47,16 @@ export const updateBranch = async (req: Request, res: Response) => {
 
     return res.status(200).json({
         success: { message: "Update branch successfully", data }
+    });
+};
+
+export const deleteBranch = async (req: Request, res: Response) => {
+    const branchId = parsePositiveIntParam(req.params.id, "Branch id");
+    const data = await branchService.deleteBranch(branchId);
+
+    if (!data) throw new AppError("Branch not found", 404, "BRANCH_NOT_FOUND");
+
+    return res.status(200).json({
+        success: { message: "Delete branch successfully", data }
     });
 };

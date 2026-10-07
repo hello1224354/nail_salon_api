@@ -301,9 +301,9 @@ export function AdminDashboard() {
         router.refresh();
     }
 
-    const activeBranches = useMemo(() => data.branches.filter((branch) => branch.is_active), [data.branches]);
-    const activeServices = useMemo(() => data.services.filter((service) => service.is_active), [data.services]);
-    const activeStaff = useMemo(() => data.staff.filter((staff) => staff.is_active), [data.staff]);
+    const branchCount = data.branches.length;
+    const serviceCount = data.services.length;
+    const staffCount = data.staff.length;
 
     const todayStats = useMemo(() => {
         const formatter = new Intl.DateTimeFormat("en-CA", {
@@ -340,13 +340,26 @@ export function AdminDashboard() {
         }
     }
 
+    async function deleteAppointment(appointment: Appointment) {
+        if (!window.confirm(`Xóa vĩnh viễn lịch hẹn #${appointment.id.slice(0, 8).toUpperCase()}? Dữ liệu này sẽ không thể khôi phục.`)) return;
+
+        setSubmitting(true);
+        try {
+            await apiRequest<Appointment>(`/api/appointments/${appointment.id}`, { method: "DELETE" });
+            await refresh("Đã xóa lịch hẹn.");
+        } catch (appointmentError) {
+            setToast(getApiErrorMessage(appointmentError, "Không thể xóa lịch hẹn."));
+        } finally {
+            setSubmitting(false);
+        }
+    }
+
     async function saveBranch(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
         const form = new FormData(event.currentTarget);
         const payload = {
             name: String(form.get("name") || "").trim(),
             address: String(form.get("address") || "").trim(),
-            is_active: form.get("is_active") === "on",
         };
 
         setSubmitting(true);
@@ -368,19 +381,15 @@ export function AdminDashboard() {
         }
     }
 
-    async function toggleBranch(branch: Branch) {
+    async function deleteBranch(branch: Branch) {
+        if (!window.confirm(`Xóa vĩnh viễn chi nhánh “${branch.name}”? Dịch vụ và nhân viên hiện tại thuộc chi nhánh cũng sẽ bị xóa; lịch hẹn cũ vẫn giữ snapshot.`)) return;
+
         setSubmitting(true);
         try {
-            await apiRequest<Branch>(
-                `/api/branches/${branch.id}`,
-                {
-                    method: "PUT",
-                    body: JSON.stringify({ is_active: !branch.is_active }),
-                }
-            );
-            await refresh(branch.is_active ? "Đã tạm ngưng chi nhánh." : "Đã kích hoạt chi nhánh.");
-        } catch (toggleError) {
-            setToast(getApiErrorMessage(toggleError, "Không thể cập nhật chi nhánh."));
+            await apiRequest<Branch>(`/api/branches/${branch.id}`, { method: "DELETE" });
+            await refresh("Đã xóa chi nhánh.");
+        } catch (branchError) {
+            setToast(getApiErrorMessage(branchError, "Không thể xóa chi nhánh."));
         } finally {
             setSubmitting(false);
         }
@@ -393,7 +402,6 @@ export function AdminDashboard() {
             name: String(form.get("name") || "").trim(),
             price: Number(form.get("price")),
             duration_minutes: Number(form.get("duration_minutes")),
-            is_active: form.get("is_active") === "on",
         };
         const payload = editingService
             ? base
@@ -418,20 +426,15 @@ export function AdminDashboard() {
         }
     }
 
-    async function deactivateService(service: Service) {
+    async function deleteService(service: Service) {
+        if (!window.confirm(`Xóa vĩnh viễn dịch vụ “${service.name}”? Lịch hẹn cũ vẫn giữ snapshot dịch vụ.`)) return;
+
         setSubmitting(true);
         try {
-            if (service.is_active) {
-                await apiRequest<Service>(`/api/services/${service.id}`, { method: "DELETE" });
-            } else {
-                await apiRequest<Service>(
-                    `/api/services/${service.id}`,
-                    { method: "PUT", body: JSON.stringify({ is_active: true }) }
-                );
-            }
-            await refresh(service.is_active ? "Đã ngưng dịch vụ." : "Đã kích hoạt dịch vụ.");
+            await apiRequest<Service>(`/api/services/${service.id}`, { method: "DELETE" });
+            await refresh("Đã xóa dịch vụ.");
         } catch (serviceError) {
-            setToast(getApiErrorMessage(serviceError, "Không thể cập nhật dịch vụ."));
+            setToast(getApiErrorMessage(serviceError, "Không thể xóa dịch vụ."));
         } finally {
             setSubmitting(false);
         }
@@ -463,7 +466,7 @@ export function AdminDashboard() {
         }
     }
 
-    async function updateStaff(staff: AdminStaff, payload: { branch_id?: number; is_active?: boolean }) {
+    async function updateStaff(staff: AdminStaff, payload: { branch_id: number }) {
         setSubmitting(true);
         try {
             await apiRequest<AdminStaff>(
@@ -473,6 +476,20 @@ export function AdminDashboard() {
             await refresh("Đã cập nhật nhân viên.");
         } catch (staffError) {
             setToast(getApiErrorMessage(staffError, "Không thể cập nhật nhân viên."));
+        } finally {
+            setSubmitting(false);
+        }
+    }
+
+    async function deleteStaff(staff: AdminStaff) {
+        if (!window.confirm(`Xóa vĩnh viễn nhân viên “${staff.full_name}”? Tài khoản nhân viên cũng sẽ bị xóa; lịch hẹn cũ vẫn giữ snapshot.`)) return;
+
+        setSubmitting(true);
+        try {
+            await apiRequest<AdminStaff>(`/api/staffs/${staff.id}`, { method: "DELETE" });
+            await refresh("Đã xóa nhân viên.");
+        } catch (staffError) {
+            setToast(getApiErrorMessage(staffError, "Không thể xóa nhân viên."));
         } finally {
             setSubmitting(false);
         }
@@ -621,9 +638,9 @@ export function AdminDashboard() {
                                     <Overview
                                         data={data}
                                         todayStats={todayStats}
-                                        activeBranches={activeBranches.length}
-                                        activeServices={activeServices.length}
-                                        activeStaff={activeStaff.length}
+                                        branchCount={branchCount}
+                                        serviceCount={serviceCount}
+                                        staffCount={staffCount}
                                         setTab={setTab}
                                     />
                                 ) : null}
@@ -631,7 +648,7 @@ export function AdminDashboard() {
                                 {tab === "appointments" ? (
                                     <AppointmentsPanel
                                         appointments={data.appointments}
-                                        branches={activeBranches}
+                                        branches={data.branches}
                                         branchFilter={appointmentBranch}
                                         statusFilter={appointmentStatus}
                                         setBranchFilter={(value) => {
@@ -646,6 +663,7 @@ export function AdminDashboard() {
                                         pages={appointmentPages}
                                         setPage={setAppointmentPage}
                                         updateStatus={updateAppointmentStatus}
+                                        onDelete={deleteAppointment}
                                         submitting={submitting}
                                     />
                                 ) : null}
@@ -662,7 +680,7 @@ export function AdminDashboard() {
                                             setEditingService(service);
                                             setModal("service");
                                         }}
-                                        onToggle={deactivateService}
+                                        onDelete={deleteService}
                                         submitting={submitting}
                                     />
                                 ) : null}
@@ -670,9 +688,10 @@ export function AdminDashboard() {
                                 {tab === "staff" ? (
                                     <StaffPanel
                                         staff={data.staff}
-                                        branches={activeBranches}
+                                        branches={data.branches}
                                         onAdd={() => setModal("staff")}
                                         onUpdate={updateStaff}
+                                        onDelete={deleteStaff}
                                         submitting={submitting}
                                     />
                                 ) : null}
@@ -688,7 +707,7 @@ export function AdminDashboard() {
                                             setEditingBranch(branch);
                                             setModal("branch");
                                         }}
-                                        onToggle={toggleBranch}
+                                        onDelete={deleteBranch}
                                         submitting={submitting}
                                     />
                                 ) : null}
@@ -726,12 +745,6 @@ export function AdminDashboard() {
                         <Field label="Tên chi nhánh">
                             <input name="name" defaultValue={editingBranch?.name || ""} className={inputClass} required maxLength={255} />
                         </Field>
-                        <Field label="Trạng thái">
-                            <label className="flex h-11 items-center gap-3 rounded-xl border border-line bg-white px-3.5 text-sm">
-                                <input name="is_active" type="checkbox" defaultChecked={editingBranch?.is_active ?? true} />
-                                Đang hoạt động
-                            </label>
-                        </Field>
                         <Field label="Địa chỉ" span>
                             <input name="address" defaultValue={editingBranch?.address || ""} className={inputClass} required maxLength={255} />
                         </Field>
@@ -760,7 +773,7 @@ export function AdminDashboard() {
                             <Field label="Chi nhánh">
                                 <select name="branch_id" className={selectClass} required defaultValue="">
                                     <option value="" disabled>Chọn chi nhánh</option>
-                                    {activeBranches.map((branch) => (
+                                    {data.branches.map((branch) => (
                                         <option key={branch.id} value={branch.id}>{localizeBranchName(branch.name)}</option>
                                     ))}
                                 </select>
@@ -781,12 +794,6 @@ export function AdminDashboard() {
                         <Field label="Thời lượng (phút)">
                             <input name="duration_minutes" type="number" min="1" step="1" defaultValue={editingService?.duration_minutes ?? ""} className={inputClass} required />
                         </Field>
-                        <Field label="Trạng thái" span>
-                            <label className="flex h-11 items-center gap-3 rounded-xl border border-line bg-white px-3.5 text-sm">
-                                <input name="is_active" type="checkbox" defaultChecked={editingService?.is_active ?? true} />
-                                Đang hoạt động
-                            </label>
-                        </Field>
                         <div className="flex justify-end gap-3 md:col-span-2">
                             <button type="button" onClick={() => setModal(null)} className="rounded-full border border-line px-5 py-2.5 text-xs font-semibold">Hủy</button>
                             <button disabled={submitting} className="rounded-full bg-ink px-5 py-2.5 text-xs font-semibold text-white disabled:opacity-50">
@@ -806,7 +813,7 @@ export function AdminDashboard() {
                         <Field label="Chi nhánh">
                             <select name="branch_id" className={selectClass} required defaultValue="">
                                 <option value="" disabled>Chọn chi nhánh</option>
-                                {activeBranches.map((branch) => (
+                                {data.branches.map((branch) => (
                                     <option key={branch.id} value={branch.id}>{localizeBranchName(branch.name)}</option>
                                 ))}
                             </select>
@@ -880,23 +887,23 @@ export function AdminDashboard() {
 function Overview({
     data,
     todayStats,
-    activeBranches,
-    activeServices,
-    activeStaff,
+    branchCount,
+    serviceCount,
+    staffCount,
     setTab,
 }: {
     data: LoadState;
     todayStats: { total: number; pending: number; confirmed: number; completed: number };
-    activeBranches: number;
-    activeServices: number;
-    activeStaff: number;
+    branchCount: number;
+    serviceCount: number;
+    staffCount: number;
     setTab: (tab: TabKey) => void;
 }) {
     const cards = [
         { label: "Lịch đang tải", value: data.appointmentTotal, note: "Tổng lịch theo dữ liệu hiện có" },
         { label: "Chờ xác nhận hôm nay", value: todayStats.pending, note: `${todayStats.total} lịch trong ngày` },
-        { label: "Nhân viên hoạt động", value: activeStaff, note: `${data.staff.length} hồ sơ nhân viên` },
-        { label: "Dịch vụ hoạt động", value: activeServices, note: `${activeBranches} chi nhánh đang mở` },
+        { label: "Nhân viên", value: staffCount, note: "Hồ sơ nhân viên hiện tại" },
+        { label: "Dịch vụ", value: serviceCount, note: `${branchCount} chi nhánh hiện tại` },
     ];
 
     const upcoming = data.appointments
@@ -978,6 +985,7 @@ function AppointmentsPanel({
     pages,
     setPage,
     updateStatus,
+    onDelete,
     submitting,
 }: {
     appointments: Appointment[];
@@ -990,6 +998,7 @@ function AppointmentsPanel({
     pages: number;
     setPage: (page: number) => void;
     updateStatus: (appointment: Appointment, status: string) => Promise<void>;
+    onDelete: (appointment: Appointment) => Promise<void>;
     submitting: boolean;
 }) {
     return (
@@ -1059,23 +1068,32 @@ function AppointmentsPanel({
                                         </span>
                                     </td>
                                     <td className="px-5 py-4">
-                                        {allowed.length ? (
-                                            <select
-                                                defaultValue=""
+                                        <div className="flex items-center gap-3">
+                                            {allowed.length ? (
+                                                <select
+                                                    defaultValue=""
+                                                    disabled={submitting}
+                                                    onChange={(event) => {
+                                                        const value = event.target.value;
+                                                        if (value) void updateStatus(appointment, value);
+                                                        event.target.value = "";
+                                                    }}
+                                                    className="h-8 rounded-lg border border-line bg-white px-2 text-[10px] outline-none"
+                                                >
+                                                    <option value="">Cập nhật…</option>
+                                                    {allowed.map((status) => <option key={status} value={status}>{formatAppointmentStatus(status)}</option>)}
+                                                </select>
+                                            ) : (
+                                                <span className="text-[10px] text-muted">Đã khóa</span>
+                                            )}
+                                            <button
                                                 disabled={submitting}
-                                                onChange={(event) => {
-                                                    const value = event.target.value;
-                                                    if (value) void updateStatus(appointment, value);
-                                                    event.target.value = "";
-                                                }}
-                                                className="h-8 rounded-lg border border-line bg-white px-2 text-[10px] outline-none"
+                                                onClick={() => void onDelete(appointment)}
+                                                className="font-semibold text-[#8a5147]"
                                             >
-                                                <option value="">Cập nhật…</option>
-                                                {allowed.map((status) => <option key={status} value={status}>{formatAppointmentStatus(status)}</option>)}
-                                            </select>
-                                        ) : (
-                                            <span className="text-[10px] text-muted">Đã khóa</span>
-                                        )}
+                                                Xóa
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             );
@@ -1102,24 +1120,28 @@ function ServicesPanel({
     branches,
     onAdd,
     onEdit,
-    onToggle,
+    onDelete,
     submitting,
 }: {
     services: Service[];
     branches: Branch[];
     onAdd: () => void;
     onEdit: (service: Service) => void;
-    onToggle: (service: Service) => Promise<void>;
+    onDelete: (service: Service) => Promise<void>;
     submitting: boolean;
 }) {
     return (
         <section className="overflow-hidden rounded-[22px] border border-line bg-white">
             <PanelHeading eyebrow="Danh mục" title="Dịch vụ" action="Thêm dịch vụ" onAction={onAdd} />
             <div className="overflow-x-auto">
-                <table className="min-w-[800px] w-full text-left text-xs">
+                <table className="min-w-[720px] w-full text-left text-xs">
                     <thead className="bg-[#f8f5f1] text-[9px] uppercase tracking-[0.14em] text-muted">
                         <tr>
-                            <th className="px-5 py-3">Tên</th><th className="px-5 py-3">Chi nhánh</th><th className="px-5 py-3">Giá</th><th className="px-5 py-3">Thời lượng</th><th className="px-5 py-3">Trạng thái</th><th className="px-5 py-3">Thao tác</th>
+                            <th className="px-5 py-3">Tên</th>
+                            <th className="px-5 py-3">Chi nhánh</th>
+                            <th className="px-5 py-3">Giá</th>
+                            <th className="px-5 py-3">Thời lượng</th>
+                            <th className="px-5 py-3">Thao tác</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-line">
@@ -1129,13 +1151,10 @@ function ServicesPanel({
                                 <td className="px-5 py-4">{localizeBranchName(branches.find((branch) => branch.id === service.branch_id)?.name || `#${service.branch_id}`)}</td>
                                 <td className="px-5 py-4">{formatVnd(service.price)} VND</td>
                                 <td className="px-5 py-4">{service.duration_minutes} phút</td>
-                                <td className="px-5 py-4"><ActiveBadge active={service.is_active} /></td>
                                 <td className="px-5 py-4">
                                     <div className="flex gap-3">
                                         <button onClick={() => onEdit(service)} className="font-semibold text-accent">Sửa</button>
-                                        <button disabled={submitting} onClick={() => void onToggle(service)} className={service.is_active ? "font-semibold text-[#8a5147]" : "font-semibold text-[#3f6b4c]"}>
-                                            {service.is_active ? "Ngưng" : "Bật lại"}
-                                        </button>
+                                        <button disabled={submitting} onClick={() => void onDelete(service)} className="font-semibold text-[#8a5147]">Xóa</button>
                                     </div>
                                 </td>
                             </tr>
@@ -1152,22 +1171,27 @@ function StaffPanel({
     branches,
     onAdd,
     onUpdate,
+    onDelete,
     submitting,
 }: {
     staff: AdminStaff[];
     branches: Branch[];
     onAdd: () => void;
-    onUpdate: (staff: AdminStaff, payload: { branch_id?: number; is_active?: boolean }) => Promise<void>;
+    onUpdate: (staff: AdminStaff, payload: { branch_id: number }) => Promise<void>;
+    onDelete: (staff: AdminStaff) => Promise<void>;
     submitting: boolean;
 }) {
     return (
         <section className="overflow-hidden rounded-[22px] border border-line bg-white">
             <PanelHeading eyebrow="Nhân sự" title="Nhân viên" action="Thêm nhân viên" onAction={onAdd} />
             <div className="overflow-x-auto">
-                <table className="min-w-[900px] w-full text-left text-xs">
+                <table className="min-w-[760px] w-full text-left text-xs">
                     <thead className="bg-[#f8f5f1] text-[9px] uppercase tracking-[0.14em] text-muted">
                         <tr>
-                            <th className="px-5 py-3">Nhân viên</th><th className="px-5 py-3">Liên hệ</th><th className="px-5 py-3">Chi nhánh</th><th className="px-5 py-3">Trạng thái</th><th className="px-5 py-3">Thao tác</th>
+                            <th className="px-5 py-3">Nhân viên</th>
+                            <th className="px-5 py-3">Liên hệ</th>
+                            <th className="px-5 py-3">Chi nhánh</th>
+                            <th className="px-5 py-3">Thao tác</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-line">
@@ -1181,21 +1205,20 @@ function StaffPanel({
                                 <td className="px-5 py-4">
                                     <select
                                         value={person.branch_id}
-                                        disabled={submitting || !person.is_active}
+                                        disabled={submitting}
                                         onChange={(event) => void onUpdate(person, { branch_id: Number(event.target.value) })}
                                         className="h-9 rounded-lg border border-line bg-white px-2 text-[11px]"
                                     >
                                         {branches.map((branch) => <option key={branch.id} value={branch.id}>{localizeBranchName(branch.name)}</option>)}
                                     </select>
                                 </td>
-                                <td className="px-5 py-4"><ActiveBadge active={person.is_active} /></td>
                                 <td className="px-5 py-4">
                                     <button
                                         disabled={submitting}
-                                        onClick={() => void onUpdate(person, { is_active: !person.is_active })}
-                                        className={person.is_active ? "font-semibold text-[#8a5147]" : "font-semibold text-[#3f6b4c]"}
+                                        onClick={() => void onDelete(person)}
+                                        className="font-semibold text-[#8a5147]"
                                     >
-                                        {person.is_active ? "Khóa tài khoản" : "Kích hoạt"}
+                                        Xóa
                                     </button>
                                 </td>
                             </tr>
@@ -1211,13 +1234,13 @@ function BranchesPanel({
     branches,
     onAdd,
     onEdit,
-    onToggle,
+    onDelete,
     submitting,
 }: {
     branches: Branch[];
     onAdd: () => void;
     onEdit: (branch: Branch) => void;
-    onToggle: (branch: Branch) => Promise<void>;
+    onDelete: (branch: Branch) => Promise<void>;
     submitting: boolean;
 }) {
     return (
@@ -1226,19 +1249,14 @@ function BranchesPanel({
             <div className="grid gap-4 p-5 md:grid-cols-2 xl:grid-cols-3">
                 {branches.map((branch) => (
                     <article key={branch.id} className="rounded-2xl border border-line bg-[#faf8f5] p-5">
-                        <div className="flex items-start justify-between gap-4">
-                            <div>
-                                <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-accent">Chi nhánh #{branch.id}</p>
-                                <h3 className="mt-2 font-serif text-2xl">{localizeBranchName(branch.name)}</h3>
-                            </div>
-                            <ActiveBadge active={branch.is_active} />
+                        <div>
+                            <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-accent">Chi nhánh #{branch.id}</p>
+                            <h3 className="mt-2 font-serif text-2xl">{localizeBranchName(branch.name)}</h3>
                         </div>
                         <p className="mt-4 min-h-10 text-xs leading-5 text-muted">{branch.address}</p>
                         <div className="mt-5 flex gap-4 border-t border-line pt-4 text-[11px]">
                             <button onClick={() => onEdit(branch)} className="font-semibold text-accent">Chỉnh sửa</button>
-                            <button disabled={submitting} onClick={() => void onToggle(branch)} className={branch.is_active ? "font-semibold text-[#8a5147]" : "font-semibold text-[#3f6b4c]"}>
-                                {branch.is_active ? "Tạm ngưng" : "Kích hoạt"}
-                            </button>
+                            <button disabled={submitting} onClick={() => void onDelete(branch)} className="font-semibold text-[#8a5147]">Xóa</button>
                         </div>
                     </article>
                 ))}
@@ -1312,10 +1330,3 @@ function PanelHeading({
     );
 }
 
-function ActiveBadge({ active }: { active: boolean }) {
-    return (
-        <span className={`inline-flex rounded-full border px-2.5 py-1 text-[9px] font-semibold ${active ? "border-[#a7c8b2] bg-[#edf7f0] text-[#356245]" : "border-[#d8aaa0] bg-[#faeeeb] text-[#854d42]"}`}>
-            {active ? "Hoạt động" : "Tạm ngưng"}
-        </span>
-    );
-}

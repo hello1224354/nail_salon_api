@@ -29,9 +29,6 @@ export class User {
     })
     role: UserRole;
 
-    @Column({ type: "boolean", default: true })
-    is_active: boolean;
-
     @Column({ type: "int", default: 0 })
     token_version: number;
 

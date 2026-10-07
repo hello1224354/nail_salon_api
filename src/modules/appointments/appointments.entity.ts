@@ -1,8 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, OneToMany, Index } from "typeorm";
-import { User } from "../users/users.entity";
-import { Staff } from "../staffs/staffs.entity";
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, Index } from "typeorm";
 import { AppointmentService } from "./appointment-services.entity";
-import { Branch } from "../branches/branches.entity";
 
 export enum AppointmentStatus {
     PENDING = "pending",
@@ -22,23 +19,29 @@ export class Appointment {
     @Column({ type: "uuid" })
     user_id: string;
 
-    @ManyToOne(() => User, { onDelete: "RESTRICT" })
-    @JoinColumn({ name: "user_id" })
-    user: User;
+    @Column({ type: "varchar" })
+    customer_full_name: string;
+
+    @Column({ type: "varchar" })
+    customer_phone: string;
+
+    @Column({ type: "varchar", nullable: true })
+    customer_email: string | null;
 
     @Column({ type: "uuid" })
     staff_id: string;
 
-    @ManyToOne(() => Staff, (staff) => staff.appointments, { onDelete: "RESTRICT" })
-    @JoinColumn({ name: "staff_id", referencedColumnName: "user_id" })
-    staff: Staff;
+    @Column({ type: "varchar" })
+    staff_full_name: string;
 
     @Column({ type: "int" })
     branch_id: number;
 
-    @ManyToOne(() => Branch, { onDelete: "RESTRICT" })
-    @JoinColumn({ name: "branch_id" })
-    branch: Branch;
+    @Column({ type: "varchar" })
+    branch_name: string;
+
+    @Column({ type: "varchar" })
+    branch_address: string;
 
     @OneToMany(() => AppointmentService, (appointmentService) => appointmentService.appointment)
     appointment_services: AppointmentService[];

@@ -38,7 +38,6 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
     const user = await userService.getUser(payload.sub);
 
     if (!user) throw new AppError("Invalid or expired token", 401, "INVALID_TOKEN");
-    if (!user.is_active) throw new AppError("User account is inactive", 403, "USER_INACTIVE");
 
     if (payload.ver !== user.token_version) {
         throw new AppError("Session has been revoked", 401, "TOKEN_REVOKED");
