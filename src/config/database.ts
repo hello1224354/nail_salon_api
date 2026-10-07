@@ -13,6 +13,8 @@ import { RefreshSession } from "../modules/users/refresh-session.entity";
 import { PasswordResetChallenge } from "../modules/users/password-reset-challenge.entity";
 import { LoginMfaChallenge } from "../modules/users/login-mfa-challenge.entity";
 import { SalonContent } from "../modules/site-content/salon-content.entity";
+import { InstagramTrendItem } from "../modules/site-content/instagram-trend-item.entity";
+import { CustomerReview } from "../modules/site-content/customer-review.entity";
 
 export const AppDataSource = new DataSource({
     type: "mysql",
@@ -37,6 +39,8 @@ export const AppDataSource = new DataSource({
         PasswordResetChallenge,
         LoginMfaChallenge,
         SalonContent,
+        InstagramTrendItem,
+        CustomerReview,
     ],
     migrations: [__dirname + "/../migrations/**/*{.js,.ts}"],
     timezone: "Z",
