@@ -1,4 +1,4 @@
-import { rateLimit } from "express-rate-limit";
+import { ipKeyGenerator, rateLimit } from "express-rate-limit";
 import { AppError } from "../errors";
 import { AuditEventType, createAuditLog } from "../../modules/audit/audit-log.service";
 
@@ -74,5 +74,37 @@ export const bookingRateLimiter = rateLimit({
     legacyHeaders: false,
     handler: () => {
         throw new AppError("Too many booking attempts. Try again later", 429, "RATE_LIMIT_EXCEEDED");
+    },
+});
+
+export const publicReadRateLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    limit: 120,
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: () => {
+        throw new AppError("Too many read requests. Try again later", 429, "RATE_LIMIT_EXCEEDED");
+    },
+});
+
+export const authenticatedReadRateLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    limit: 120,
+    keyGenerator: (req) => req.user?.id ?? ipKeyGenerator(req.ip ?? ""),
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: () => {
+        throw new AppError("Too many read requests. Try again later", 429, "RATE_LIMIT_EXCEEDED");
+    },
+});
+
+export const availabilityRateLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    limit: 30,
+    keyGenerator: (req) => req.user?.id ?? ipKeyGenerator(req.ip ?? ""),
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: () => {
+        throw new AppError("Too many availability requests. Try again later", 429, "RATE_LIMIT_EXCEEDED");
     },
 });
