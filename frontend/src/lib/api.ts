@@ -128,6 +128,7 @@ const errorMessagesByCode: Record<string, string> = {
     VALIDATION_ERROR: "Thông tin chưa hợp lệ. Vui lòng kiểm tra lại.",
     BRANCH_NOT_FOUND: "Không tìm thấy chi nhánh.",
     SERVICE_NOT_FOUND: "Không tìm thấy một hoặc nhiều dịch vụ.",
+    SERVICE_NOT_BOOKABLE: "Dịch vụ này chưa có thời lượng chính thức nên chưa thể đặt trực tuyến.",
     BRANCH_MISMATCH: "Các dịch vụ đã chọn không thuộc cùng một chi nhánh.",
     SLOT_UNAVAILABLE: "Khung giờ này vừa hết chỗ. Vui lòng chọn khung giờ khác.",
     CUSTOMER_APPOINTMENT_CONFLICT: "Bạn đã có lịch hẹn trùng với khung giờ này.",
@@ -159,6 +160,8 @@ export type Branch = {
     id: number;
     name: string;
     address: string;
+    phone?: string | null;
+    opening_hours?: string | null;
     created_at?: string;
     updated_at?: string;
 };
@@ -175,8 +178,15 @@ export type Service = {
     id: string;
     branch_id: number;
     name: string;
+    display_name?: string | null;
+    category?: string | null;
+    subcategory?: string | null;
+    description?: string | null;
     price: number;
-    duration_minutes: number;
+    price_min?: number | null;
+    price_max?: number | null;
+    duration_minutes: number | null;
+    booking_enabled: boolean;
     created_at?: string;
     updated_at?: string;
 };
@@ -269,4 +279,37 @@ export type AdminStaff = {
     email: string | null;
     created_at?: string;
     updated_at?: string;
+};
+
+export type InstagramShowcaseItem = {
+    title: string | null;
+    instagram_url: string;
+    image_source: string | null;
+    sort_order: number;
+};
+
+export type CustomerReview = {
+    display_name: string;
+    content: string;
+    source: string;
+    source_url: string;
+};
+
+export type SalonContent = {
+    id: number;
+    name: string;
+    display_name: string;
+    instagram_handle: string | null;
+    google_maps_location: string | null;
+    hotline: string | null;
+    contact_email: string | null;
+    facebook_name: string | null;
+    tiktok_name: string | null;
+    has_refreshments: boolean;
+    has_warranty: boolean;
+    warranty_days: number | null;
+    brands: string | null;
+    experience_notes: string | null;
+    instagram_showcase: InstagramShowcaseItem[];
+    customer_reviews: CustomerReview[];
 };
