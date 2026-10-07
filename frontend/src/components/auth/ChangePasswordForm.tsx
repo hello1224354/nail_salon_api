@@ -82,7 +82,7 @@ export function ChangePasswordForm({ admin = false }: { admin?: boolean }) {
             router.replace(admin ? "/admin/login?password_changed=1" : "/login?password_changed=1");
             router.refresh();
         } catch (submitError) {
-            setError(getApiErrorMessage(submitError, "Không thể đổi mật khẩu. Vui lòng thử lại."));
+            setError(getApiErrorMessage(submitError, "Chưa đổi được mật khẩu. Vui lòng thử lại."));
         } finally {
             setSubmitting(false);
         }
@@ -95,7 +95,7 @@ export function ChangePasswordForm({ admin = false }: { admin?: boolean }) {
     return (
         <form onSubmit={handleSubmit} className="mt-8 space-y-5" noValidate>
             <div className="rounded-xl border border-line bg-tint/40 px-4 py-3 text-xs leading-5 text-muted">
-                Đang đổi mật khẩu cho <span className="font-semibold text-ink">{user?.full_name}</span>. Sau khi đổi, hệ thống sẽ đăng xuất tất cả thiết bị.
+                Tài khoản đang đổi mật khẩu: <span className="font-semibold text-ink">{user?.full_name}</span>. Sau khi đổi xong, tài khoản sẽ được đăng xuất khỏi tất cả thiết bị.
             </div>
 
             <label className="block">
