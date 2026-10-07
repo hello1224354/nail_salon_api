@@ -12,6 +12,12 @@ export class Branch {
     @Column({ type: "varchar" })
     address: string;
 
+    @Column({ type: "varchar", nullable: true })
+    phone: string | null;
+
+    @Column({ type: "varchar", nullable: true })
+    opening_hours: string | null;
+
     @CreateDateColumn()
     created_at: Date;
 
