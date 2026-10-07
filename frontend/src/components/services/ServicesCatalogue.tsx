@@ -232,9 +232,6 @@ export function ServicesCatalogue() {
                 </div>
             ) : null}
 
-            <p className="mt-5 text-xs leading-5 text-muted">
-                Giá trên là bảng giá hiện có của tiệm. Những dịch vụ chưa ghi thời lượng trong dữ liệu gốc vẫn được hiển thị nhưng chưa mở đặt lịch trực tuyến.
-            </p>
         </div>
     );
 }
