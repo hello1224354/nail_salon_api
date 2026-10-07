@@ -53,3 +53,12 @@ export function getMapsSearchUrl(location: string | null | undefined) {
         ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`
         : null;
 }
+
+export function getMapsUrl(
+    directUrl: string | null | undefined,
+    location: string | null | undefined
+) {
+    const normalizedDirectUrl = directUrl?.trim();
+
+    return normalizedDirectUrl || getMapsSearchUrl(location);
+}

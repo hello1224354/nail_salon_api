@@ -295,12 +295,19 @@ export type CustomerReview = {
     source_url: string;
 };
 
+export type HotTrendImage = {
+    id: string;
+    image_url: string;
+    source_url: string;
+};
+
 export type SalonContent = {
     id: number;
     name: string;
     display_name: string;
     instagram_handle: string | null;
     google_maps_location: string | null;
+    google_maps_url: string | null;
     hotline: string | null;
     contact_email: string | null;
     facebook_name: string | null;
@@ -311,5 +318,6 @@ export type SalonContent = {
     brands: string | null;
     experience_notes: string | null;
     instagram_showcase: InstagramShowcaseItem[];
+    hot_trend_images: HotTrendImage[];
     customer_reviews: CustomerReview[];
 };
