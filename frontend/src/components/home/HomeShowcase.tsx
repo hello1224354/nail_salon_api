@@ -73,7 +73,7 @@ function ExperienceIcon({ icon }: { icon: (typeof experience)[number]["icon"] })
     );
 }
 
-function useAutoCarousel(itemCount: number, delay: number, desktopActive: boolean) {
+function useAutoCarousel(itemCount: number, delay: number) {
     const [autoplay] = useState(() =>
         Autoplay({
             delay,
@@ -87,13 +87,7 @@ function useAutoCarousel(itemCount: number, delay: number, desktopActive: boolea
         {
             loop: itemCount > 1,
             align: "start",
-            breakpoints: desktopActive
-                ? undefined
-                : {
-                    "(min-width: 768px)": {
-                        active: false,
-                    },
-                },
+            containScroll: "trimSnaps",
         },
         [autoplay]
     );
@@ -132,31 +126,22 @@ function useAutoCarousel(itemCount: number, delay: number, desktopActive: boolea
         };
     }, [autoplay, emblaApi, syncSelectedIndex]);
 
-    return {
-        emblaRef,
-        emblaApi,
-        selectedIndex,
-    };
+    return { emblaRef, emblaApi, selectedIndex };
 }
 
 function CarouselDots({
     count,
     selectedIndex,
     onSelect,
-    mobileOnly = false,
 }: {
     count: number;
     selectedIndex: number;
     onSelect: (index: number) => void;
-    mobileOnly?: boolean;
 }) {
     if (count <= 1) return null;
 
     return (
-        <div
-            className={`mt-5 flex items-center justify-center gap-2 ${mobileOnly ? "md:hidden" : ""}`}
-            aria-label="Điều khiển băng chuyền"
-        >
+        <div className="mt-5 flex items-center justify-center gap-2" aria-label="Điều khiển băng chuyền">
             {Array.from({ length: count }, (_, index) => (
                 <button
                     key={index}
@@ -171,10 +156,50 @@ function CarouselDots({
     );
 }
 
+function TrendCard({ look }: { look: (typeof instagramLooks)[number] }) {
+    return (
+        <a
+            href={studio.instagramUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="focus-ring motion-card group block h-full overflow-hidden rounded-[18px] border border-line bg-surface p-2 shadow-[0_8px_26px_rgba(48,40,35,0.04)]"
+        >
+            <div className="relative aspect-square overflow-hidden rounded-[13px] bg-tint">
+                <Image
+                    src={look.image}
+                    alt={look.name}
+                    fill
+                    sizes="(max-width: 767px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                    className="motion-image object-cover group-hover:scale-[1.035]"
+                />
+            </div>
+            <div className="px-2 pb-3 pt-4">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-accent">Instagram</p>
+                <h3 className="mt-2 font-serif text-xl">{look.name}</h3>
+                <p className="mt-3 text-[11px] text-muted underline decoration-line underline-offset-4">Xem trên Instagram</p>
+            </div>
+        </a>
+    );
+}
+
+function ExperienceCard({ item }: { item: (typeof experience)[number] }) {
+    return (
+        <article className="motion-card h-full rounded-[18px] border border-line bg-surface p-2">
+            <div className="flex h-24 items-center justify-center rounded-[13px] bg-tint text-accent/65">
+                <ExperienceIcon icon={item.icon} />
+            </div>
+            <div className="px-3 pb-4 pt-4">
+                <h3 className="font-serif text-xl">{item.title}</h3>
+                <p className="mt-2 max-w-xs text-xs leading-5 text-muted">{item.description}</p>
+            </div>
+        </article>
+    );
+}
+
 export function HomeShowcase() {
-    const looksCarousel = useAutoCarousel(instagramLooks.length, 3900, false);
-    const experienceCarousel = useAutoCarousel(experience.length, 4400, false);
-    const reviewsCarousel = useAutoCarousel(reviews.length, 5200, true);
+    const looksCarousel = useAutoCarousel(instagramLooks.length, 3900);
+    const experienceCarousel = useAutoCarousel(experience.length, 4400);
+    const reviewsCarousel = useAutoCarousel(reviews.length, 5200);
 
     return (
         <>
@@ -199,44 +224,28 @@ export function HomeShowcase() {
                         </a>
                     </div>
 
-                    <div ref={looksCarousel.emblaRef} className="mt-8 overflow-hidden md:overflow-visible">
-                        <div className="flex gap-4 md:grid md:grid-cols-2 lg:grid-cols-4">
-                            {instagramLooks.map((look) => (
-                                <div
-                                    key={look.name}
-                                    className="min-w-0 flex-[0_0_78%] sm:flex-[0_0_52%] md:block md:flex-none"
-                                >
-                                    <a
-                                        href={studio.instagramUrl}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="focus-ring motion-card group block h-full overflow-hidden rounded-[18px] border border-line bg-surface p-2 shadow-[0_8px_26px_rgba(48,40,35,0.04)]"
-                                    >
-                                        <div className="relative aspect-square overflow-hidden rounded-[13px] bg-tint">
-                                            <Image
-                                                src={look.image}
-                                                alt={look.name}
-                                                fill
-                                                sizes="(max-width: 767px) 78vw, (max-width: 1024px) 50vw, 25vw"
-                                                className="motion-image object-cover group-hover:scale-[1.035]"
-                                            />
-                                        </div>
-                                        <div className="px-2 pb-3 pt-4">
-                                            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-accent">Instagram</p>
-                                            <h3 className="mt-2 font-serif text-xl">{look.name}</h3>
-                                            <p className="mt-3 text-[11px] text-muted underline decoration-line underline-offset-4">Xem trên Instagram</p>
-                                        </div>
-                                    </a>
-                                </div>
-                            ))}
+                    <div className="mt-8 md:hidden">
+                        <div ref={looksCarousel.emblaRef} className="overflow-hidden">
+                            <div className="flex">
+                                {instagramLooks.map((look) => (
+                                    <div key={look.name} className="min-w-0 flex-[0_0_100%]">
+                                        <TrendCard look={look} />
+                                    </div>
+                                ))}
+                            </div>
                         </div>
+                        <CarouselDots
+                            count={instagramLooks.length}
+                            selectedIndex={looksCarousel.selectedIndex}
+                            onSelect={(index) => looksCarousel.emblaApi?.scrollTo(index)}
+                        />
                     </div>
-                    <CarouselDots
-                        count={instagramLooks.length}
-                        selectedIndex={looksCarousel.selectedIndex}
-                        onSelect={(index) => looksCarousel.emblaApi?.scrollTo(index)}
-                        mobileOnly
-                    />
+
+                    <div className="mt-8 hidden gap-4 md:grid md:grid-cols-2 lg:grid-cols-4">
+                        {instagramLooks.map((look) => (
+                            <TrendCard key={look.name} look={look} />
+                        ))}
+                    </div>
                 </div>
             </section>
 
@@ -253,32 +262,28 @@ export function HomeShowcase() {
                         </p>
                     </div>
 
-                    <div ref={experienceCarousel.emblaRef} className="mt-8 overflow-hidden md:overflow-visible">
-                        <div className="flex gap-4 md:grid md:grid-cols-3">
-                            {experience.map((item) => (
-                                <div
-                                    key={item.title}
-                                    className="min-w-0 flex-[0_0_86%] sm:flex-[0_0_58%] md:block md:flex-none"
-                                >
-                                    <article className="motion-card h-full rounded-[18px] border border-line bg-surface p-2">
-                                        <div className="flex h-24 items-center justify-center rounded-[13px] bg-tint text-accent/65">
-                                            <ExperienceIcon icon={item.icon} />
-                                        </div>
-                                        <div className="px-3 pb-4 pt-4">
-                                            <h3 className="font-serif text-xl">{item.title}</h3>
-                                            <p className="mt-2 max-w-xs text-xs leading-5 text-muted">{item.description}</p>
-                                        </div>
-                                    </article>
-                                </div>
-                            ))}
+                    <div className="mt-8 md:hidden">
+                        <div ref={experienceCarousel.emblaRef} className="overflow-hidden">
+                            <div className="flex">
+                                {experience.map((item) => (
+                                    <div key={item.title} className="min-w-0 flex-[0_0_100%]">
+                                        <ExperienceCard item={item} />
+                                    </div>
+                                ))}
+                            </div>
                         </div>
+                        <CarouselDots
+                            count={experience.length}
+                            selectedIndex={experienceCarousel.selectedIndex}
+                            onSelect={(index) => experienceCarousel.emblaApi?.scrollTo(index)}
+                        />
                     </div>
-                    <CarouselDots
-                        count={experience.length}
-                        selectedIndex={experienceCarousel.selectedIndex}
-                        onSelect={(index) => experienceCarousel.emblaApi?.scrollTo(index)}
-                        mobileOnly
-                    />
+
+                    <div className="mt-8 hidden gap-4 md:grid md:grid-cols-3">
+                        {experience.map((item) => (
+                            <ExperienceCard key={item.title} item={item} />
+                        ))}
+                    </div>
                 </div>
             </section>
 
@@ -301,7 +306,7 @@ export function HomeShowcase() {
                             {reviews.map((review, index) => (
                                 <div
                                     key={`${review.name}-${index}`}
-                                    className="min-w-0 flex-[0_0_88%] sm:flex-[0_0_70%] md:flex-[0_0_calc(50%-10px)]"
+                                    className="min-w-0 flex-[0_0_100%] md:flex-[0_0_calc(50%-10px)]"
                                 >
                                     <a
                                         href={studio.mapsUrl}
