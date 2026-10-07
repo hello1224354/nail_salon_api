@@ -122,7 +122,7 @@ const errorMessagesByCode: Record<string, string> = {
     INVALID_MFA_CODE: "Mã OTP không đúng hoặc đã hết hạn.",
     MFA_EMAIL_REQUIRED: "Tài khoản quản trị chưa có email để nhận OTP.",
     MFA_NOT_CONFIGURED: "Hệ thống OTP quản trị chưa được cấu hình.",
-    REGISTRATION_UNAVAILABLE: "Không thể tạo tài khoản với thông tin đã cung cấp.",
+    REGISTRATION_UNAVAILABLE: "Chưa tạo được tài khoản với thông tin này.",
     USER_NOT_FOUND: "Không tìm thấy tài khoản.",
     FORBIDDEN: "Bạn không có quyền thực hiện thao tác này.",
     VALIDATION_ERROR: "Thông tin chưa hợp lệ. Vui lòng kiểm tra lại.",
@@ -134,7 +134,7 @@ const errorMessagesByCode: Record<string, string> = {
     CUSTOMER_APPOINTMENT_CONFLICT: "Bạn đã có lịch hẹn trùng với khung giờ này.",
     TOO_MANY_PENDING_APPOINTMENTS: "Bạn đã có quá nhiều lịch hẹn đang chờ xác nhận.",
     INVALID_APPOINTMENT_TIME: "Giờ bắt đầu phải nằm trên mốc 15 phút.",
-    OUTSIDE_BUSINESS_HOURS: "Khung giờ đã chọn nằm ngoài giờ hoạt động của salon.",
+    OUTSIDE_BUSINESS_HOURS: "Khung giờ đã chọn nằm ngoài giờ mở cửa của tiệm.",
     APPOINTMENT_CONFLICT: "Khung giờ này không còn khả dụng.",
 };
 
