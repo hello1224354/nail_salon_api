@@ -196,7 +196,7 @@ function ReviewsCarousel({ reviews }: { reviews: CustomerReview[] }) {
                 <div className="-ml-4 flex">
                     {reviews.map((review) => (
                         <div
-                            key={review.source_url}
+                            key={review.id}
                             className="flex min-w-0 shrink-0 grow-0 basis-1/2 pl-4 lg:basis-1/3"
                         >
                             <ReviewCard review={review} />
