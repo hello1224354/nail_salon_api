@@ -281,24 +281,21 @@ export type AdminStaff = {
     updated_at?: string;
 };
 
-export type InstagramShowcaseItem = {
+export type InstagramTrendItem = {
+    id: number;
     title: string | null;
+    image_src: string;
     instagram_url: string;
-    image_source: string | null;
     sort_order: number;
 };
 
 export type CustomerReview = {
+    id: number;
     display_name: string;
     content: string;
     source: string;
     source_url: string;
-};
-
-export type HotTrendImage = {
-    id: string;
-    image_url: string;
-    source_url: string;
+    sort_order: number;
 };
 
 export type SalonContent = {
@@ -317,7 +314,6 @@ export type SalonContent = {
     warranty_days: number | null;
     brands: string | null;
     experience_notes: string | null;
-    instagram_showcase: InstagramShowcaseItem[];
-    hot_trend_images: HotTrendImage[];
+    instagram_showcase: InstagramTrendItem[];
     customer_reviews: CustomerReview[];
 };
