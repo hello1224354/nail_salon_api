@@ -43,6 +43,11 @@ async function getGmailAccessToken() {
     });
 
     if (!response.ok) {
+        const errorBody = await response.text().catch(() => "");
+        console.error("Gmail OAuth token exchange failed", {
+            status: response.status,
+            body: errorBody.slice(0, 1000),
+        });
         throw new AppError("Email delivery is temporarily unavailable", 503, "EMAIL_DELIVERY_FAILED");
     }
 
@@ -86,6 +91,11 @@ export async function sendPlainTextEmail(to: string, subject: string, body: stri
     });
 
     if (!response.ok) {
+        const errorBody = await response.text().catch(() => "");
+        console.error("Gmail API send failed", {
+            status: response.status,
+            body: errorBody.slice(0, 1500),
+        });
         throw new AppError("Email delivery is temporarily unavailable", 503, "EMAIL_DELIVERY_FAILED");
     }
 }
