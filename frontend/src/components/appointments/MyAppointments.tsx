@@ -9,8 +9,6 @@ import {
     getApiErrorMessage,
     type Appointment,
     type AppointmentList,
-    type Branch,
-    type BranchList,
 } from "@/lib/api";
 import { clearSession, restoreSession, type AuthUser } from "@/lib/auth";
 import { formatAppointmentStatus, formatVnd, localizeBranchName } from "@/lib/studio-data";
@@ -60,7 +58,6 @@ async function fetchAppointmentContext() {
     return await Promise.all([
         apiRequest<AuthUser>("/api/users/me"),
         apiRequest<AppointmentList>("/api/appointments?page=1&limit=100"),
-        apiRequest<BranchList>("/api/branches?page=1&limit=100"),
     ]);
 }
 
@@ -77,7 +74,6 @@ function AppointmentSkeleton() {
 export function MyAppointments() {
     const router = useRouter();
     const [appointments, setAppointments] = useState<Appointment[]>([]);
-    const [branches, setBranches] = useState<Branch[]>([]);
     const [filter, setFilter] = useState<FilterValue>("all");
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -95,18 +91,16 @@ export function MyAppointments() {
                     return;
                 }
 
-                const [currentUser, appointmentData, branchData] = await fetchAppointmentContext();
+                const [currentUser, appointmentData] = await fetchAppointmentContext();
                 if (cancelled) return;
 
                 if (currentUser.role.toLowerCase() !== CUSTOMER_ROLE) {
                     setError("Trang này chỉ dành cho tài khoản khách hàng.");
                     setAppointments([]);
-                    setBranches(branchData.branches);
                     return;
                 }
 
                 setAppointments(appointmentData.appointments);
-                setBranches(branchData.branches);
             } catch (loadError) {
                 if (cancelled) return;
 
@@ -141,17 +135,15 @@ export function MyAppointments() {
                 return;
             }
 
-            const [currentUser, appointmentData, branchData] = await fetchAppointmentContext();
+            const [currentUser, appointmentData] = await fetchAppointmentContext();
 
             if (currentUser.role.toLowerCase() !== CUSTOMER_ROLE) {
                 setError("Trang này chỉ dành cho tài khoản khách hàng.");
                 setAppointments([]);
-                setBranches(branchData.branches);
                 return;
             }
 
             setAppointments(appointmentData.appointments);
-            setBranches(branchData.branches);
         } catch (loadError) {
             if (loadError instanceof ApiError && loadError.status === 401) {
                 clearSession();
@@ -164,11 +156,6 @@ export function MyAppointments() {
             setRefreshing(false);
         }
     }
-
-    const branchMap = useMemo(
-        () => new Map(branches.map((branch) => [branch.id, branch])),
-        [branches]
-    );
 
     const visibleAppointments = useMemo(() => {
         const filtered = filter === "all"
@@ -270,7 +257,6 @@ export function MyAppointments() {
                     <div className="grid gap-4 lg:grid-cols-2">
                         {visibleAppointments.map((appointment) => {
                             const status = appointment.status.toLowerCase();
-                            const branch = branchMap.get(appointment.branch_id);
                             const services = appointment.appointment_services ?? [];
                             const total = services.reduce((sum, service) => sum + service.price, 0);
                             const duration = services.reduce((sum, service) => sum + service.duration_minutes, 0);
@@ -292,7 +278,7 @@ export function MyAppointments() {
                                         <p className="mt-1 text-sm font-semibold tabular-nums">
                                             {formatAppointmentTime(appointment.start_time)}–{formatAppointmentTime(appointment.end_time)}
                                         </p>
-                                        <p className="mt-2 text-xs text-muted">{branch ? localizeBranchName(branch.name) : `Chi nhánh #${appointment.branch_id}`}</p>
+                                        <p className="mt-2 text-xs text-muted">{appointment.branch?.name ? localizeBranchName(appointment.branch.name) : `Chi nhánh #${appointment.branch_id}`}</p>
                                     </div>
 
                                     <div className="mt-5">
