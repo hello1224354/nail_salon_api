@@ -35,7 +35,7 @@ export function RegisterForm() {
 
             router.push("/login");
         } catch (submitError) {
-            setError(getApiErrorMessage(submitError, "Không thể tạo tài khoản. Vui lòng kiểm tra thông tin và thử lại."));
+            setError(getApiErrorMessage(submitError, "Chưa tạo được tài khoản. Vui lòng kiểm tra lại thông tin."));
         } finally {
             setSubmitting(false);
         }
