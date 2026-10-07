@@ -7,23 +7,10 @@ import Autoplay from "embla-carousel-autoplay";
 import type { CustomerReview, HotTrendImage, InstagramShowcaseItem, SalonContent } from "@/lib/api";
 import { getInstagramUrl, getMapsUrl } from "@/lib/studio-data";
 
-const MOBILE_QUERY = "(max-width: 767px)";
-
-function useIsMobile() {
-    const [isMobile, setIsMobile] = useState<boolean | null>(null);
-
-    useEffect(() => {
-        const mediaQuery = window.matchMedia(MOBILE_QUERY);
-        const sync = () => setIsMobile(mediaQuery.matches);
-
-        sync();
-        mediaQuery.addEventListener("change", sync);
-
-        return () => mediaQuery.removeEventListener("change", sync);
-    }, []);
-
-    return isMobile;
-}
+type LinkedHotTrendItem = {
+    image: HotTrendImage;
+    instagram: InstagramShowcaseItem | null;
+};
 
 function useAutoCarousel(itemCount: number, delay: number) {
     const [autoplay] = useState(() =>
@@ -40,6 +27,7 @@ function useAutoCarousel(itemCount: number, delay: number) {
             loop: itemCount > 1,
             align: "start",
             containScroll: false,
+            slidesToScroll: 1,
         },
         [autoplay]
     );
@@ -107,33 +95,67 @@ function CarouselDots({
     );
 }
 
-function HotTrendCard({ item, index }: { item: HotTrendImage; index: number }) {
-    return (
+function HotTrendCard({ item, index }: { item: LinkedHotTrendItem; index: number }) {
+    const instagramPostUrl = item.instagram?.instagram_url ?? null;
+
+    const card = (
         <figure className="group relative aspect-[4/5] overflow-hidden rounded-[24px] bg-tint shadow-[0_14px_42px_rgba(48,40,35,0.05)]">
             <Image
-                src={item.image_url}
-                alt={`Mẫu nail hot trend ${index + 1} tại Serpente Nail Room`}
+                src={item.image.image_url}
+                alt={item.instagram?.title?.trim() || `Mẫu nail hot trend ${index + 1} tại Serpente Nail Room`}
                 fill
-                sizes="(max-width: 767px) 100vw, (max-width: 1023px) 50vw, 25vw"
+                sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 33vw"
                 className="motion-image object-cover transition-transform duration-500 group-hover:scale-[1.025]"
             />
-            <figcaption className="absolute inset-x-0 bottom-0 flex items-end justify-between bg-gradient-to-t from-black/45 via-black/10 to-transparent px-5 pb-5 pt-16 text-white">
-                <span className="text-[10px] font-semibold uppercase tracking-[0.16em]">Hot trend</span>
-                <span className="font-serif text-xl">{String(index + 1).padStart(2, "0")}</span>
+            <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/65 via-black/20 to-transparent px-5 pb-5 pt-20 text-white">
+                <div className="flex items-end justify-between gap-4">
+                    <div className="min-w-0">
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.16em]">Hot trend</span>
+                        {item.instagram?.title?.trim() ? (
+                            <p className="mt-2 line-clamp-2 max-w-[24ch] font-serif text-xl leading-tight">
+                                {item.instagram.title}
+                            </p>
+                        ) : null}
+                        {instagramPostUrl ? (
+                            <p className="mt-3 text-[11px] font-semibold">
+                                Xem bài trên Instagram{" "}
+                                <span className="ml-1 inline-block transition-transform group-hover:translate-x-1">↗</span>
+                            </p>
+                        ) : null}
+                    </div>
+                    <span className="shrink-0 font-serif text-xl">{String(index + 1).padStart(2, "0")}</span>
+                </div>
             </figcaption>
         </figure>
     );
+
+    if (!instagramPostUrl) return card;
+
+    return (
+        <a
+            href={instagramPostUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="focus-ring block rounded-[24px]"
+            aria-label={`Mở mẫu nail hot trend ${index + 1} trên Instagram`}
+        >
+            {card}
+        </a>
+    );
 }
 
-function MobileHotTrendCarousel({ items }: { items: HotTrendImage[] }) {
+function HotTrendCarousel({ items }: { items: LinkedHotTrendItem[] }) {
     const carousel = useAutoCarousel(items.length, 4600);
 
     return (
         <div className="mt-8">
             <div ref={carousel.emblaRef} className="overflow-hidden">
-                <div className="flex">
+                <div className="-ml-4 flex">
                     {items.map((item, index) => (
-                        <div key={item.id} className="min-w-0 flex-[0_0_100%]">
+                        <div
+                            key={item.image.id}
+                            className="min-w-0 shrink-0 grow-0 basis-full pl-4 sm:basis-1/2 lg:basis-1/3"
+                        >
                             <HotTrendCard item={item} index={index} />
                         </div>
                     ))}
@@ -145,34 +167,6 @@ function MobileHotTrendCarousel({ items }: { items: HotTrendImage[] }) {
                 onSelect={(index) => carousel.emblaApi?.scrollTo(index)}
             />
         </div>
-    );
-}
-
-function InstagramCard({ item, index }: { item: InstagramShowcaseItem; index: number }) {
-    return (
-        <a
-            href={item.instagram_url}
-            target="_blank"
-            rel="noreferrer"
-            className="focus-ring group flex min-h-[300px] flex-col justify-between overflow-hidden rounded-[24px] border border-line bg-surface p-6 shadow-[0_14px_42px_rgba(48,40,35,0.04)] transition-transform hover:-translate-y-1 sm:min-h-[360px] sm:p-7"
-        >
-            <div>
-                <div className="flex items-center justify-between gap-4">
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-accent">Instagram</span>
-                    <span className="font-serif text-3xl text-accent/35">{String(index + 1).padStart(2, "0")}</span>
-                </div>
-                <h3 className="mt-8 max-w-[15ch] font-serif text-3xl leading-[1.02] tracking-[-0.025em] sm:text-4xl">
-                    {item.title?.trim() || "Một mẫu móng từ Serpente Nail Room"}
-                </h3>
-            </div>
-
-            <div>
-                <div className="h-px bg-line" />
-                <p className="mt-5 text-xs font-semibold text-accent">
-                    Xem bài đăng trên Instagram <span className="ml-1 transition-transform group-hover:translate-x-1">→</span>
-                </p>
-            </div>
-        </a>
     );
 }
 
@@ -200,38 +194,18 @@ function ReviewCard({ review }: { review: CustomerReview }) {
     );
 }
 
-function MobileInstagramCarousel({ items }: { items: InstagramShowcaseItem[] }) {
-    const carousel = useAutoCarousel(items.length, 5200);
-
-    return (
-        <div className="mt-8">
-            <div ref={carousel.emblaRef} className="overflow-hidden">
-                <div className="flex">
-                    {items.map((item, index) => (
-                        <div key={item.instagram_url} className="min-w-0 flex-[0_0_100%]">
-                            <InstagramCard item={item} index={index} />
-                        </div>
-                    ))}
-                </div>
-            </div>
-            <CarouselDots
-                count={items.length}
-                selectedIndex={carousel.selectedIndex}
-                onSelect={(index) => carousel.emblaApi?.scrollTo(index)}
-            />
-        </div>
-    );
-}
-
-function MobileReviewsCarousel({ reviews }: { reviews: CustomerReview[] }) {
+function ReviewsCarousel({ reviews }: { reviews: CustomerReview[] }) {
     const carousel = useAutoCarousel(reviews.length, 7200);
 
     return (
         <div className="mt-8">
             <div ref={carousel.emblaRef} className="overflow-hidden">
-                <div className="flex">
+                <div className="-ml-4 flex">
                     {reviews.map((review) => (
-                        <div key={review.source_url} className="min-w-0 flex-[0_0_100%]">
+                        <div
+                            key={review.source_url}
+                            className="min-w-0 shrink-0 grow-0 basis-full pl-4 sm:basis-1/2 lg:basis-1/3"
+                        >
                             <ReviewCard review={review} />
                         </div>
                     ))}
@@ -247,7 +221,6 @@ function MobileReviewsCarousel({ reviews }: { reviews: CustomerReview[] }) {
 }
 
 export function HomeShowcase({ content }: { content: SalonContent | null }) {
-    const isMobile = useIsMobile();
 
     if (!content) {
         return (
@@ -261,6 +234,10 @@ export function HomeShowcase({ content }: { content: SalonContent | null }) {
 
     const hotTrendImages = content.hot_trend_images ?? [];
     const instagramItems = [...content.instagram_showcase].sort((a, b) => a.sort_order - b.sort_order);
+    const linkedHotTrendItems: LinkedHotTrendItem[] = hotTrendImages.map((image, index) => ({
+        image,
+        instagram: instagramItems[index] ?? null,
+    }));
     const reviews = content.customer_reviews;
     const instagramUrl = getInstagramUrl(content.instagram_handle);
     const mapsUrl = getMapsUrl(content.google_maps_url, content.google_maps_location);
@@ -282,7 +259,7 @@ export function HomeShowcase({ content }: { content: SalonContent | null }) {
             : null,
         content.instagram_handle
             ? {
-                  eyebrow: "Theo dõi Serpente",
+                  eyebrow: "Theo dõi Instagram",
                   title: `@${content.instagram_handle.replace(/^@/, "")}`,
                   body: "Mẫu móng mới và thông tin từ tiệm được cập nhật trên Instagram.",
               }
@@ -291,46 +268,16 @@ export function HomeShowcase({ content }: { content: SalonContent | null }) {
 
     return (
         <>
-            {hotTrendImages.length > 0 ? (
+            {linkedHotTrendItems.length > 0 ? (
                 <section className="border-t border-line">
                     <div className="site-shell py-14 lg:py-20">
-                        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                        <div className="flex flex-wrap items-end justify-between gap-4">
                             <div>
                                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">
                                     Hot trend
                                 </p>
                                 <h2 className="mt-3 max-w-3xl font-serif text-4xl tracking-[-0.025em] sm:text-5xl">
                                     Mẫu nail đang được yêu thích
-                                </h2>
-                            </div>
-                            <p className="max-w-sm text-sm leading-6 text-muted">
-                                Bộ sưu tập được cập nhật trực tiếp từ thư viện mẫu của Serpente.
-                            </p>
-                        </div>
-
-                        {isMobile === true ? (
-                            <MobileHotTrendCarousel items={hotTrendImages} />
-                        ) : (
-                            <div className="mt-8 hidden gap-4 md:grid md:grid-cols-2 lg:grid-cols-4">
-                                {hotTrendImages.map((item, index) => (
-                                    <HotTrendCard key={item.id} item={item} index={index} />
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                </section>
-            ) : null}
-
-            {instagramItems.length > 0 ? (
-                <section className="border-t border-line">
-                    <div className="site-shell py-14 lg:py-20">
-                        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                            <div>
-                                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">
-                                    Mẫu móng tại Serpente
-                                </p>
-                                <h2 className="mt-3 font-serif text-4xl tracking-[-0.025em] sm:text-5xl">
-                                    Xem thêm trên Instagram
                                 </h2>
                             </div>
                             {instagramUrl ? (
@@ -340,20 +287,15 @@ export function HomeShowcase({ content }: { content: SalonContent | null }) {
                                     rel="noreferrer"
                                     className="focus-ring group w-fit rounded-sm text-xs font-semibold text-accent"
                                 >
-                                    @{content.instagram_handle} <span className="ml-2 inline-block transition-transform duration-300 group-hover:translate-x-1">→</span>
+                                    @{content.instagram_handle}{" "}
+                                    <span className="ml-2 inline-block transition-transform duration-300 group-hover:translate-x-1">
+                                        →
+                                    </span>
                                 </a>
                             ) : null}
                         </div>
 
-                        {isMobile === true ? (
-                            <MobileInstagramCarousel items={instagramItems} />
-                        ) : (
-                            <div className="mt-8 hidden gap-4 md:grid md:grid-cols-2 lg:grid-cols-4">
-                                {instagramItems.map((item, index) => (
-                                    <InstagramCard key={item.instagram_url} item={item} index={index} />
-                                ))}
-                            </div>
-                        )}
+                        <HotTrendCarousel items={linkedHotTrendItems} />
                     </div>
                 </section>
             ) : null}
@@ -403,15 +345,7 @@ export function HomeShowcase({ content }: { content: SalonContent | null }) {
                             ) : null}
                         </div>
 
-                        {isMobile === true ? (
-                            <MobileReviewsCarousel reviews={reviews} />
-                        ) : (
-                            <div className="mt-8 hidden gap-5 md:grid md:grid-cols-2">
-                                {reviews.map((review) => (
-                                    <ReviewCard key={review.source_url} review={review} />
-                                ))}
-                            </div>
-                        )}
+                        <ReviewsCarousel reviews={reviews} />
                     </div>
                 </section>
             ) : null}
