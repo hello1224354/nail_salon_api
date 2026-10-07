@@ -31,7 +31,13 @@ export const createService = async (data: CreateServiceDto) => {
 
     if (!branch) throw new AppError("Branch not found", 404, "BRANCH_NOT_FOUND");
 
-    const newService = serviceRepo.create(data);
+    const newService = serviceRepo.create({
+        ...data,
+        display_name: data.name,
+        price_min: data.price,
+        price_max: data.price,
+        booking_enabled: true,
+    });
     return await serviceRepo.save(newService);
 };
 
@@ -48,6 +54,20 @@ export const updateService = async (id: string, data: UpdateServiceDto) => {
     if (!service) return null;
 
     serviceRepo.merge(service, data);
+
+    if (data.name !== undefined) {
+        service.display_name = data.name;
+    }
+
+    if (data.price !== undefined) {
+        service.price_min = data.price;
+        service.price_max = data.price;
+    }
+
+    if (data.duration_minutes !== undefined) {
+        service.booking_enabled = true;
+    }
+
     return await serviceRepo.save(service);
 };
 
