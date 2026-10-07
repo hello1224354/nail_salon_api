@@ -52,6 +52,18 @@ export const refreshRateLimiter = rateLimit({
     },
 });
 
+export const sensitiveAccountActionRateLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 5,
+    keyGenerator: (req) => req.user!.id,
+    skipSuccessfulRequests: true,
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: () => {
+        throw new AppError("Too many sensitive account attempts. Try again later", 429, "RATE_LIMIT_EXCEEDED");
+    },
+});
+
 export const bookingRateLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     limit: 5,
