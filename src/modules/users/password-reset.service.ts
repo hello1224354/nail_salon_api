@@ -28,44 +28,64 @@ function hashesMatch(actualHex: string, expectedHex: string) {
 }
 
 export async function requestPasswordReset(email: string) {
-    const user = await userRepo.findOneBy({ email });
+    const issued = await AppDataSource.transaction(async (manager) => {
+        const transactionUserRepo = manager.getRepository(User);
+        const transactionChallengeRepo = manager.getRepository(PasswordResetChallenge);
 
-    if (!user || !user.email) {
+        const user = await transactionUserRepo.findOne({
+            where: { email },
+            lock: { mode: "pessimistic_write" },
+        });
+
+        if (!user || !user.email) {
+            return null;
+        }
+
+        await transactionChallengeRepo.update(
+            { user_id: user.id, consumed_at: IsNull() },
+            { consumed_at: new Date() }
+        );
+
+        const id = randomUUID();
+        const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
+        const challenge = transactionChallengeRepo.create({
+            id,
+            user_id: user.id,
+            code_hash: hashCode(id, code),
+            expires_at: new Date(Date.now() + OTP_TTL_MS),
+            attempts_remaining: OTP_ATTEMPTS,
+            consumed_at: null,
+        });
+
+        await transactionChallengeRepo.save(challenge);
+
+        return {
+            challenge,
+            email: user.email,
+            code,
+        };
+    });
+
+    if (!issued) {
         return;
     }
 
-    await challengeRepo.update(
-        { user_id: user.id, consumed_at: IsNull() },
-        { consumed_at: new Date() }
-    );
-
-    const id = randomUUID();
-    const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
-    const challenge = challengeRepo.create({
-        id,
-        user_id: user.id,
-        code_hash: hashCode(id, code),
-        expires_at: new Date(Date.now() + OTP_TTL_MS),
-        attempts_remaining: OTP_ATTEMPTS,
-        consumed_at: null,
-    });
-
-    await challengeRepo.save(challenge);
-
     try {
         await sendPlainTextEmail(
-            user.email,
+            issued.email,
             "Mã đặt lại mật khẩu Serpente Nail Room",
             [
-                `Mã OTP đặt lại mật khẩu của bạn là: ${code}`,
+                `Mã OTP đặt lại mật khẩu của bạn là: ${issued.code}`,
                 "",
                 "Mã có hiệu lực trong 5 phút và chỉ dùng được một lần.",
                 "Nếu bạn không yêu cầu đặt lại mật khẩu, hãy bỏ qua email này.",
             ].join("\n")
         );
     } catch (error) {
-        challenge.consumed_at = new Date();
-        await challengeRepo.save(challenge);
+        await challengeRepo.update(
+            { id: issued.challenge.id },
+            { consumed_at: new Date() }
+        );
         console.error("Failed to deliver password reset email", error);
     }
 }
