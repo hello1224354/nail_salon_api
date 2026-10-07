@@ -291,6 +291,7 @@ export type InstagramTrendItem = {
 
 export type CustomerReview = {
     id: number;
+    branch_id: number;
     display_name: string;
     content: string;
     source: string;

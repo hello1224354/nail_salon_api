@@ -30,19 +30,19 @@ export const REAL_SALON_DATA = {
       sort_order: 1,
     },
     {
-      title: "French tip kim tuyến ngọc trai",
+      title: null,
       instagram_url: "https://www.instagram.com/p/DdLGgOuicGs/?utm_source=ig_web_copy_link&stkn=MzRlODBiNWFlZA==",
       image_source: null,
       sort_order: 2,
     },
     {
-      title: "French tip sữa đính hoa 3D",
+      title: null,
       instagram_url: "https://www.instagram.com/p/DddH7VSpqk7/?utm_source=ig_web_copy_link&stkn=MzRlODBiNWFlZA==",
       image_source: null,
       sort_order: 3,
     },
     {
-      title: "Ngọc trai xà cừ",
+      title: null,
       instagram_url: "https://www.instagram.com/p/DdITMpxib29/?utm_source=ig_web_copy_link&stkn=MzRlODBiNWFlZA==",
       image_source: null,
       sort_order: 4,
@@ -50,30 +50,35 @@ export const REAL_SALON_DATA = {
   ],
   customer_reviews: [
     {
+      branch_id: 1,
       display_name: "Phương Liên Tạ",
       content: "Thật sự là tiệm nail số một lòng tuii, tìm thấy chân ái rồi huhu. Mê tiệm này quá chừng luôn, làm đẹp không góc chê á",
       source: "Google Maps",
       source_url: "https://maps.app.goo.gl/Ln8rHHizBWrGWhPZ6",
     },
     {
+      branch_id: 1,
       display_name: "Việt Đan Mã",
       content: "Tiệm nằm trên tầng của chung cư nhưng dễ kiếm ( đi thẳng lên cầu thang là tới- tiệm xinh lắm mọi người .. mình làm tay chân sáng nay mọi thứ êm. Mình rất sợ tiếng mài móng - nóng do mài móng nữa mà trộm vía làm êm ru\n\n10/10 sẽ quay lại 🙏🏻😘❤️",
       source: "Google Maps",
       source_url: "https://maps.app.goo.gl/gnBL4bRiuQZY3Eew8",
     },
     {
+      branch_id: 1,
       display_name: "phoinhu ly",
       content: "tuyệt vời, 2 chị siêu takecare luôn. Mình đi với em gái mà, có đặt lịch trước. Các chị rất lịch sự và vui vẻ. Thái độ làm việc chuyên nghiệp. Liên tục hỏi xem có nóng khi cứng móng ko?\n\nLàm 2 bộ nails mà có hơn 500 cá xí. Đối với mình là rẻ. Với chỗ thì xịn, xinh, sạch mà chỗ cũng dễ kiếm nữa. Siêu recommended các bạn đến trải nghiệm 1 lần.\n\nBonus, tiệm còn cho phiếu tích điểm nữa. Đi 3 lần là đc giảm 10% nha",
       source: "Google Maps",
       source_url: "https://maps.app.goo.gl/HbmpcN7MzUiY1pbu7",
     },
     {
+      branch_id: 1,
       display_name: "Ngoc Anh Chau",
       content: "Kiếm được tiệm nail style clean gu xịn như ở trung tâm gần nhà quá ưng. Các achi nhân viên dễ thương, làm móng siêu xinh và kỹ 💝💝",
       source: "Google Maps",
       source_url: "https://maps.app.goo.gl/x6FFbFELWqyLr7Xv7",
     },
     {
+      branch_id: 1,
       display_name: "Thi Men Nguyen",
       content: "Tiệm đầu tiên làm tôi hài lòng\nMọi người kiếm chi hằng lam nha , lam qua là đẹp đi ạ 🫶🏼🫶🏼🫶🏼 …",
       source: "Google Maps",

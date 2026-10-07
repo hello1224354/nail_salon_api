@@ -8,7 +8,7 @@ const salonContentRepo = AppDataSource.getRepository(SalonContent);
 const instagramTrendRepo = AppDataSource.getRepository(InstagramTrendItem);
 const customerReviewRepo = AppDataSource.getRepository(CustomerReview);
 
-export const getPublicContent = async () => {
+export const getPublicContent = async (branchId: number) => {
     const content = await salonContentRepo.findOneBy({ id: 1 });
 
     if (!content) return null;
@@ -19,7 +19,7 @@ export const getPublicContent = async () => {
             order: { sort_order: "ASC", id: "ASC" },
         }),
         customerReviewRepo.find({
-            where: { salon_content_id: content.id },
+            where: { branch_id: branchId },
             order: { sort_order: "ASC", id: "ASC" },
         }),
     ]);
@@ -36,6 +36,7 @@ export const getPublicContent = async () => {
         })),
         customer_reviews: customerReviews.map((review) => ({
             id: review.id,
+            branch_id: review.branch_id,
             display_name: review.display_name,
             content: review.content,
             source: review.source,
