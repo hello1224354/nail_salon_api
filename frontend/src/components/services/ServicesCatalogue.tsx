@@ -9,11 +9,15 @@ export function ServicesCatalogue() {
     const { selectedBranchId, loading: branchesLoading, error: branchesError } = useBranch();
     const [services, setServices] = useState<Service[]>([]);
     const [activeCategory, setActiveCategory] = useState("Tất cả");
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
     useEffect(() => {
-        if (selectedBranchId === null) return;
+        if (selectedBranchId === null) {
+            setServices([]);
+            setLoading(false);
+            return;
+        }
 
         let cancelled = false;
 
