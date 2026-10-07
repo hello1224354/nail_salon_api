@@ -210,6 +210,8 @@ export type OfferList = {
 export type Availability = {
     branch_id: number;
     duration_minutes: number;
+    party_size: number;
+    max_party_size: number;
     slots: string[];
 };
 
@@ -223,6 +225,8 @@ export type AppointmentService = {
 export type Appointment = {
     id: string;
     user_id: string;
+    booking_group_id?: string | null;
+    party_size: number;
     staff_id: string;
     branch_id: number;
     start_time: string;

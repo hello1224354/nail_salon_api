@@ -265,8 +265,15 @@ export function MyAppointments() {
                                 <article key={appointment.id} className="rounded-[22px] border border-line bg-surface p-5 shadow-[0_12px_34px_rgba(48,40,35,0.035)] sm:p-6">
                                     <div className="flex items-start justify-between gap-4">
                                         <div>
-                                            <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-muted">Mã lịch hẹn</p>
-                                            <p className="mt-1 font-mono text-xs font-semibold tracking-[0.05em]">{appointment.id.slice(0, 8).toUpperCase()}</p>
+                                            <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-muted">
+                                                {appointment.party_size > 1 ? "Mã nhóm" : "Mã lịch hẹn"}
+                                            </p>
+                                            <p className="mt-1 font-mono text-xs font-semibold tracking-[0.05em]">
+                                                {(appointment.booking_group_id ?? appointment.id).slice(0, 8).toUpperCase()}
+                                            </p>
+                                            {appointment.party_size > 1 ? (
+                                                <p className="mt-1 text-[10px] font-semibold text-accent">Nhóm {appointment.party_size} người</p>
+                                            ) : null}
                                         </div>
                                         <span className={`shrink-0 rounded-full border px-3 py-1.5 text-[10px] font-semibold ${statusClasses[status] ?? "border-line bg-cream text-muted"}`}>
                                             {formatAppointmentStatus(status)}
@@ -279,6 +286,9 @@ export function MyAppointments() {
                                             {formatAppointmentTime(appointment.start_time)}–{formatAppointmentTime(appointment.end_time)}
                                         </p>
                                         <p className="mt-2 text-xs text-muted">{appointment.branch?.name ? localizeBranchName(appointment.branch.name) : `Chi nhánh #${appointment.branch_id}`}</p>
+                                        <p className="mt-1 text-xs text-muted">
+                                            Nhân viên: {appointment.staff?.full_name || "Đang cập nhật"}
+                                        </p>
                                     </div>
 
                                     <div className="mt-5">
@@ -303,7 +313,9 @@ export function MyAppointments() {
                                             <p className="mt-1 text-xs font-semibold">{duration > 0 ? `${duration} phút` : "—"}</p>
                                         </div>
                                         <div className="text-right">
-                                            <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-muted">Tổng dự kiến</p>
+                                            <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-muted">
+                                                {appointment.party_size > 1 ? "Dự kiến / người" : "Tổng dự kiến"}
+                                            </p>
                                             <p className="mt-1 font-serif text-xl tabular-nums">{services.length > 0 ? `${formatVnd(total)} VND` : "—"}</p>
                                         </div>
                                     </div>

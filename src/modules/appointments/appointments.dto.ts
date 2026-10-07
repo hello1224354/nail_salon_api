@@ -6,6 +6,7 @@ export interface CreateAppointmentDto {
     staff_id?: string;
     service_ids: string[];
     start_time: Date;
+    party_size: number;
 }
 
 export interface UpdateAppointmentDto {
@@ -28,6 +29,7 @@ export interface GetAppointmentsQueryDto {
 export interface GetAvailabilityQueryDto {
     service_ids: string[];
     date: Date;
+    party_size: number;
 }
 
 const DEFAULT_PAGE = 1;
@@ -99,6 +101,16 @@ function parseDateTime(value: unknown, fieldName: string): Date {
     if (!isValidIsoDateTime(value)) throw new AppError(`${fieldName} must be a valid ISO datetime`, 400, "VALIDATION_ERROR");
 
     return new Date(value.trim());
+}
+
+function parsePositiveIntegerBody(value: unknown, fieldName: string, defaultValue: number): number {
+    if (value === undefined) return defaultValue;
+
+    if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 1) {
+        throw new AppError(`${fieldName} must be a positive safe integer`, 400, "VALIDATION_ERROR");
+    }
+
+    return value;
 }
 
 function parsePositiveIntegerQuery(value: unknown, fieldName: string, defaultValue: number): number {
@@ -179,6 +191,7 @@ export function parseCreateAppointmentDto(body: unknown): CreateAppointmentDto {
         staff_id: data.staff_id as string | undefined,
         service_ids: data.service_ids as string[],
         start_time: startTime,
+        party_size: parsePositiveIntegerBody(data.party_size, "Party_size", 1),
     };
 }
 
@@ -237,9 +250,11 @@ export function parseGetAvailabilityQuery(query: unknown): GetAvailabilityQueryD
     if (new Set(serviceIds).size !== serviceIds.length) throw new AppError("Service_ids must not contain duplicates", 400, "VALIDATION_ERROR");
 
     const date = parseDateTime(data.date, "Date");
+    const partySize = parsePositiveIntegerQuery(data.party_size, "Party_size", 1);
 
     return {
         service_ids: serviceIds,
         date,
+        party_size: partySize,
     };
 }

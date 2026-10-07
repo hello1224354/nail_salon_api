@@ -147,6 +147,8 @@ export function BookingForm() {
     const [selectedBranchId, setSelectedBranchId] = useState<number | null>(null);
     const [services, setServices] = useState<StudioService[]>([]);
     const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
+    const [partySize, setPartySize] = useState(1);
+    const [maxPartySize, setMaxPartySize] = useState<number | null>(null);
     const [selectedDate, setSelectedDate] = useState(dates[0]?.value ?? "");
     const [availableSlots, setAvailableSlots] = useState<Map<string, string>>(new Map());
     const [selectedTime, setSelectedTime] = useState("");
@@ -164,10 +166,13 @@ export function BookingForm() {
         [selectedServiceIds, services]
     );
     const totalDuration = selectedServices.reduce((sum, service) => sum + service.duration_minutes, 0);
-    const totalPrice = selectedServices.reduce((sum, service) => sum + service.price, 0);
+    const pricePerPerson = selectedServices.reduce((sum, service) => sum + service.price, 0);
+    const totalPrice = pricePerPerson * partySize;
     const endTime = selectedTime && totalDuration > 0 ? addMinutes(selectedTime, totalDuration) : "";
     const createdServices = createdAppointment?.appointment_services ?? [];
-    const createdTotalPrice = createdServices.reduce((sum, service) => sum + service.price, 0);
+    const createdTotalPrice =
+        createdServices.reduce((sum, service) => sum + service.price, 0) *
+        (createdAppointment?.party_size ?? 1);
 
     useEffect(() => {
         let cancelled = false;
@@ -266,6 +271,7 @@ export function BookingForm() {
                 const params = new URLSearchParams({
                     service_ids: selectedServiceIds.join(","),
                     date: `${selectedDate}T00:00:00+07:00`,
+                    party_size: String(partySize),
                 });
                 const data = await apiRequest<Availability>(
                     `/api/appointments/availability?${params.toString()}`
@@ -278,6 +284,7 @@ export function BookingForm() {
                     slotMap.set(formatSlotTime(slot), slot);
                 }
 
+                setMaxPartySize(data.max_party_size);
                 setAvailableSlots(slotMap);
                 setSelectedTime((current) => (slotMap.has(current) ? current : ""));
             } catch (loadError) {
@@ -302,7 +309,7 @@ export function BookingForm() {
         return () => {
             cancelled = true;
         };
-    }, [availabilityRefreshKey, router, selectedDate, selectedServiceIds, user]);
+    }, [availabilityRefreshKey, partySize, router, selectedDate, selectedServiceIds, user]);
 
     useEffect(() => {
         if (!createdAppointment) return;
@@ -325,6 +332,8 @@ export function BookingForm() {
     function closeSuccessModal() {
         setCreatedAppointment(null);
         setSelectedServiceIds([]);
+        setPartySize(1);
+        setMaxPartySize(null);
         setSelectedTime("");
         setAvailableSlots(new Map());
         setAvailabilityLoading(false);
@@ -343,6 +352,8 @@ export function BookingForm() {
         setServices([]);
         setServicesLoading(true);
         setSelectedServiceIds([]);
+        setPartySize(1);
+        setMaxPartySize(null);
         setAvailableSlots(new Map());
         setAvailabilityLoading(false);
         setSelectedTime("");
@@ -358,8 +369,20 @@ export function BookingForm() {
             : [...selectedServiceIds, id];
 
         setSelectedServiceIds(next);
+        setMaxPartySize(null);
         setAvailabilityLoading(next.length > 0);
     };
+
+    function changePartySize(nextPartySize: number) {
+        if (nextPartySize < 1) return;
+        if (maxPartySize !== null && nextPartySize > maxPartySize) return;
+
+        setPartySize(nextPartySize);
+        setSelectedTime("");
+        setAvailableSlots(new Map());
+        setAvailabilityLoading(selectedServiceIds.length > 0);
+        setFormError("");
+    }
 
     async function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
@@ -397,6 +420,7 @@ export function BookingForm() {
                     body: JSON.stringify({
                         service_ids: selectedServiceIds,
                         start_time: startTime,
+                        party_size: partySize,
                     }),
                 }
             );
@@ -517,7 +541,55 @@ export function BookingForm() {
                 <div className="mx-5 h-px bg-line sm:mx-7 lg:mx-8" />
 
                 <section className="p-5 sm:p-7 lg:p-8">
-                    <SectionHeading number="03" title="Ngày" helper={`Có thể đặt lịch: ${formatDateRange(dates)}`} />
+                    <SectionHeading
+                        number="03"
+                        title="Số người"
+                        helper="Dịch vụ đã chọn áp dụng cho cả nhóm. Mỗi người được tự động gán một nhân viên khác nhau đang rảnh trong cùng khung giờ."
+                    />
+                    <div className="mt-6 sm:pl-[60px]">
+                        <div className="flex max-w-sm items-center justify-between rounded-[14px] border border-line bg-cream p-3">
+                            <div>
+                                <p className="text-sm font-semibold">{partySize} người</p>
+                                <p className="mt-1 text-[11px] leading-4 text-muted">
+                                    {maxPartySize === null
+                                        ? "Chọn dịch vụ để kiểm tra sức chứa nhân viên."
+                                        : maxPartySize > 0
+                                          ? `Có ${maxPartySize} nhân viên phù hợp với dịch vụ đã chọn tại chi nhánh.`
+                                          : "Hiện chưa có nhân viên phù hợp tại chi nhánh này."}
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => changePartySize(partySize - 1)}
+                                    disabled={partySize <= 1}
+                                    className="focus-ring grid size-10 place-items-center rounded-full border border-line bg-white text-lg font-semibold disabled:cursor-not-allowed disabled:opacity-35"
+                                    aria-label="Giảm số người"
+                                >
+                                    −
+                                </button>
+                                <span className="min-w-8 text-center font-serif text-2xl tabular-nums">{partySize}</span>
+                                <button
+                                    type="button"
+                                    onClick={() => changePartySize(partySize + 1)}
+                                    disabled={
+                                        selectedServiceIds.length === 0 ||
+                                        (maxPartySize !== null && partySize >= maxPartySize)
+                                    }
+                                    className="focus-ring grid size-10 place-items-center rounded-full border border-line bg-white text-lg font-semibold disabled:cursor-not-allowed disabled:opacity-35"
+                                    aria-label="Tăng số người"
+                                >
+                                    +
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <div className="mx-5 h-px bg-line sm:mx-7 lg:mx-8" />
+
+                <section className="p-5 sm:p-7 lg:p-8">
+                    <SectionHeading number="04" title="Ngày" helper={`Có thể đặt lịch: ${formatDateRange(dates)}`} />
                     <div className="mt-6 grid grid-cols-4 gap-2 sm:grid-cols-7 sm:pl-[60px]">
                         {dates.map((date) => {
                             const selected = date.value === selectedDate;
@@ -547,7 +619,7 @@ export function BookingForm() {
                 <div className="mx-5 h-px bg-line sm:mx-7 lg:mx-8" />
 
                 <section className="p-5 sm:p-7 lg:p-8">
-                    <SectionHeading number="04" title="Giờ còn trống" />
+                    <SectionHeading number="05" title="Giờ còn trống" helper={`Chỉ hiện các giờ còn đủ ${partySize} nhân viên khác nhau.`} />
                     <div className="mt-6 sm:pl-[60px]">
                         {selectedServiceIds.length === 0 ? (
                             <div className="rounded-[14px] border border-line bg-cream px-4 py-5 text-xs leading-5 text-muted">
@@ -561,8 +633,8 @@ export function BookingForm() {
                             </div>
                         ) : availableSlots.size === 0 ? (
                             <div className="rounded-[14px] border border-line bg-cream px-4 py-5">
-                                <p className="text-sm font-semibold">Ngày này đã hết khung giờ phù hợp.</p>
-                                <p className="mt-1 text-xs leading-5 text-muted">Chọn một ngày khác để xem các giờ còn trống.</p>
+                                <p className="text-sm font-semibold">Không còn khung giờ đủ nhân viên cho {partySize} người.</p>
+                                <p className="mt-1 text-xs leading-5 text-muted">Giảm số người hoặc chọn một ngày khác để kiểm tra lại.</p>
                             </div>
                         ) : (
                             <div className="space-y-5">
@@ -606,7 +678,7 @@ export function BookingForm() {
                 <div className="mx-5 h-px bg-line sm:mx-7 lg:mx-8" />
 
                 <section className="p-5 sm:p-7 lg:p-8">
-                    <SectionHeading number="05" title="Thông tin tài khoản" helper="Lịch hẹn sẽ được tạo cho tài khoản khách hàng đang đăng nhập." />
+                    <SectionHeading number="06" title="Thông tin tài khoản" helper="Một yêu cầu nhóm sẽ tạo lịch riêng cho từng người dưới cùng tài khoản đặt lịch." />
                     <div className="mt-6 grid gap-4 sm:grid-cols-2 sm:pl-[60px]">
                         <div className="rounded-[12px] border border-line bg-cream px-4 py-3">
                             <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">Họ và tên</p>
@@ -653,7 +725,12 @@ export function BookingForm() {
                         </div>
 
                         <div className="flex items-center justify-between text-xs text-muted">
-                            <span>Tổng thời lượng</span>
+                            <span>Số người</span>
+                            <span className="font-semibold text-ink">{partySize}</span>
+                        </div>
+
+                        <div className="flex items-center justify-between text-xs text-muted">
+                            <span>Thời lượng mỗi người</span>
                             <span className="font-semibold text-ink">{totalDuration} phút</span>
                         </div>
 
@@ -745,8 +822,12 @@ export function BookingForm() {
                                 {formatSlotTime(createdAppointment.start_time)}–{formatSlotTime(createdAppointment.end_time)}
                             </p>
                         </div>
+                        <div>
+                            <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-muted">Số người</p>
+                            <p className="mt-1 text-sm font-semibold">{createdAppointment.party_size} người</p>
+                        </div>
                         <div className="sm:col-span-2">
-                            <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-muted">Dịch vụ</p>
+                            <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-muted">Dịch vụ mỗi người</p>
                             <p className="mt-1 text-sm leading-6">
                                 {(createdServices.length > 0 ? createdServices.map((service) => service.service_name) : selectedServices.map((service) => service.name)).join(" · ")}
                             </p>
@@ -755,11 +836,13 @@ export function BookingForm() {
 
                     <div className="mt-6 flex items-end justify-between gap-5 rounded-[18px] bg-cream p-4">
                         <div>
-                            <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-muted">Mã lịch hẹn</p>
-                            <p className="mt-1 font-mono text-xs font-semibold tracking-[0.04em]">{createdAppointment.id.slice(0, 8).toUpperCase()}</p>
+                            <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-muted">Mã nhóm đặt lịch</p>
+                            <p className="mt-1 font-mono text-xs font-semibold tracking-[0.04em]">
+                                {(createdAppointment.booking_group_id ?? createdAppointment.id).slice(0, 8).toUpperCase()}
+                            </p>
                         </div>
                         <div className="text-right">
-                            <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-muted">Tổng dự kiến</p>
+                            <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-muted">Tổng dự kiến cả nhóm</p>
                             <p className="mt-1 font-serif text-xl tabular-nums">{formatVnd(createdServices.length > 0 ? createdTotalPrice : totalPrice)} VND</p>
                         </div>
                     </div>
