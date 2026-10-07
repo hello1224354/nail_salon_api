@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from "express";
-import { createAuditLog } from "../../modules/audit/audit-log.service";
+import { AuditEventType, createAuditLog } from "../../modules/audit/audit-log.service";
 
 const MUTATION_METHODS = new Set(["POST", "PUT", "DELETE"]);
 
@@ -10,6 +10,7 @@ export const auditMutation = (req: Request, res: Response, next: NextFunction) =
         if (res.statusCode < 200 || res.statusCode >= 300) return;
 
         void createAuditLog({
+            event_type: AuditEventType.HTTP_MUTATION,
             user_id: req.user.id,
             user_role: req.user.role,
             method: req.method,
