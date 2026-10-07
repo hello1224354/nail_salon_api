@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
     return {
         name: "Serpente Nail Room",
         short_name: "Serpente Nail Room",
-        description: "Đặt lịch và khám phá dịch vụ chăm sóc móng tại Serpente Nail Room.",
+        description: "Xem bảng giá và đặt lịch tại Serpente Nail Room, Quận 8.",
         start_url: "/",
         display: "standalone",
         background_color: "#f6f3ee",
