@@ -445,7 +445,7 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
                     service_id: service.id,
                     service_name: service.name,
                     price: service.price,
-                    duration_minutes: service.duration_minutes,
+                    duration_minutes: service.duration_minutes!,
                 });
             });
 
@@ -670,6 +670,14 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
 
             if (servicesChecker.length < data.service_ids.length) throw new AppError("One or more services were not found", 404, "SERVICE_NOT_FOUND");
 
+            if (servicesChecker.some((service) => !service.booking_enabled || service.duration_minutes === null)) {
+                throw new AppError(
+                    "One or more services are not available for online booking yet",
+                    409,
+                    "SERVICE_NOT_BOOKABLE"
+                );
+            }
+
             if (!servicesChecker.every((service) => service.branch_id === liveStaffBranchId)) throw new AppError("All services must belong to the same branch as the staff", 400, "BRANCH_MISMATCH");
 
             const liveBranch = await branchService.getBranch(liveStaffBranchId);
@@ -685,7 +693,7 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
                     service_id: service.id,
                     service_name: service.name,
                     price: service.price,
-                    duration_minutes: service.duration_minutes,
+                    duration_minutes: service.duration_minutes!,
                 } as AppointmentService;
             });
         }
