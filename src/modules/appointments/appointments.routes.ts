@@ -12,5 +12,6 @@ router.get("/availability", authenticate, requireRole(UserRole.CUSTOMER), contro
 router.post("/", authenticate, requireRole(UserRole.CUSTOMER, UserRole.ADMIN), bookingRateLimiter, controller.createAppointment);
 router.get("/:id", authenticate, controller.getAppointmentById);
 router.put("/:id", authenticate, requireRole(UserRole.STAFF, UserRole.ADMIN), controller.updateAppointment);
+router.delete("/:id", authenticate, requireRole(UserRole.ADMIN), controller.deleteAppointment);
 
 export default router;
