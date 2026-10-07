@@ -4,24 +4,8 @@ import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
 import useEmblaCarousel from "embla-carousel-react";
 import Autoplay from "embla-carousel-autoplay";
-import type { CustomerReview, HotTrendImage, InstagramShowcaseItem, SalonContent } from "@/lib/api";
+import type { CustomerReview, InstagramTrendItem, SalonContent } from "@/lib/api";
 import { getInstagramUrl, getMapsUrl } from "@/lib/studio-data";
-
-type LinkedHotTrendItem = {
-    image: HotTrendImage;
-    instagram: InstagramShowcaseItem | null;
-};
-
-const HOT_TREND_POST_CODE_BY_DRIVE_ID: Record<string, string> = {
-    "1DtS5RGDSSeLd0J9KYaZk4PA5je8cj8UX": "DeGQeQvynTm",
-    "1dwTteuoTGfVvijHDYS8C1E4Ko2ZjYfMc": "DdLGgOuicGs",
-    "1pg5xQFyq5Yx4jjqDuDcvAIBBM3iC4W6g": "DdLGgOuicGs",
-    "1a2H_0PJmRFW2G0dA-pT_A-YCN4-u0Fxh": "DdLGgOuicGs",
-    "15c9T9QBS-MO1EZ5AL4oV2sJDB-F6IyIn": "DddH7VSpqk7",
-    "1EJKxKhza6gfg5OZkkt_cKqbyy3dPhVPv": "DdITMpxib29",
-    "1jQn9zhQrVXYBzNKcxEjwZiHrC4kgklIC": "DdITMpxib29",
-    "1HHeURR4Vfuxg-4b3yBcuSF2nY3bP05Zh": "DdITMpxib29",
-};
 
 function useAutoCarousel(itemCount: number, delay: number) {
     const [autoplay] = useState(() =>
@@ -106,14 +90,14 @@ function CarouselDots({
     );
 }
 
-function HotTrendCard({ item, index }: { item: LinkedHotTrendItem; index: number }) {
-    const instagramPostUrl = item.instagram?.instagram_url ?? null;
+function HotTrendCard({ item, index }: { item: InstagramTrendItem; index: number }) {
+    const instagramPostUrl = item.instagram_url;
 
     const card = (
         <figure className="group relative aspect-[4/5] overflow-hidden rounded-[24px] bg-tint shadow-[0_14px_42px_rgba(48,40,35,0.05)]">
             <Image
-                src={item.image.image_url}
-                alt={item.instagram?.title?.trim() || `Mẫu nail hot trend ${index + 1} tại Serpente Nail Room`}
+                src={item.image_src}
+                alt={item.title?.trim() || `Mẫu nail hot trend ${index + 1} tại Serpente Nail Room`}
                 fill
                 sizes="(max-width: 1023px) 50vw, 33vw"
                 className="motion-image object-cover transition-transform duration-500 group-hover:scale-[1.025]"
@@ -122,9 +106,9 @@ function HotTrendCard({ item, index }: { item: LinkedHotTrendItem; index: number
                 <div className="flex items-end justify-between gap-4">
                     <div className="min-w-0">
                         <span className="text-[10px] font-semibold uppercase tracking-[0.16em]">Hot trend</span>
-                        {item.instagram?.title?.trim() ? (
+                        {item.title?.trim() ? (
                             <p className="mt-2 line-clamp-2 max-w-[24ch] font-serif text-xl leading-tight">
-                                {item.instagram.title}
+                                {item.title}
                             </p>
                         ) : null}
                         {instagramPostUrl ? (
@@ -140,8 +124,6 @@ function HotTrendCard({ item, index }: { item: LinkedHotTrendItem; index: number
         </figure>
     );
 
-    if (!instagramPostUrl) return card;
-
     return (
         <a
             href={instagramPostUrl}
@@ -155,7 +137,7 @@ function HotTrendCard({ item, index }: { item: LinkedHotTrendItem; index: number
     );
 }
 
-function HotTrendCarousel({ items }: { items: LinkedHotTrendItem[] }) {
+function HotTrendCarousel({ items }: { items: InstagramTrendItem[] }) {
     const carousel = useAutoCarousel(items.length, 4600);
 
     return (
@@ -164,7 +146,7 @@ function HotTrendCarousel({ items }: { items: LinkedHotTrendItem[] }) {
                 <div className="-ml-4 flex">
                     {items.map((item, index) => (
                         <div
-                            key={item.image.id}
+                            key={item.id}
                             className="min-w-0 shrink-0 grow-0 basis-1/2 pl-4 lg:basis-1/3"
                         >
                             <HotTrendCard item={item} index={index} />
@@ -183,11 +165,11 @@ function HotTrendCarousel({ items }: { items: LinkedHotTrendItem[] }) {
 
 function ReviewCard({ review }: { review: CustomerReview }) {
     return (
-        <article className="flex h-full min-h-[290px] flex-col justify-between rounded-[24px] border border-line bg-surface p-6 shadow-[0_14px_42px_rgba(48,40,35,0.04)] sm:p-7">
-            <blockquote className="whitespace-pre-line font-serif text-[23px] leading-[1.25] tracking-[-0.015em] sm:text-[27px]">
+        <article className="flex h-[250px] w-full flex-col rounded-[22px] border border-line bg-surface p-5 shadow-[0_14px_42px_rgba(48,40,35,0.04)] sm:h-[270px] sm:p-6">
+            <blockquote className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-contain whitespace-pre-line pr-2 font-serif text-[19px] leading-[1.3] tracking-[-0.015em] sm:text-[21px]">
                 “{review.content}”
             </blockquote>
-            <div className="mt-7 flex items-end justify-between gap-4 border-t border-line pt-5">
+            <div className="mt-4 flex shrink-0 items-end justify-between gap-4 border-t border-line pt-4">
                 <div>
                     <p className="text-sm font-semibold">{review.display_name}</p>
                     <p className="mt-1 text-[10px] uppercase tracking-[0.14em] text-muted">{review.source}</p>
@@ -214,7 +196,7 @@ function ReviewsCarousel({ reviews }: { reviews: CustomerReview[] }) {
                 <div className="-ml-4 flex">
                     {reviews.map((review) => (
                         <div
-                            key={review.source_url}
+                            key={review.id}
                             className="flex min-w-0 shrink-0 grow-0 basis-1/2 pl-4 lg:basis-1/3"
                         >
                             <ReviewCard review={review} />
@@ -243,16 +225,7 @@ export function HomeShowcase({ content }: { content: SalonContent | null }) {
         );
     }
 
-    const hotTrendImages = content.hot_trend_images ?? [];
-    const instagramItems = [...content.instagram_showcase].sort((a, b) => a.sort_order - b.sort_order);
-    const linkedHotTrendItems: LinkedHotTrendItem[] = hotTrendImages.map((image) => {
-        const postCode = HOT_TREND_POST_CODE_BY_DRIVE_ID[image.id];
-        const instagram = postCode
-            ? instagramItems.find((item) => item.instagram_url.includes(`/p/${postCode}/`)) ?? null
-            : null;
-
-        return { image, instagram };
-    });
+    const trendItems = [...content.instagram_showcase].sort((a, b) => a.sort_order - b.sort_order);
     const reviews = content.customer_reviews;
     const instagramUrl = getInstagramUrl(content.instagram_handle);
     const mapsUrl = getMapsUrl(content.google_maps_url, content.google_maps_location);
@@ -283,7 +256,7 @@ export function HomeShowcase({ content }: { content: SalonContent | null }) {
 
     return (
         <>
-            {linkedHotTrendItems.length > 0 ? (
+            {trendItems.length > 0 ? (
                 <section className="border-t border-line">
                     <div className="site-shell py-14 lg:py-20">
                         <div className="flex flex-wrap items-end justify-between gap-4">
@@ -310,7 +283,7 @@ export function HomeShowcase({ content }: { content: SalonContent | null }) {
                             ) : null}
                         </div>
 
-                        <HotTrendCarousel items={linkedHotTrendItems} />
+                        <HotTrendCarousel items={trendItems} />
                     </div>
                 </section>
             ) : null}

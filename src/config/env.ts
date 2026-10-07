@@ -90,5 +90,4 @@ export const env = {
     GMAIL_REFRESH_TOKEN: asOptionalString("GMAIL_REFRESH_TOKEN"),
     GMAIL_FROM_EMAIL: asOptionalString("GMAIL_FROM_EMAIL"),
     GOOGLE_MAPS_URL: asOptionalString("GOOGLE_MAPS_URL"),
-    HOT_TREND_DRIVE_FOLDER_URL: asOptionalString("HOT_TREND_DRIVE_FOLDER_URL"),
 };

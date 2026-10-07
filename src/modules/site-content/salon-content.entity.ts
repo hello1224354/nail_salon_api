@@ -1,19 +1,5 @@
 import { Column, CreateDateColumn, Entity, PrimaryColumn, UpdateDateColumn } from "typeorm";
 
-export type InstagramShowcaseItem = {
-    title: string | null;
-    instagram_url: string;
-    image_source: string | null;
-    sort_order: number;
-};
-
-export type CustomerReview = {
-    display_name: string;
-    content: string;
-    source: string;
-    source_url: string;
-};
-
 @Entity("salon_content")
 export class SalonContent {
     @PrimaryColumn({ type: "int" })
@@ -58,11 +44,6 @@ export class SalonContent {
     @Column({ type: "text", nullable: true })
     experience_notes: string | null;
 
-    @Column({ type: "json" })
-    instagram_showcase: InstagramShowcaseItem[];
-
-    @Column({ type: "json" })
-    customer_reviews: CustomerReview[];
 
     @CreateDateColumn()
     created_at: Date;
