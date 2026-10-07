@@ -638,9 +638,9 @@ export function AdminDashboard() {
                                     <Overview
                                         data={data}
                                         todayStats={todayStats}
-                                        activeBranches={activeBranches.length}
-                                        activeServices={activeServices.length}
-                                        activeStaff={activeStaff.length}
+                                        branchCount={branchCount}
+                                        serviceCount={serviceCount}
+                                        staffCount={staffCount}
                                         setTab={setTab}
                                     />
                                 ) : null}
@@ -648,7 +648,7 @@ export function AdminDashboard() {
                                 {tab === "appointments" ? (
                                     <AppointmentsPanel
                                         appointments={data.appointments}
-                                        branches={activeBranches}
+                                        branches={data.branches}
                                         branchFilter={appointmentBranch}
                                         statusFilter={appointmentStatus}
                                         setBranchFilter={(value) => {
@@ -663,6 +663,7 @@ export function AdminDashboard() {
                                         pages={appointmentPages}
                                         setPage={setAppointmentPage}
                                         updateStatus={updateAppointmentStatus}
+                                        onDelete={deleteAppointment}
                                         submitting={submitting}
                                     />
                                 ) : null}
@@ -679,7 +680,7 @@ export function AdminDashboard() {
                                             setEditingService(service);
                                             setModal("service");
                                         }}
-                                        onToggle={deactivateService}
+                                        onDelete={deleteService}
                                         submitting={submitting}
                                     />
                                 ) : null}
@@ -687,9 +688,10 @@ export function AdminDashboard() {
                                 {tab === "staff" ? (
                                     <StaffPanel
                                         staff={data.staff}
-                                        branches={activeBranches}
+                                        branches={data.branches}
                                         onAdd={() => setModal("staff")}
                                         onUpdate={updateStaff}
+                                        onDelete={deleteStaff}
                                         submitting={submitting}
                                     />
                                 ) : null}
@@ -705,7 +707,7 @@ export function AdminDashboard() {
                                             setEditingBranch(branch);
                                             setModal("branch");
                                         }}
-                                        onToggle={toggleBranch}
+                                        onDelete={deleteBranch}
                                         submitting={submitting}
                                     />
                                 ) : null}
@@ -743,12 +745,6 @@ export function AdminDashboard() {
                         <Field label="Tên chi nhánh">
                             <input name="name" defaultValue={editingBranch?.name || ""} className={inputClass} required maxLength={255} />
                         </Field>
-                        <Field label="Trạng thái">
-                            <label className="flex h-11 items-center gap-3 rounded-xl border border-line bg-white px-3.5 text-sm">
-                                <input name="is_active" type="checkbox" defaultChecked={editingBranch?.is_active ?? true} />
-                                Đang hoạt động
-                            </label>
-                        </Field>
                         <Field label="Địa chỉ" span>
                             <input name="address" defaultValue={editingBranch?.address || ""} className={inputClass} required maxLength={255} />
                         </Field>
@@ -777,7 +773,7 @@ export function AdminDashboard() {
                             <Field label="Chi nhánh">
                                 <select name="branch_id" className={selectClass} required defaultValue="">
                                     <option value="" disabled>Chọn chi nhánh</option>
-                                    {activeBranches.map((branch) => (
+                                    {data.branches.map((branch) => (
                                         <option key={branch.id} value={branch.id}>{localizeBranchName(branch.name)}</option>
                                     ))}
                                 </select>
@@ -798,12 +794,6 @@ export function AdminDashboard() {
                         <Field label="Thời lượng (phút)">
                             <input name="duration_minutes" type="number" min="1" step="1" defaultValue={editingService?.duration_minutes ?? ""} className={inputClass} required />
                         </Field>
-                        <Field label="Trạng thái" span>
-                            <label className="flex h-11 items-center gap-3 rounded-xl border border-line bg-white px-3.5 text-sm">
-                                <input name="is_active" type="checkbox" defaultChecked={editingService?.is_active ?? true} />
-                                Đang hoạt động
-                            </label>
-                        </Field>
                         <div className="flex justify-end gap-3 md:col-span-2">
                             <button type="button" onClick={() => setModal(null)} className="rounded-full border border-line px-5 py-2.5 text-xs font-semibold">Hủy</button>
                             <button disabled={submitting} className="rounded-full bg-ink px-5 py-2.5 text-xs font-semibold text-white disabled:opacity-50">
@@ -823,7 +813,7 @@ export function AdminDashboard() {
                         <Field label="Chi nhánh">
                             <select name="branch_id" className={selectClass} required defaultValue="">
                                 <option value="" disabled>Chọn chi nhánh</option>
-                                {activeBranches.map((branch) => (
+                                {data.branches.map((branch) => (
                                     <option key={branch.id} value={branch.id}>{localizeBranchName(branch.name)}</option>
                                 ))}
                             </select>
@@ -897,23 +887,23 @@ export function AdminDashboard() {
 function Overview({
     data,
     todayStats,
-    activeBranches,
-    activeServices,
-    activeStaff,
+    branchCount,
+    serviceCount,
+    staffCount,
     setTab,
 }: {
     data: LoadState;
     todayStats: { total: number; pending: number; confirmed: number; completed: number };
-    activeBranches: number;
-    activeServices: number;
-    activeStaff: number;
+    branchCount: number;
+    serviceCount: number;
+    staffCount: number;
     setTab: (tab: TabKey) => void;
 }) {
     const cards = [
         { label: "Lịch đang tải", value: data.appointmentTotal, note: "Tổng lịch theo dữ liệu hiện có" },
         { label: "Chờ xác nhận hôm nay", value: todayStats.pending, note: `${todayStats.total} lịch trong ngày` },
-        { label: "Nhân viên hoạt động", value: activeStaff, note: `${data.staff.length} hồ sơ nhân viên` },
-        { label: "Dịch vụ hoạt động", value: activeServices, note: `${activeBranches} chi nhánh đang mở` },
+        { label: "Nhân viên", value: staffCount, note: "Hồ sơ nhân viên hiện tại" },
+        { label: "Dịch vụ", value: serviceCount, note: `${branchCount} chi nhánh hiện tại` },
     ];
 
     const upcoming = data.appointments
