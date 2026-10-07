@@ -117,6 +117,14 @@ async function resolveBookingResources(serviceIds: string[]) {
 
     if (!services.every((service) => service.branch_id === branchId)) throw new AppError("All services must belong to the same branch", 400, "BRANCH_MISMATCH");
 
+    if (services.some((service) => !service.booking_enabled || service.duration_minutes === null)) {
+        throw new AppError(
+            "One or more services are not available for online booking yet",
+            409,
+            "SERVICE_NOT_BOOKABLE"
+        );
+    }
+
     const branch = await branchService.getBranch(branchId);
 
     if (!branch) throw new AppError("Branch not found", 404, "BRANCH_NOT_FOUND");
@@ -151,7 +159,7 @@ export const getAvailability = async (data: GetAvailabilityQueryDto) => {
     let totalDurationMinutes = 0;
 
     services.forEach((service) => {
-        totalDurationMinutes += service.duration_minutes;
+        totalDurationMinutes += service.duration_minutes!;
     });
 
     const durationMs = totalDurationMinutes * 60 * 1000;
@@ -294,7 +302,7 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
     let totalDurationMinutes = 0;
 
     services.forEach((service) => {
-        totalDurationMinutes += service.duration_minutes;
+        totalDurationMinutes += service.duration_minutes!;
     });
 
     const endTime = new Date(data.start_time.getTime() + totalDurationMinutes * 60 * 1000);
