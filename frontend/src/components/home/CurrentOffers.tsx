@@ -113,8 +113,9 @@ export function CurrentOffers({ offers, instagramHandle }: CurrentOffersProps) {
     }
 
     return (
-        <div ref={emblaRef} className="overflow-hidden bg-transparent">
-            <div className="flex">
+        <div className="relative">
+            <div ref={emblaRef} className="overflow-hidden bg-transparent">
+                <div className="flex">
                 {offers.map((offer, index) => (
                     <article
                         key={`${offer.name}-${index}`}
@@ -180,7 +181,29 @@ export function CurrentOffers({ offers, instagramHandle }: CurrentOffersProps) {
                         </div>
                     </article>
                 ))}
+                </div>
             </div>
+
+            {offers.length > 1 ? (
+                <div className="pointer-events-none absolute inset-x-2 top-1/2 z-20 flex -translate-y-1/2 items-center justify-between sm:inset-x-3">
+                    <button
+                        type="button"
+                        aria-label="Ưu đãi trước"
+                        className="focus-ring pointer-events-auto flex size-11 items-center justify-center rounded-full border border-line bg-surface/95 text-lg font-semibold text-ink shadow-[0_10px_30px_rgba(48,40,35,0.12)] backdrop-blur-sm transition hover:bg-tint"
+                        onClick={() => emblaApi?.scrollPrev()}
+                    >
+                        ←
+                    </button>
+                    <button
+                        type="button"
+                        aria-label="Ưu đãi tiếp theo"
+                        className="focus-ring pointer-events-auto flex size-11 items-center justify-center rounded-full border border-line bg-surface/95 text-lg font-semibold text-ink shadow-[0_10px_30px_rgba(48,40,35,0.12)] backdrop-blur-sm transition hover:bg-tint"
+                        onClick={() => emblaApi?.scrollNext()}
+                    >
+                        →
+                    </button>
+                </div>
+            ) : null}
         </div>
     );
 }
