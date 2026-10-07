@@ -121,9 +121,9 @@ export function ServicesCatalogue() {
                 </select>
             </div>
 
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
                 <div
-                    className="hide-scrollbar -mx-1 flex min-w-0 flex-nowrap gap-2 overflow-x-auto px-1 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0"
+                    className="hide-scrollbar -mx-1 flex max-w-full min-w-0 flex-nowrap gap-2 overflow-x-auto px-1 pb-1 xl:mx-0 xl:px-0 xl:pb-0"
                     role="group"
                     aria-label="Lọc dịch vụ"
                 >
@@ -146,7 +146,7 @@ export function ServicesCatalogue() {
                         );
                     })}
                 </div>
-                <p className="shrink-0 text-[11px] text-muted sm:text-xs">Giá hiển thị bằng VND</p>
+                <p className="shrink-0 text-[11px] text-muted sm:text-xs xl:text-right">Giá hiển thị bằng VND</p>
             </div>
 
             {error ? (
