@@ -4,7 +4,7 @@ import * as branchService from "../branches/branches.service";
 import { AppError } from "../../common/errors";
 import { parseCreateStaffDto, parseGetStaffsQuery, parseUpdateStaffDto } from "./staffs.dto";
 import { parseUuidParam } from "../../common/validators";
-import { createSecurityEvent, SecurityEventType } from "../audit/security-event.service";
+import { AuditEventType, createAuditLog } from "../audit/audit-log.service";
 
 function toPublicStaff(staff: Awaited<ReturnType<typeof staffService.getStaff>>) {
     if (!staff) return null;
@@ -34,13 +34,13 @@ function toAdminStaff(staff: NonNullable<Awaited<ReturnType<typeof staffService.
     };
 }
 
-async function auditStaffSecurityEvent(
+async function auditStaffEvent(
     req: Request,
     res: Response,
     eventType: string,
     targetUserId: string
 ) {
-    await createSecurityEvent({
+    await createAuditLog({
         event_type: eventType,
         request_id: res.locals.requestId,
         user_id: req.user?.id ?? null,
@@ -93,7 +93,7 @@ export const createStaff = async (req: Request, res: Response) => {
     const data = await staffService.createStaff(parseCreateStaffDto(req.body));
     const staff = await staffService.getStaff(data.user_id);
 
-    await auditStaffSecurityEvent(req, res, SecurityEventType.STAFF_CREATED, data.user_id);
+    await auditStaffEvent(req, res, AuditEventType.STAFF_CREATED, data.user_id);
 
     return res.status(201).json({
         success: {
@@ -128,7 +128,7 @@ export const updateStaff = async (req: Request, res: Response) => {
     if (!data) throw new AppError("Staff not found", 404, "STAFF_NOT_FOUND");
 
     if (input.is_active === false) {
-        await auditStaffSecurityEvent(req, res, SecurityEventType.STAFF_DISABLED, staffId);
+        await auditStaffEvent(req, res, AuditEventType.STAFF_DISABLED, staffId);
     }
 
     const staff = await staffService.getStaff(staffId);
@@ -147,7 +147,7 @@ export const deleteStaff = async (req: Request, res: Response) => {
 
     if (!data) throw new AppError("Staff not found", 404, "STAFF_NOT_FOUND");
 
-    await auditStaffSecurityEvent(req, res, SecurityEventType.STAFF_DISABLED, staffId);
+    await auditStaffEvent(req, res, AuditEventType.STAFF_DISABLED, staffId);
 
     const staff = await staffService.getStaff(staffId);
 

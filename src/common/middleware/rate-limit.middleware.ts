@@ -1,6 +1,6 @@
 import { rateLimit } from "express-rate-limit";
 import { AppError } from "../errors";
-import { createSecurityEvent, SecurityEventType } from "../../modules/audit/security-event.service";
+import { AuditEventType, createAuditLog } from "../../modules/audit/audit-log.service";
 
 export const loginRateLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
@@ -9,8 +9,8 @@ export const loginRateLimiter = rateLimit({
     standardHeaders: true,
     legacyHeaders: false,
     handler: (req, res, next) => {
-        void createSecurityEvent({
-            event_type: SecurityEventType.LOGIN_RATE_LIMITED,
+        void createAuditLog({
+            event_type: AuditEventType.LOGIN_RATE_LIMITED,
             request_id: res.locals.requestId,
             identifier: typeof req.body?.phone === "string" ? req.body.phone : null,
             ip: req.ip,
