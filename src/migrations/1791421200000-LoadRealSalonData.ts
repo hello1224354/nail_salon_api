@@ -63,7 +63,6 @@ export class LoadRealSalonData1791421200000 implements MigrationInterface {
             }
 
             await queryRunner.query("ALTER TABLE `branches` AUTO_INCREMENT = 1");
-            await queryRunner.query("ALTER TABLE `audit_logs` AUTO_INCREMENT = 1");
 
             const branch = REAL_SALON_DATA.branch;
 
