@@ -14,10 +14,10 @@ export default function AccountSecurityPage() {
                 <div className="mx-auto w-full max-w-xl rounded-[28px] border border-line bg-surface p-7 shadow-[0_24px_80px_rgba(48,40,35,0.07)] sm:p-10">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-accent">Tài khoản</p>
                     <h1 className="mt-4 font-serif text-[clamp(2.5rem,7vw,4rem)] leading-[0.95] tracking-[-0.04em]">
-                        Đổi mật khẩu.
+                        Đổi mật khẩu
                     </h1>
                     <p className="mt-5 text-sm leading-6 text-muted">
-                        Sau khi đổi mật khẩu, bạn sẽ được đăng xuất khỏi tất cả thiết bị đang đăng nhập.
+                        Sau khi đổi xong, tài khoản sẽ được đăng xuất khỏi tất cả thiết bị.
                     </p>
                     <ChangePasswordForm />
                 </div>
