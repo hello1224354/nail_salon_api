@@ -26,6 +26,7 @@ export interface GetOffersQueryDto {
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
+const MAX_PAGE = 1000;
 const MAX_INT = 2_147_483_647;
 
 function parsePositiveIntegerQuery(value: unknown, fieldName: string, defaultValue: number): number {
@@ -108,6 +109,10 @@ export function parseGetOffersQuery(query: unknown): GetOffersQueryDto {
 
     if (limit > MAX_LIMIT) {
         throw new AppError(`Limit must not exceed ${MAX_LIMIT}`, 400, "VALIDATION_ERROR");
+    }
+
+    if (page > MAX_PAGE) {
+        throw new AppError(`Page must not exceed ${MAX_PAGE}`, 400, "VALIDATION_ERROR");
     }
 
     const offset = (page - 1) * limit;

@@ -85,37 +85,48 @@ export async function createLoginMfaChallenge(user: User) {
 }
 
 export async function verifyLoginMfaChallenge(challengeId: string, code: string) {
-    const challenge = await challengeRepo.findOneBy({ id: challengeId });
+    return await AppDataSource.transaction(async (manager) => {
+        const transactionChallengeRepo = manager.getRepository(LoginMfaChallenge);
+        const transactionUserRepo = manager.getRepository(User);
 
-    if (
-        !challenge ||
-        challenge.consumed_at ||
-        challenge.expires_at.getTime() <= Date.now() ||
-        challenge.attempts_remaining <= 0
-    ) {
-        throw new AppError("Invalid or expired MFA code", 401, "INVALID_MFA_CODE");
-    }
+        const challenge = await transactionChallengeRepo.findOne({
+            where: { id: challengeId },
+            lock: { mode: "pessimistic_write" },
+        });
 
-    const expected = hashCode(challenge.id, code);
+        if (
+            !challenge ||
+            challenge.consumed_at ||
+            challenge.expires_at.getTime() <= Date.now() ||
+            challenge.attempts_remaining <= 0
+        ) {
+            throw new AppError("Invalid or expired MFA code", 401, "INVALID_MFA_CODE");
+        }
 
-    if (!hashesMatch(expected, challenge.code_hash)) {
-        challenge.attempts_remaining -= 1;
-        if (challenge.attempts_remaining <= 0) challenge.consumed_at = new Date();
-        await challengeRepo.save(challenge);
+        const expected = hashCode(challenge.id, code);
 
-        throw new AppError("Invalid or expired MFA code", 401, "INVALID_MFA_CODE");
-    }
+        if (!hashesMatch(expected, challenge.code_hash)) {
+            challenge.attempts_remaining -= 1;
+            if (challenge.attempts_remaining <= 0) challenge.consumed_at = new Date();
+            await transactionChallengeRepo.save(challenge);
 
-    const user = await userRepo.findOneBy({ id: challenge.user_id });
+            throw new AppError("Invalid or expired MFA code", 401, "INVALID_MFA_CODE");
+        }
 
-    if (!user) {
+        const user = await transactionUserRepo.findOne({
+            where: { id: challenge.user_id },
+            lock: { mode: "pessimistic_read" },
+        });
+
+        if (!user) {
+            challenge.consumed_at = new Date();
+            await transactionChallengeRepo.save(challenge);
+            throw new AppError("Invalid or expired MFA code", 401, "INVALID_MFA_CODE");
+        }
+
         challenge.consumed_at = new Date();
-        await challengeRepo.save(challenge);
-        throw new AppError("Invalid or expired MFA code", 401, "INVALID_MFA_CODE");
-    }
+        await transactionChallengeRepo.save(challenge);
 
-    challenge.consumed_at = new Date();
-    await challengeRepo.save(challenge);
-
-    return user;
+        return user;
+    });
 }

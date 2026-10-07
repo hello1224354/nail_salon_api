@@ -18,6 +18,7 @@ export interface GetBranchesQueryDto {
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 5;
 const MAX_LIMIT = 100;
+const MAX_PAGE = 1000;
 
 function parsePositiveIntegerQuery(value: unknown, fieldName: string, defaultValue: number): number {
     if (value === undefined) return defaultValue;
@@ -40,6 +41,7 @@ export function parseGetBranchesQuery(query: unknown): GetBranchesQueryDto {
     const limit = parsePositiveIntegerQuery(data.limit, "Limit", DEFAULT_LIMIT);
 
     if (limit > MAX_LIMIT) throw new AppError(`Limit must not exceed ${MAX_LIMIT}`, 400, "VALIDATION_ERROR");
+    if (page > MAX_PAGE) throw new AppError(`Page must not exceed ${MAX_PAGE}`, 400, "VALIDATION_ERROR");
 
     const offset = (page - 1) * limit;
 

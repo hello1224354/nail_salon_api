@@ -46,6 +46,22 @@ function getBusinessMinuteOfDay(date: Date) {
     return hour * 60 + minute;
 }
 
+function assertFifteenMinuteAligned(startTime: Date) {
+    const businessStartMinute = getBusinessMinuteOfDay(startTime);
+
+    if (
+        businessStartMinute % 15 !== 0 ||
+        startTime.getUTCSeconds() !== 0 ||
+        startTime.getUTCMilliseconds() !== 0
+    ) {
+        throw new AppError(
+            "Appointment start time must be on a 15-minute interval",
+            400,
+            "INVALID_APPOINTMENT_TIME"
+        );
+    }
+}
+
 function getRequiredSlotStarts(startTime: Date, endTime: Date) {
     const slotStarts: Date[] = [];
 
@@ -269,11 +285,11 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
 
     const endTime = new Date(data.start_time.getTime() + totalDurationMinutes * 60 * 1000);
 
+    assertFifteenMinuteAligned(data.start_time);
+
     if (actorRole === UserRole.CUSTOMER) {
         const businessStartMinute = getBusinessMinuteOfDay(data.start_time);
         const businessEndMinute = getBusinessMinuteOfDay(endTime);
-
-        if (businessStartMinute % 15 !== 0 || data.start_time.getUTCSeconds() !== 0 || data.start_time.getUTCMilliseconds() !== 0) throw new AppError("Appointment start time must be on a 15-minute interval", 400, "INVALID_APPOINTMENT_TIME");
 
         if (businessStartMinute < BUSINESS_OPEN_MINUTE) throw new AppError(`Appointment must start at or after ${formatMinuteOfDay(BUSINESS_OPEN_MINUTE)}`, 400, "OUTSIDE_BUSINESS_HOURS");
 
@@ -298,7 +314,7 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
 
         if (actorRole === UserRole.CUSTOMER) {
             const pendingAppointmentCount = await transactionAppointmentRepo.countBy({
-                user_id: ownerId,
+                customer_phone: owner.phone,
                 status: AppointmentStatus.PENDING,
             });
 
@@ -306,7 +322,7 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
         }
 
         const customerOverlapAppointment = await transactionAppointmentRepo.findOneBy({
-            user_id: ownerId,
+            customer_phone: owner.phone,
             status: In([
                 AppointmentStatus.PENDING,
                 AppointmentStatus.CONFIRMED,
@@ -640,6 +656,7 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
         }
 
         if (data.start_time !== undefined) {
+            assertFifteenMinuteAligned(data.start_time);
             startTime = data.start_time;
         }
 

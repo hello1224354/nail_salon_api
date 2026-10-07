@@ -4,6 +4,7 @@ import { AppError } from "../errors";
 import { env } from "../../config/env";
 import * as userService from "../../modules/users/users.service";
 import { getAccessTokenVerifyOptions } from "../../modules/users/auth-session.service";
+import { authenticatedReadRateLimiter } from "./rate-limit.middleware";
 
 export const authenticate = async (req: Request, res: Response, next: NextFunction) => {
     const authorization = req.headers.authorization;
@@ -47,6 +48,11 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
         id: user.id,
         role: user.role,
     };
+
+    if (req.method === "GET") {
+        authenticatedReadRateLimiter(req, res, next);
+        return;
+    }
 
     next();
 };
