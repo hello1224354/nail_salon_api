@@ -25,7 +25,7 @@ export function ForgotPasswordForm() {
         });
 
         setStep("verify");
-        setNotice("Nếu email thuộc một tài khoản hợp lệ, mã OTP 6 số đã được gửi. Mã có hiệu lực trong 5 phút.");
+        setNotice("Nếu email khớp với tài khoản đã đăng ký, bạn sẽ nhận được mã OTP gồm 6 số. Mã dùng được trong 5 phút.");
     }
 
     async function handleRequest(event: FormEvent<HTMLFormElement>) {
@@ -37,7 +37,7 @@ export function ForgotPasswordForm() {
         try {
             await requestCode();
         } catch (submitError) {
-            setError(getApiErrorMessage(submitError, "Không thể gửi mã xác nhận. Vui lòng thử lại."));
+            setError(getApiErrorMessage(submitError, "Chưa gửi được mã xác nhận. Vui lòng thử lại."));
         } finally {
             setSubmitting(false);
         }
@@ -75,7 +75,7 @@ export function ForgotPasswordForm() {
             setPassword("");
             setConfirmPassword("");
         } catch (submitError) {
-            setError(getApiErrorMessage(submitError, "Không thể đặt lại mật khẩu. Vui lòng thử lại."));
+            setError(getApiErrorMessage(submitError, "Chưa đổi được mật khẩu. Vui lòng thử lại."));
         } finally {
             setSubmitting(false);
         }
@@ -89,9 +89,9 @@ export function ForgotPasswordForm() {
         try {
             await requestCode();
             setCode("");
-            setNotice("Đã xử lý yêu cầu gửi lại mã. Hãy kiểm tra email và dùng mã mới nhất.");
+            setNotice("Nếu email khớp với tài khoản đã đăng ký, một mã mới sẽ được gửi. Hãy dùng mã mới nhất trong hộp thư.");
         } catch (submitError) {
-            setError(getApiErrorMessage(submitError, "Không thể gửi lại mã. Vui lòng thử lại sau."));
+            setError(getApiErrorMessage(submitError, "Chưa gửi lại được mã. Vui lòng thử lại sau."));
         } finally {
             setSubmitting(false);
         }
@@ -230,7 +230,7 @@ export function ForgotPasswordForm() {
             </label>
 
             <p className="text-xs leading-5 text-muted">
-                Vì lý do bảo mật, hệ thống luôn trả cùng một phản hồi dù email có tồn tại hay không.
+                Nếu email khớp với tài khoản đã đăng ký, mã xác nhận sẽ được gửi vào hộp thư đó.
             </p>
 
             {error ? (
@@ -248,8 +248,8 @@ export function ForgotPasswordForm() {
             </button>
 
             <div className="flex justify-between gap-4 text-xs">
-                <Link href="/login" className="font-semibold text-accent">← Đăng nhập khách hàng</Link>
-                <Link href="/admin/login" className="font-semibold text-accent">Đăng nhập quản trị →</Link>
+                <Link href="/login" className="font-semibold text-accent">← Quay lại đăng nhập</Link>
+                <Link href="/admin/login" className="font-semibold text-accent">Dành cho quản trị →</Link>
             </div>
         </form>
     );

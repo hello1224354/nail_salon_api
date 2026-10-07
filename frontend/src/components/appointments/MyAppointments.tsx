@@ -20,7 +20,7 @@ const filters = [
     { value: "all", label: "Tất cả" },
     { value: "pending", label: "Chờ xác nhận" },
     { value: "confirmed", label: "Đã xác nhận" },
-    { value: "in_progress", label: "Đang thực hiện" },
+    { value: "in_progress", label: "Đang làm" },
     { value: "completed", label: "Hoàn thành" },
     { value: "cancelled", label: "Đã hủy" },
 ] as const;
@@ -110,7 +110,7 @@ export function MyAppointments() {
                     return;
                 }
 
-                setError(getApiErrorMessage(loadError, "Không thể tải lịch hẹn của bạn."));
+                setError(getApiErrorMessage(loadError, "Chưa tải được lịch hẹn của bạn."));
             } finally {
                 if (!cancelled) setLoading(false);
             }
@@ -151,7 +151,7 @@ export function MyAppointments() {
                 return;
             }
 
-            setError(getApiErrorMessage(loadError, "Không thể tải lịch hẹn của bạn."));
+            setError(getApiErrorMessage(loadError, "Chưa tải được lịch hẹn của bạn."));
         } finally {
             setRefreshing(false);
         }
@@ -238,7 +238,7 @@ export function MyAppointments() {
                         <h2 className="mt-5 font-serif text-3xl">{filter === "all" ? "Chưa có lịch hẹn" : "Không có lịch ở trạng thái này"}</h2>
                         <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted">
                             {filter === "all"
-                                ? "Khi bạn gửi một yêu cầu đặt lịch, lịch hẹn sẽ xuất hiện tại đây để bạn theo dõi."
+                                ? "Sau khi đặt lịch, bạn có thể xem trạng thái xác nhận và thông tin buổi hẹn tại đây."
                                 : "Chọn trạng thái khác hoặc xem tất cả lịch hẹn của bạn."}
                         </p>
                         {filter === "all" ? (
@@ -303,7 +303,7 @@ export function MyAppointments() {
                                                 ))}
                                             </div>
                                         ) : (
-                                            <p className="mt-2 text-xs text-muted">Thông tin dịch vụ chưa được trả về.</p>
+                                            <p className="mt-2 text-xs text-muted">Chưa có thông tin dịch vụ cho lịch hẹn này.</p>
                                         )}
                                     </div>
 

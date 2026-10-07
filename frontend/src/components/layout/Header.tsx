@@ -7,7 +7,7 @@ import { AUTH_CHANGED_EVENT, getAuthUser, logoutSession, restoreSession, type Au
 
 const navigation = [
     { href: "/", label: "Trang chủ" },
-    { href: "/services", label: "Dịch vụ" },
+    { href: "/services", label: "Bảng giá" },
     { href: "/book", label: "Đặt lịch" },
 ];
 

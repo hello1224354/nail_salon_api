@@ -19,7 +19,7 @@ export default function AdminLoginPage() {
                         </span>
                         <div>
                             <p className="font-serif text-xl">Serpente Nail Room</p>
-                            <p className="text-[10px] uppercase tracking-[0.2em] text-white/45">Admin Console</p>
+                            <p className="text-[10px] uppercase tracking-[0.2em] text-white/45">Trang quản trị</p>
                         </div>
                     </div>
 
@@ -27,12 +27,12 @@ export default function AdminLoginPage() {
                         Khu vực quản trị
                     </p>
                     <h1 className="mt-4 font-serif text-[clamp(2.8rem,6vw,5rem)] leading-[0.9] tracking-[-0.045em]">
-                        Điều hành
+                        Quản lý
                         <br />
-                        salon.
+                        Serpente.
                     </h1>
                     <p className="mt-5 max-w-md text-sm leading-6 text-white/55">
-                        Quản lý lịch hẹn, dịch vụ, nhân viên, chi nhánh và ưu đãi từ một nơi.
+                        Theo dõi lịch hẹn và cập nhật dữ liệu vận hành của tiệm tại một nơi.
                     </p>
 
                     <AdminLoginForm />
@@ -49,7 +49,7 @@ export default function AdminLoginPage() {
                             Serpente Nail Room
                         </p>
                         <p className="mt-3 max-w-lg font-serif text-3xl leading-tight">
-                            Theo dõi vận hành hằng ngày và xử lý lịch hẹn nhanh hơn.
+                            Theo dõi lịch trong ngày và cập nhật thông tin của tiệm khi cần.
                         </p>
                     </div>
                 </div>

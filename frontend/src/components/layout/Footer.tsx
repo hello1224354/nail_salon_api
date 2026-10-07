@@ -1,71 +1,119 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { studio } from "@/lib/studio-data";
+import { apiRequest, type Branch, type BranchList, type SalonContent } from "@/lib/api";
+import { getInstagramUrl, getMapsSearchUrl, localizeBranchName } from "@/lib/studio-data";
 
 export function Footer() {
     const pathname = usePathname();
+    const [content, setContent] = useState<SalonContent | null>(null);
+    const [branch, setBranch] = useState<Branch | null>(null);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        async function loadFooterData() {
+            try {
+                const [salonContent, branchList] = await Promise.all([
+                    apiRequest<SalonContent>("/api/site-content"),
+                    apiRequest<BranchList>("/api/branches?page=1&limit=1"),
+                ]);
+
+                if (cancelled) return;
+
+                setContent(salonContent);
+                setBranch(branchList.branches[0] ?? null);
+            } catch {
+                // Footer vẫn hiển thị được các liên kết chính nếu API tạm thời không phản hồi.
+            }
+        }
+
+        void loadFooterData();
+
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
     if (pathname.startsWith("/admin")) return null;
+
+    const instagramUrl = getInstagramUrl(content?.instagram_handle);
+    const mapsUrl = getMapsSearchUrl(content?.google_maps_location);
+    const phone = branch?.phone || content?.hotline;
+    const phoneHref = phone ? `tel:${phone.replace(/[^+\d]/g, "")}` : null;
 
     return (
         <footer className="bg-studio-dark text-white">
             <div className="site-shell py-12 lg:py-14">
-                <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-[1.4fr_0.7fr_1fr] lg:gap-16">
+                <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-[1.25fr_0.65fr_1.1fr] lg:gap-16">
                     <div className="md:col-span-2 lg:col-span-1">
                         <div className="flex items-center gap-3">
                             <span className="flex size-8 items-center justify-center rounded-full border border-[#bba18e] font-serif text-[11px]">
                                 SR
                             </span>
-                            <span className="font-serif text-2xl">Serpente Nail Room</span>
+                            <span className="font-serif text-2xl">{content?.display_name || "Serpente Nail Room"}</span>
                         </div>
-                        <p className="mt-3 text-sm text-[#cdbfb3]">
-                            Chăm sóc móng, chu đáo trong từng khoảnh khắc.
+                        <p className="mt-4 max-w-sm text-sm leading-6 text-[#cdbfb3]">
+                            Tiệm nail tại Quận 8. Xem bảng giá, chọn giờ còn trống và đặt lịch trực tiếp trên website.
                         </p>
+
+                        <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-xs">
+                            {instagramUrl ? (
+                                <a href={instagramUrl} target="_blank" rel="noreferrer" className="hover:text-[#d8c2b5]">
+                                    Instagram
+                                </a>
+                            ) : null}
+                            {content?.facebook_name ? <span className="text-white/65">{content.facebook_name}</span> : null}
+                            {content?.tiktok_name ? <span className="text-white/65">{content.tiktok_name}</span> : null}
+                        </div>
                     </div>
 
                     <div>
                         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#bba18e]">
-                            Khám phá
+                            Đi nhanh
                         </p>
                         <nav className="mt-4 flex flex-col gap-2.5 text-sm">
-                            <Link className="w-fit hover:text-[#d8c2b5]" href="/">
-                                Trang chủ
-                            </Link>
-                            <Link className="w-fit hover:text-[#d8c2b5]" href="/services">
-                                Dịch vụ
-                            </Link>
-                            <Link className="w-fit hover:text-[#d8c2b5]" href="/book">
-                                Đặt lịch
-                            </Link>
+                            <Link className="w-fit hover:text-[#d8c2b5]" href="/">Trang chủ</Link>
+                            <Link className="w-fit hover:text-[#d8c2b5]" href="/services">Bảng giá</Link>
+                            <Link className="w-fit hover:text-[#d8c2b5]" href="/book">Đặt lịch</Link>
+                            <Link className="w-fit hover:text-[#d8c2b5]" href="/appointments">Lịch của tôi</Link>
                         </nav>
                     </div>
 
                     <div>
                         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#bba18e]">
-                            {studio.branch}
+                            {branch ? localizeBranchName(branch.name) : "Liên hệ"}
                         </p>
-                        <div className="mt-4 space-y-2.5 text-sm text-white/90">
-                            <a
-                                href={studio.mapsUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="block w-fit hover:text-[#d8c2b5]"
-                            >
-                                {studio.address}
-                            </a>
-                            <p>{studio.hours}</p>
-                            <a className="block w-fit hover:text-[#d8c2b5]" href={studio.phoneHref}>
-                                {studio.phoneDisplay}
-                            </a>
+                        <div className="mt-4 space-y-2.5 text-sm leading-6 text-white/90">
+                            {branch?.address ? (
+                                mapsUrl ? (
+                                    <a href={mapsUrl} target="_blank" rel="noreferrer" className="block hover:text-[#d8c2b5]">
+                                        {branch.address}
+                                    </a>
+                                ) : (
+                                    <p>{branch.address}</p>
+                                )
+                            ) : null}
+                            {branch?.opening_hours ? <p>Mở cửa: {branch.opening_hours}</p> : null}
+                            {phoneHref && phone ? (
+                                <a className="block w-fit hover:text-[#d8c2b5]" href={phoneHref}>
+                                    {phone}
+                                </a>
+                            ) : null}
+                            {content?.contact_email ? (
+                                <a className="block w-fit hover:text-[#d8c2b5]" href={`mailto:${content.contact_email}`}>
+                                    {content.contact_email}
+                                </a>
+                            ) : null}
                         </div>
                     </div>
                 </div>
 
                 <div className="mt-12 flex flex-col gap-2 border-t border-white/15 pt-5 text-[11px] text-[#bfb0a4] sm:flex-row sm:items-center sm:justify-between">
                     <span>© 2026 Serpente Nail Room</span>
-                    <span>Đặt lịch khách hàng · Xác nhận qua điện thoại</span>
+                    <span>Đặt lịch trực tuyến · Tiệm xác nhận lại trước giờ hẹn</span>
                 </div>
             </div>
         </footer>

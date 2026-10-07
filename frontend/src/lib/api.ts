@@ -122,18 +122,19 @@ const errorMessagesByCode: Record<string, string> = {
     INVALID_MFA_CODE: "Mã OTP không đúng hoặc đã hết hạn.",
     MFA_EMAIL_REQUIRED: "Tài khoản quản trị chưa có email để nhận OTP.",
     MFA_NOT_CONFIGURED: "Hệ thống OTP quản trị chưa được cấu hình.",
-    REGISTRATION_UNAVAILABLE: "Không thể tạo tài khoản với thông tin đã cung cấp.",
+    REGISTRATION_UNAVAILABLE: "Chưa tạo được tài khoản với thông tin này.",
     USER_NOT_FOUND: "Không tìm thấy tài khoản.",
     FORBIDDEN: "Bạn không có quyền thực hiện thao tác này.",
     VALIDATION_ERROR: "Thông tin chưa hợp lệ. Vui lòng kiểm tra lại.",
     BRANCH_NOT_FOUND: "Không tìm thấy chi nhánh.",
     SERVICE_NOT_FOUND: "Không tìm thấy một hoặc nhiều dịch vụ.",
+    SERVICE_NOT_BOOKABLE: "Dịch vụ này chưa có thời lượng chính thức nên chưa thể đặt trực tuyến.",
     BRANCH_MISMATCH: "Các dịch vụ đã chọn không thuộc cùng một chi nhánh.",
     SLOT_UNAVAILABLE: "Khung giờ này vừa hết chỗ. Vui lòng chọn khung giờ khác.",
     CUSTOMER_APPOINTMENT_CONFLICT: "Bạn đã có lịch hẹn trùng với khung giờ này.",
     TOO_MANY_PENDING_APPOINTMENTS: "Bạn đã có quá nhiều lịch hẹn đang chờ xác nhận.",
     INVALID_APPOINTMENT_TIME: "Giờ bắt đầu phải nằm trên mốc 15 phút.",
-    OUTSIDE_BUSINESS_HOURS: "Khung giờ đã chọn nằm ngoài giờ hoạt động của salon.",
+    OUTSIDE_BUSINESS_HOURS: "Khung giờ đã chọn nằm ngoài giờ mở cửa của tiệm.",
     APPOINTMENT_CONFLICT: "Khung giờ này không còn khả dụng.",
 };
 
@@ -159,6 +160,8 @@ export type Branch = {
     id: number;
     name: string;
     address: string;
+    phone?: string | null;
+    opening_hours?: string | null;
     created_at?: string;
     updated_at?: string;
 };
@@ -175,8 +178,15 @@ export type Service = {
     id: string;
     branch_id: number;
     name: string;
+    display_name?: string | null;
+    category?: string | null;
+    subcategory?: string | null;
+    description?: string | null;
     price: number;
-    duration_minutes: number;
+    price_min?: number | null;
+    price_max?: number | null;
+    duration_minutes: number | null;
+    booking_enabled: boolean;
     created_at?: string;
     updated_at?: string;
 };
@@ -269,4 +279,37 @@ export type AdminStaff = {
     email: string | null;
     created_at?: string;
     updated_at?: string;
+};
+
+export type InstagramShowcaseItem = {
+    title: string | null;
+    instagram_url: string;
+    image_source: string | null;
+    sort_order: number;
+};
+
+export type CustomerReview = {
+    display_name: string;
+    content: string;
+    source: string;
+    source_url: string;
+};
+
+export type SalonContent = {
+    id: number;
+    name: string;
+    display_name: string;
+    instagram_handle: string | null;
+    google_maps_location: string | null;
+    hotline: string | null;
+    contact_email: string | null;
+    facebook_name: string | null;
+    tiktok_name: string | null;
+    has_refreshments: boolean;
+    has_warranty: boolean;
+    warranty_days: number | null;
+    brands: string | null;
+    experience_notes: string | null;
+    instagram_showcase: InstagramShowcaseItem[];
+    customer_reviews: CustomerReview[];
 };
