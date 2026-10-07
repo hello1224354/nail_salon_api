@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import {
     parseChangePasswordDto,
+    parseDeleteMeDto,
     parseForgotPasswordDto,
     parseLoginUserDto,
     parseRegisterUserDto,
@@ -445,7 +446,8 @@ export const resetPassword = async (req: Request, res: Response) => {
 export const deleteMe = async (req: Request, res: Response) => {
     if (!req.user) throw new AppError("Authentication required", 401, "AUTHENTICATION_REQUIRED");
 
-    const user = await userService.deleteUser(req.user.id);
+    const data = parseDeleteMeDto(req.body);
+    const user = await userService.deleteOwnUser(req.user.id, data.current_password);
     if (!user) throw new AppError("User not found", 404, "USER_NOT_FOUND");
 
     clearRefreshCookie(res);
