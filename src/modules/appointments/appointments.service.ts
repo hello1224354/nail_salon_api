@@ -680,6 +680,14 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
 
             if (!servicesChecker.every((service) => service.branch_id === liveStaffBranchId)) throw new AppError("All services must belong to the same branch as the staff", 400, "BRANCH_MISMATCH");
 
+            if (servicesChecker.some((service) => !service.booking_enabled || service.duration_minutes === null)) {
+                throw new AppError(
+                    "One or more services are not available for online booking yet",
+                    409,
+                    "SERVICE_NOT_BOOKABLE"
+                );
+            }
+
             const liveBranch = await branchService.getBranch(liveStaffBranchId);
             if (!liveBranch) throw new AppError("Branch not found", 404, "BRANCH_NOT_FOUND");
 
