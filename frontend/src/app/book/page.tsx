@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { BookingForm } from "@/components/booking/BookingForm";
+import "./book.css";
 
 export const metadata: Metadata = {
     title: "Đặt lịch",
