@@ -11,6 +11,7 @@ export enum AppointmentStatus {
 
 @Index("IDX_appointments_user_start", ["user_id", "start_time"])
 @Index("IDX_appointments_staff_start", ["staff_id", "start_time"])
+@Index("IDX_appointments_booking_group", ["booking_group_id"])
 @Entity("appointments")
 export class Appointment {
     @PrimaryGeneratedColumn("uuid")
@@ -18,6 +19,12 @@ export class Appointment {
 
     @Column({ type: "uuid" })
     user_id: string;
+
+    @Column({ type: "uuid", nullable: true })
+    booking_group_id: string | null;
+
+    @Column({ type: "int", default: 1 })
+    party_size: number;
 
     @Column({ type: "varchar" })
     customer_full_name: string;
