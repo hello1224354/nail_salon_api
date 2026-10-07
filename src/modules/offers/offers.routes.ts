@@ -3,10 +3,11 @@ import { authenticate } from "../../common/middleware/auth.middleware";
 import { requireRole } from "../../common/middleware/role.middleware";
 import { UserRole } from "../users/users.entity";
 import * as controller from "./offers.controller";
+import { publicReadRateLimiter } from "../../common/middleware/rate-limit.middleware";
 
 const router = Router();
 
-router.get("/", controller.getCurrentOffers);
+router.get("/", publicReadRateLimiter, controller.getCurrentOffers);
 router.get("/admin", authenticate, requireRole(UserRole.ADMIN), controller.getAllOffersForAdmin);
 router.get("/:id", authenticate, requireRole(UserRole.ADMIN), controller.getOffer);
 router.post("/", authenticate, requireRole(UserRole.ADMIN), controller.createOffer);
