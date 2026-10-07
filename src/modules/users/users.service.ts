@@ -1,10 +1,10 @@
 import bcrypt from "bcryptjs";
-import { EntityManager, QueryFailedError } from "typeorm";
+import { EntityManager, IsNull, QueryFailedError } from "typeorm";
 import { AppDataSource } from "../../config/database";
 import { AppError } from "../../common/errors";
 import { ChangePasswordDto, LoginUserDto, RegisterUserDto } from "./users.dto";
 import { User, UserRole } from "./users.entity";
-import { revokeAllUserSessions } from "./auth-session.service";
+import { RefreshSession } from "./refresh-session.entity";
 
 const userRepo = AppDataSource.getRepository(User);
 const DUMMY_PASSWORD_HASH = bcrypt.hashSync("timing-equalization-password", 12);
@@ -81,21 +81,36 @@ export const getUser = async (id: string) => {
 };
 
 export const changePassword = async (userId: string, data: ChangePasswordDto) => {
-    const user = await getUser(userId);
-    if (!user) return null;
+    const nextPasswordHash = await bcrypt.hash(data.new_password, 12);
 
-    const currentMatches = await bcrypt.compare(data.current_password, user.password_hash);
-    if (!currentMatches) {
-        throw new AppError("Current password is incorrect", 401, "INVALID_CURRENT_PASSWORD");
-    }
+    return await AppDataSource.transaction(async (manager) => {
+        const transactionUserRepo = manager.getRepository(User);
+        const transactionRefreshSessionRepo = manager.getRepository(RefreshSession);
 
-    user.password_hash = await bcrypt.hash(data.new_password, 12);
-    user.token_version += 1;
-    const saved = await userRepo.save(user);
+        const user = await transactionUserRepo.findOne({
+            where: { id: userId },
+            lock: { mode: "pessimistic_write" },
+        });
 
-    await revokeAllUserSessions(user.id);
+        if (!user) return null;
 
-    return saved;
+        const currentMatches = await bcrypt.compare(data.current_password, user.password_hash);
+        if (!currentMatches) {
+            throw new AppError("Current password is incorrect", 401, "INVALID_CURRENT_PASSWORD");
+        }
+
+        user.password_hash = nextPasswordHash;
+        user.token_version += 1;
+
+        const saved = await transactionUserRepo.save(user);
+
+        await transactionRefreshSessionRepo.update(
+            { user_id: user.id, revoked_at: IsNull() },
+            { revoked_at: new Date() }
+        );
+
+        return saved;
+    });
 };
 
 export const deleteOwnUser = async (id: string, currentPassword: string) => {
