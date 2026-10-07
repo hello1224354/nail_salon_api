@@ -10,6 +10,7 @@ import { User, UserRole } from "../users/users.entity";
 import * as userService from "../users/users.service";
 import { AppointmentService } from "./appointment-services.entity";
 import { StaffBookingSlot } from "./staff-booking-slots.entity";
+import { randomUUID } from "crypto";
 
 const appointmentRepo = AppDataSource.getRepository(Appointment);
 
@@ -171,6 +172,8 @@ export const getAvailability = async (data: GetAvailabilityQueryDto) => {
         return {
             branch_id: branchId,
             duration_minutes: totalDurationMinutes,
+            party_size: data.party_size,
+            max_party_size: 0,
             slots: [],
         };
     }
@@ -202,24 +205,33 @@ export const getAvailability = async (data: GetAvailabilityQueryDto) => {
         const startTime = new Date(startTimeMs);
         const endTime = new Date(startTimeMs + durationMs);
 
-        const hasAvailableStaff = staffs.some((staff) => {
-            return !appointments.some((appointment) => {
+        let availableStaffCount = 0;
+
+        for (const staff of staffs) {
+            const hasOverlap = appointments.some((appointment) => {
                 return (
                     appointment.staff_id === staff.user_id &&
                     appointment.start_time.getTime() < endTime.getTime() &&
                     appointment.end_time.getTime() > startTime.getTime()
                 );
             });
-        });
 
-        if (hasAvailableStaff) {
-            slots.push(startTime);
+            if (!hasOverlap) {
+                availableStaffCount += 1;
+            }
+
+            if (availableStaffCount >= data.party_size) {
+                slots.push(startTime);
+                break;
+            }
         }
     }
 
     return {
         branch_id: branchId,
         duration_minutes: totalDurationMinutes,
+        party_size: data.party_size,
+        max_party_size: staffs.length,
         slots,
     };
 };
@@ -264,6 +276,8 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
     }
 
     if (actorRole === UserRole.ADMIN) {
+        if (data.party_size !== 1) throw new AppError("Admin-created appointments must use party_size 1", 400, "VALIDATION_ERROR");
+
         if (data.staff_id === undefined) throw new AppError("Staff_id is required when admin creates an appointment", 400, "VALIDATION_ERROR");
 
         const staff = await staffService.getStaff(data.staff_id);
@@ -313,28 +327,41 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
         if (!owner) throw new AppError("User not found", 404, "USER_NOT_FOUND");
 
         if (actorRole === UserRole.CUSTOMER) {
-            const pendingAppointmentCount = await transactionAppointmentRepo.countBy({
-                customer_phone: owner.phone,
-                status: AppointmentStatus.PENDING,
-            });
+            const pendingBookingCountRaw = await transactionAppointmentRepo
+                .createQueryBuilder("appointment")
+                .select(
+                    "COUNT(DISTINCT COALESCE(appointment.booking_group_id, appointment.id))",
+                    "count"
+                )
+                .where("appointment.customer_phone = :customerPhone", {
+                    customerPhone: owner.phone,
+                })
+                .andWhere("appointment.status = :pendingStatus", {
+                    pendingStatus: AppointmentStatus.PENDING,
+                })
+                .getRawOne<{ count: string }>();
 
-            if (pendingAppointmentCount >= CUSTOMER_MAX_PENDING_APPOINTMENTS) throw new AppError("Customer cannot have more than 3 pending appointments", 429, "TOO_MANY_PENDING_APPOINTMENTS");
+            const pendingBookingCount = Number(pendingBookingCountRaw?.count ?? 0);
+
+            if (pendingBookingCount >= CUSTOMER_MAX_PENDING_APPOINTMENTS) {
+                throw new AppError(
+                    "Customer cannot have more than 3 pending booking requests",
+                    429,
+                    "TOO_MANY_PENDING_APPOINTMENTS"
+                );
+            }
         }
 
-        const customerOverlapAppointment = await transactionAppointmentRepo.findOneBy({
-            customer_phone: owner.phone,
-            status: In([
-                AppointmentStatus.PENDING,
-                AppointmentStatus.CONFIRMED,
-                AppointmentStatus.IN_PROGRESS,
-            ]),
-            start_time: LessThan(endTime),
-            end_time: MoreThan(data.start_time),
-        });
-
-        if (customerOverlapAppointment) throw new AppError("Customer already has an appointment during this time", 409, "CUSTOMER_APPOINTMENT_CONFLICT");
+        if (data.party_size > candidateStaffs.length) {
+            throw new AppError(
+                "Not enough staff is available for this group size",
+                409,
+                "SLOT_UNAVAILABLE"
+            );
+        }
 
         const slotStarts = getRequiredSlotStarts(data.start_time, endTime);
+        const reservedStaffs: typeof candidateStaffs = [];
 
         for (const staff of candidateStaffs) {
             const overlapAppointment = await transactionAppointmentRepo.findOneBy({
@@ -358,8 +385,37 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
 
             if (!reserved) continue;
 
+            reservedStaffs.push(staff);
+
+            if (reservedStaffs.length === data.party_size) {
+                break;
+            }
+        }
+
+        if (reservedStaffs.length < data.party_size) {
+            if (actorRole === UserRole.ADMIN) {
+                throw new AppError(
+                    "Staff already has an appointment during this time",
+                    409,
+                    "APPOINTMENT_CONFLICT"
+                );
+            }
+
+            throw new AppError(
+                "Not enough staff is available for this group size at this time",
+                409,
+                "SLOT_UNAVAILABLE"
+            );
+        }
+
+        const bookingGroupId = randomUUID();
+        const savedAppointments: Appointment[] = [];
+
+        for (const staff of reservedStaffs) {
             const newAppointment = transactionAppointmentRepo.create({
                 user_id: ownerId,
+                booking_group_id: bookingGroupId,
+                party_size: data.party_size,
                 customer_full_name: owner.full_name,
                 customer_phone: owner.phone,
                 customer_email: owner.email,
@@ -385,18 +441,16 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
                 });
             });
 
-            const savedAppointmentServices = await appointmentServiceRepo.save(appointmentServices);
+            savedAppointment.appointment_services = await appointmentServiceRepo.save(
+                appointmentServices
+            );
 
-            savedAppointment.appointment_services = savedAppointmentServices;
-
-            return savedAppointment;
+            savedAppointments.push(savedAppointment);
         }
 
-        if (actorRole === UserRole.ADMIN) throw new AppError("Staff already has an appointment during this time", 409, "APPOINTMENT_CONFLICT");
-
-        throw new AppError("No staff is available for this time slot", 409, "SLOT_UNAVAILABLE");
+        return savedAppointments[0];
     });
-};
+
 
 export const getAllAppointments = async (userId: string, role: UserRole, query: GetAppointmentsQueryDto) => {
     const queryBuilder = appointmentRepo.createQueryBuilder("appointment")
@@ -699,31 +753,6 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
             });
 
             endTime = new Date(startTime.getTime() + totalDurationMinutes * 60 * 1000);
-        }
-
-        if (
-            hasScheduleChanges &&
-            (status === AppointmentStatus.PENDING || status === AppointmentStatus.CONFIRMED)
-        ) {
-            const customerOverlapAppointment = await transactionAppointmentRepo.findOneBy({
-                id: Not(appointment.id),
-                customer_phone: appointment.customer_phone,
-                status: In([
-                    AppointmentStatus.PENDING,
-                    AppointmentStatus.CONFIRMED,
-                    AppointmentStatus.IN_PROGRESS,
-                ]),
-                start_time: LessThan(endTime),
-                end_time: MoreThan(startTime),
-            });
-
-            if (customerOverlapAppointment) {
-                throw new AppError(
-                    "Customer already has an appointment during this time",
-                    409,
-                    "CUSTOMER_APPOINTMENT_CONFLICT"
-                );
-            }
         }
 
         if (status === AppointmentStatus.PENDING || status === AppointmentStatus.CONFIRMED) {
