@@ -167,7 +167,7 @@ export async function refreshSession(refreshToken: string, fingerprint: SessionF
         }
 
         const user = await transactionUserRepo.findOneBy({ id: session.user_id });
-        if (!user || !user.is_active) {
+        if (!user) {
             await sessionRepo.update(
                 { family_id: session.family_id, revoked_at: IsNull() },
                 { revoked_at: new Date() }
