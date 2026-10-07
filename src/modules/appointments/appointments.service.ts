@@ -325,7 +325,7 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
 
         for (const staff of candidateStaffs) {
             const overlapAppointment = await transactionAppointmentRepo.findOneBy({
-                staff_id: staffId,
+                staff_id: staff.user_id,
                 status: In([
                     AppointmentStatus.PENDING,
                     AppointmentStatus.CONFIRMED,
@@ -621,7 +621,7 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
         if (status === AppointmentStatus.PENDING || status === AppointmentStatus.CONFIRMED) {
             const overlapAppointment = await transactionAppointmentRepo.findOneBy({
                 id: Not(appointment.id),
-                staff_id: staff.user_id,
+                staff_id: staffId,
                 status: In([
                     AppointmentStatus.PENDING,
                     AppointmentStatus.CONFIRMED,
