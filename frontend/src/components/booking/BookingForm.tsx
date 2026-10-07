@@ -544,7 +544,7 @@ export function BookingForm() {
                     <SectionHeading
                         number="03"
                         title="Số người"
-                        helper="Dịch vụ đã chọn áp dụng cho cả nhóm. Mỗi người được tự động gán một nhân viên khác nhau đang rảnh trong cùng khung giờ."
+                        helper="Dịch vụ đã chọn áp dụng cho tất cả người trong lịch hẹn. Mỗi người được tự động gán một nhân viên khác nhau đang rảnh trong cùng khung giờ."
                     />
                     <div className="mt-6 sm:pl-[60px]">
                         <div className="flex max-w-sm items-center justify-between rounded-[14px] border border-line bg-cream p-3">
@@ -678,7 +678,7 @@ export function BookingForm() {
                 <div className="mx-5 h-px bg-line sm:mx-7 lg:mx-8" />
 
                 <section className="p-5 sm:p-7 lg:p-8">
-                    <SectionHeading number="06" title="Thông tin tài khoản" helper="Một yêu cầu nhóm sẽ tạo lịch riêng cho từng người dưới cùng tài khoản đặt lịch." />
+                    <SectionHeading number="06" title="Thông tin tài khoản" helper="Mỗi người sẽ có một lịch riêng dưới cùng tài khoản đặt lịch." />
                     <div className="mt-6 grid gap-4 sm:grid-cols-2 sm:pl-[60px]">
                         <div className="rounded-[12px] border border-line bg-cream px-4 py-3">
                             <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">Họ và tên</p>
@@ -836,13 +836,13 @@ export function BookingForm() {
 
                     <div className="mt-6 flex items-end justify-between gap-5 rounded-[18px] bg-cream p-4">
                         <div>
-                            <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-muted">Mã nhóm đặt lịch</p>
+                            <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-muted">Mã lịch hẹn</p>
                             <p className="mt-1 font-mono text-xs font-semibold tracking-[0.04em]">
                                 {(createdAppointment.booking_group_id ?? createdAppointment.id).slice(0, 8).toUpperCase()}
                             </p>
                         </div>
                         <div className="text-right">
-                            <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-muted">Tổng dự kiến cả nhóm</p>
+                            <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-muted">Tổng dự kiến</p>
                             <p className="mt-1 font-serif text-xl tabular-nums">{formatVnd(createdServices.length > 0 ? createdTotalPrice : totalPrice)} VND</p>
                         </div>
                     </div>
