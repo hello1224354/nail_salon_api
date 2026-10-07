@@ -15,9 +15,10 @@ export type Offer = {
 
 type CurrentOffersProps = {
     offers: Offer[];
+    instagramHandle?: string | null;
 };
 
-export function CurrentOffers({ offers }: CurrentOffersProps) {
+export function CurrentOffers({ offers, instagramHandle }: CurrentOffersProps) {
     const [autoplay] = useState(() =>
         Autoplay({
             delay: 4800,
@@ -101,7 +102,9 @@ export function CurrentOffers({ offers }: CurrentOffersProps) {
                         <p className="mt-4 font-serif text-4xl leading-tight">Chương trình dành riêng cho khách của Serpente.</p>
                         <div className="mt-12 h-px bg-accent/20" />
                         <p className="mt-5 text-xs leading-5 text-muted">
-                            Theo dõi @serpente.nailroom để xem mẫu móng và thông báo mới từ tiệm.
+                            {instagramHandle
+                                ? `Theo dõi @${instagramHandle.replace(/^@/, "")} để xem mẫu móng và thông báo mới từ tiệm.`
+                                : "Mẫu móng và thông báo mới sẽ được cập nhật trên các kênh chính thức của tiệm."}
                         </p>
                     </div>
                 </div>
