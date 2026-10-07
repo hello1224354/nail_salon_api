@@ -3,13 +3,11 @@ import { AppError } from "../../common/errors";
 export interface CreateBranchDto {
     name: string;
     address: string;
-    is_active?: boolean;
 }
 
 export interface UpdateBranchDto {
     name?: string;
     address?: string;
-    is_active?: boolean;
 }
 
 export interface GetBranchesQueryDto {
@@ -62,12 +60,10 @@ export function parseCreateBranchDto(body: unknown): CreateBranchDto {
 
     if (typeof data.address !== "string" || data.address.trim().length === 0 || data.address.trim().length > 255) throw new AppError("Address must be between 1 and 255 characters", 400, "VALIDATION_ERROR");
 
-    if (data.is_active !== undefined && typeof data.is_active !== "boolean") throw new AppError("Is_active must be a boolean", 400, "VALIDATION_ERROR");
 
     return {
         name: data.name.trim(),
         address: data.address.trim(),
-        is_active: data.is_active as boolean | undefined,
     };
 }
 
@@ -80,13 +76,11 @@ export function parseUpdateBranchDto(body: unknown): UpdateBranchDto {
 
     if (data.address !== undefined && (typeof data.address !== "string" || data.address.trim().length === 0 || data.address.trim().length > 255)) throw new AppError("Address must be between 1 and 255 characters", 400, "VALIDATION_ERROR");
 
-    if (data.is_active !== undefined && typeof data.is_active !== "boolean") throw new AppError("Is_active must be a boolean", 400, "VALIDATION_ERROR");
 
     const result: UpdateBranchDto = {};
 
     if (data.name !== undefined) result.name = (data.name as string).trim();
     if (data.address !== undefined) result.address = (data.address as string).trim();
-    if (data.is_active !== undefined) result.is_active = data.is_active as boolean;
 
     if (Object.keys(result).length === 0) throw new AppError("At least one field must be provided", 400, "VALIDATION_ERROR");
 
