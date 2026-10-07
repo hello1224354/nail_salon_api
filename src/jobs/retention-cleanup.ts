@@ -1,3 +1,4 @@
+import type { ResultSetHeader } from "mysql2";
 import mysql from "mysql2/promise";
 
 const AUDIT_RETENTION_DAYS = 90;
@@ -33,24 +34,24 @@ async function main() {
     try {
         await connection.beginTransaction();
 
-        const [auditResult] = await connection.execute<mysql.ResultSetHeader>(
+        const [auditResult] = await connection.execute<ResultSetHeader>(
             `DELETE FROM audit_logs
              WHERE created_at < DATE_SUB(UTC_TIMESTAMP(), INTERVAL ${AUDIT_RETENTION_DAYS} DAY)`
         );
 
-        const [passwordResetResult] = await connection.execute<mysql.ResultSetHeader>(
+        const [passwordResetResult] = await connection.execute<ResultSetHeader>(
             `DELETE FROM password_reset_challenges
              WHERE expires_at < DATE_SUB(UTC_TIMESTAMP(), INTERVAL ${CHALLENGE_RETENTION_DAYS} DAY)
                 OR consumed_at < DATE_SUB(UTC_TIMESTAMP(), INTERVAL ${CHALLENGE_RETENTION_DAYS} DAY)`
         );
 
-        const [mfaResult] = await connection.execute<mysql.ResultSetHeader>(
+        const [mfaResult] = await connection.execute<ResultSetHeader>(
             `DELETE FROM login_mfa_challenges
              WHERE expires_at < DATE_SUB(UTC_TIMESTAMP(), INTERVAL ${CHALLENGE_RETENTION_DAYS} DAY)
                 OR consumed_at < DATE_SUB(UTC_TIMESTAMP(), INTERVAL ${CHALLENGE_RETENTION_DAYS} DAY)`
         );
 
-        const [sessionResult] = await connection.execute<mysql.ResultSetHeader>(
+        const [sessionResult] = await connection.execute<ResultSetHeader>(
             `DELETE FROM refresh_sessions
              WHERE expires_at < DATE_SUB(UTC_TIMESTAMP(), INTERVAL ${SESSION_RETENTION_DAYS} DAY)
                 OR revoked_at < DATE_SUB(UTC_TIMESTAMP(), INTERVAL ${SESSION_RETENTION_DAYS} DAY)`
