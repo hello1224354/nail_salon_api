@@ -14,8 +14,8 @@ const navigation = [
 function Logo() {
     return (
         <span className="flex items-center gap-3">
-            <span className="flex size-9 items-center justify-center rounded-full border border-accent/65 font-serif text-[11px] leading-none">NS</span>
-            <span className="font-serif text-[22px] tracking-[-0.025em] sm:text-[25px]">Nail Studio</span>
+            <span className="flex size-9 items-center justify-center rounded-full border border-accent/65 font-serif text-[11px] leading-none">SR</span>
+            <span className="font-serif text-[22px] tracking-[-0.025em] sm:text-[25px]">Serpente Nail Room</span>
         </span>
     );
 }
@@ -72,7 +72,7 @@ export function Header() {
     return (
         <header className="sticky top-0 z-50 border-b border-line bg-cream/95 shadow-[0_1px_0_rgba(48,40,35,0.02)] backdrop-blur-md">
             <div className="site-shell grid h-[76px] grid-cols-[1fr_auto_1fr] items-center">
-                <Link href="/" aria-label="Trang chủ NS Nail Studio" className="focus-ring col-start-1 row-start-1 justify-self-start rounded-md" onClick={() => setMobileOpen(false)}>
+                <Link href="/" aria-label="Trang chủ Serpente Nail Room" className="focus-ring col-start-1 row-start-1 justify-self-start rounded-md" onClick={() => setMobileOpen(false)}>
                     <Logo />
                 </Link>
 

@@ -4,7 +4,7 @@ import { AdminLoginForm } from "@/components/admin/AdminLoginForm";
 
 export const metadata: Metadata = {
     title: "Đăng nhập quản trị",
-    description: "Đăng nhập trang quản trị NS Nail Studio.",
+    description: "Đăng nhập trang quản trị Serpente Nail Room.",
     robots: { index: false, follow: false },
 };
 
@@ -18,7 +18,7 @@ export default function AdminLoginPage() {
                             NS
                         </span>
                         <div>
-                            <p className="font-serif text-xl">Nail Studio</p>
+                            <p className="font-serif text-xl">Serpente Nail Room</p>
                             <p className="text-[10px] uppercase tracking-[0.2em] text-white/45">Admin Console</p>
                         </div>
                     </div>
@@ -46,7 +46,7 @@ export default function AdminLoginPage() {
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_25%_20%,rgba(255,255,255,0.7),transparent_28%),linear-gradient(145deg,#d8c8ba_0%,#b9937c_48%,#6f5547_100%)]" />
                     <div className="absolute inset-x-10 bottom-10 rounded-[22px] border border-white/35 bg-[#2e2925]/80 p-7 backdrop-blur-md">
                         <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#d9bca9]">
-                            NS Nail Studio
+                            Serpente Nail Room
                         </p>
                         <p className="mt-3 max-w-lg font-serif text-3xl leading-tight">
                             Theo dõi vận hành hằng ngày và xử lý lịch hẹn nhanh hơn.
