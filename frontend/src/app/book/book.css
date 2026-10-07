@@ -1,0 +1,63 @@
+/* Booking page refinements */
+.route-transition > section:has(.booking-success-overlay) {
+  animation: none !important;
+  transform: none !important;
+}
+
+.booking-success-overlay {
+  display: grid !important;
+  min-height: 100dvh;
+  place-items: center;
+  overflow-y: auto;
+  padding: 12px;
+}
+
+.booking-success-panel {
+  width: min(100%, 600px);
+  max-height: calc(100dvh - 24px);
+  margin-block: auto;
+  border-radius: 28px !important;
+  box-shadow: 0 28px 90px rgba(48, 40, 35, 0.28) !important;
+}
+
+.site-shell form > div:first-child > section:nth-of-type(3) > div:last-child > div {
+  display: grid;
+  width: 100%;
+  max-width: 620px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 20px;
+  padding: 18px 22px;
+  border-radius: 16px;
+}
+
+.site-shell form > div:first-child > section:nth-of-type(3) > div:last-child > div > div:last-child {
+  flex-shrink: 0;
+  gap: 12px;
+}
+
+.site-shell form > div:first-child > section:nth-of-type(3) > div:last-child > div > div:last-child > button {
+  width: 44px;
+  height: 44px;
+  font-size: 20px;
+  line-height: 1;
+  box-shadow: 0 2px 8px rgba(48, 40, 35, 0.035);
+}
+
+.site-shell form > div:first-child > section:nth-of-type(3) > div:last-child > div > div:last-child > span {
+  min-width: 36px;
+  font-size: 32px;
+  line-height: 1;
+}
+
+@media (max-width: 639px) {
+  .booking-success-panel {
+    border-radius: 24px !important;
+  }
+
+  .site-shell form > div:first-child > section:nth-of-type(3) > div:last-child > div {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    padding: 16px 18px;
+  }
+}
