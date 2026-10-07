@@ -15,9 +15,9 @@ type LinkedHotTrendItem = {
 const HOT_TREND_POST_CODE_BY_DRIVE_ID: Record<string, string> = {
     "1DtS5RGDSSeLd0J9KYaZk4PA5je8cj8UX": "DeGQeQvynTm",
     "1dwTteuoTGfVvijHDYS8C1E4Ko2ZjYfMc": "DdLGgOuicGs",
-    "1pg5xQFyq5Yx4jjqDuDcvAIBBM3iC4W6g": "DddH7VSpqk7",
-    "1a2H_0PJmRFW2G0dA-pT_A-YCN4-u0Fxh": "DddH7VSpqk7",
-    "15c9T9QBS-MO1EZ5AL4oV2sJDB-F6IyIn": "DeGQeQvynTm",
+    "1pg5xQFyq5Yx4jjqDuDcvAIBBM3iC4W6g": "DdLGgOuicGs",
+    "1a2H_0PJmRFW2G0dA-pT_A-YCN4-u0Fxh": "DdLGgOuicGs",
+    "15c9T9QBS-MO1EZ5AL4oV2sJDB-F6IyIn": "DddH7VSpqk7",
     "1EJKxKhza6gfg5OZkkt_cKqbyy3dPhVPv": "DdITMpxib29",
     "1jQn9zhQrVXYBzNKcxEjwZiHrC4kgklIC": "DdITMpxib29",
     "1HHeURR4Vfuxg-4b3yBcuSF2nY3bP05Zh": "DdITMpxib29",
