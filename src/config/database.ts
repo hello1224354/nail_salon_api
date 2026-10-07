@@ -8,7 +8,6 @@ import { AppointmentService } from "../modules/appointments/appointment-services
 import { Branch } from "../modules/branches/branches.entity";
 import { StaffBookingSlot } from "../modules/appointments/staff-booking-slots.entity";
 import { AuditLog } from "../modules/audit/audit-log.entity";
-import { SecurityEvent } from "../modules/audit/security-event.entity";
 import { Offer } from "../modules/offers/offer.entity";
 import { RefreshSession } from "../modules/users/refresh-session.entity";
 import { PasswordResetChallenge } from "../modules/users/password-reset-challenge.entity";
@@ -32,7 +31,6 @@ export const AppDataSource = new DataSource({
         Branch,
         StaffBookingSlot,
         AuditLog,
-        SecurityEvent,
         Offer,
         RefreshSession,
         PasswordResetChallenge,
