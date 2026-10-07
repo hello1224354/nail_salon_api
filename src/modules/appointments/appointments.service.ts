@@ -576,13 +576,14 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
 
             if (!liveStaff) throw new AppError("Staff not found", 404, "STAFF_NOT_FOUND");
 
+            const liveStaffBranchId = liveStaff.branch_id;
             const servicesChecker = await serviceService.getServicesByIds(data.service_ids);
 
             if (servicesChecker.length < data.service_ids.length) throw new AppError("One or more services were not found", 404, "SERVICE_NOT_FOUND");
 
-            if (!servicesChecker.every((service) => service.branch_id === liveStaff.branch_id)) throw new AppError("All services must belong to the same branch as the staff", 400, "BRANCH_MISMATCH");
+            if (!servicesChecker.every((service) => service.branch_id === liveStaffBranchId)) throw new AppError("All services must belong to the same branch as the staff", 400, "BRANCH_MISMATCH");
 
-            const liveBranch = await branchService.getBranch(liveStaff.branch_id);
+            const liveBranch = await branchService.getBranch(liveStaffBranchId);
             if (!liveBranch) throw new AppError("Branch not found", 404, "BRANCH_NOT_FOUND");
 
             branchId = liveBranch.id;
