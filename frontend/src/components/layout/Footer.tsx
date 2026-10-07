@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { apiRequest, type Branch, type BranchList, type SalonContent } from "@/lib/api";
@@ -50,9 +51,13 @@ export function Footer() {
                 <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-[1.25fr_0.65fr_1.1fr] lg:gap-16">
                     <div className="md:col-span-2 lg:col-span-1">
                         <div className="flex items-center gap-3">
-                            <span className="flex size-8 items-center justify-center rounded-full border border-[#bba18e] font-serif text-[11px]">
-                                SR
-                            </span>
+                            <Image
+                                src="/brand/serpente-logo.svg"
+                                alt=""
+                                width={32}
+                                height={32}
+                                className="size-8 shrink-0 object-contain"
+                            />
                             <span className="font-serif text-2xl">{content?.display_name || "Serpente Nail Room"}</span>
                         </div>
                         <p className="mt-4 max-w-sm text-sm leading-6 text-[#cdbfb3]">
