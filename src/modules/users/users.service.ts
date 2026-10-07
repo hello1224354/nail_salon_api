@@ -98,6 +98,27 @@ export const changePassword = async (userId: string, data: ChangePasswordDto) =>
     return saved;
 };
 
+export const deleteOwnUser = async (id: string, currentPassword: string) => {
+    return await AppDataSource.transaction(async (manager) => {
+        const repo = manager.getRepository(User);
+        const user = await repo.findOne({
+            where: { id },
+            lock: { mode: "pessimistic_write" },
+        });
+
+        if (!user) return null;
+
+        const passwordMatches = await bcrypt.compare(currentPassword, user.password_hash);
+
+        if (!passwordMatches) {
+            throw new AppError("Current password is incorrect", 401, "INVALID_CURRENT_PASSWORD");
+        }
+
+        await repo.remove(user);
+        return user;
+    });
+};
+
 export const deleteUser = async (id: string, manager?: EntityManager) => {
     const repo = manager ? manager.getRepository(User) : userRepo;
     const user = await repo.findOneBy({ id });
