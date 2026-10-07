@@ -35,9 +35,14 @@ async function getCurrentOffers(): Promise<OfferCard[]> {
     }
 }
 
+const CURRENT_BRANCH_ID = 1;
+
 async function getSalonContent(): Promise<SalonContent | null> {
     try {
-        return await apiRequest<SalonContent>("/api/site-content", { cache: "no-store" });
+        return await apiRequest<SalonContent>(
+            `/api/site-content?branch_id=${CURRENT_BRANCH_ID}`,
+            { cache: "no-store" }
+        );
     } catch (error) {
         console.error("Chưa tải được thông tin tiệm", error);
         return null;
