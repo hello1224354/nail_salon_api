@@ -544,7 +544,7 @@ export function BookingForm() {
                     <SectionHeading
                         number="03"
                         title="Số người"
-                        helper="Mỗi người sẽ được hệ thống tự gán một nhân viên khác nhau đang rảnh trong cùng khung giờ."
+                        helper="Dịch vụ đã chọn áp dụng cho cả nhóm. Mỗi người được tự động gán một nhân viên khác nhau đang rảnh trong cùng khung giờ."
                     />
                     <div className="mt-6 sm:pl-[60px]">
                         <div className="flex max-w-sm items-center justify-between rounded-[14px] border border-line bg-cream p-3">
@@ -554,7 +554,7 @@ export function BookingForm() {
                                     {maxPartySize === null
                                         ? "Chọn dịch vụ để kiểm tra sức chứa nhân viên."
                                         : maxPartySize > 0
-                                          ? `Tối đa ${maxPartySize} người cùng lúc với dịch vụ đã chọn.`
+                                          ? `Có ${maxPartySize} nhân viên phù hợp với dịch vụ đã chọn tại chi nhánh.`
                                           : "Hiện chưa có nhân viên phù hợp tại chi nhánh này."}
                                 </p>
                             </div>
