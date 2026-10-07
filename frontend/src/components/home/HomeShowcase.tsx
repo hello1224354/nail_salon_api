@@ -1,10 +1,11 @@
 "use client";
 
+import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
 import useEmblaCarousel from "embla-carousel-react";
 import Autoplay from "embla-carousel-autoplay";
-import type { CustomerReview, InstagramShowcaseItem, SalonContent } from "@/lib/api";
-import { getInstagramUrl, getMapsSearchUrl } from "@/lib/studio-data";
+import type { CustomerReview, HotTrendImage, InstagramShowcaseItem, SalonContent } from "@/lib/api";
+import { getInstagramUrl, getMapsUrl } from "@/lib/studio-data";
 
 const MOBILE_QUERY = "(max-width: 767px)";
 
@@ -102,6 +103,47 @@ function CarouselDots({
                     }`}
                 />
             ))}
+        </div>
+    );
+}
+
+function HotTrendCard({ item, index }: { item: HotTrendImage; index: number }) {
+    return (
+        <figure className="group relative aspect-[4/5] overflow-hidden rounded-[24px] bg-tint shadow-[0_14px_42px_rgba(48,40,35,0.05)]">
+            <Image
+                src={item.image_url}
+                alt={`Mẫu nail hot trend ${index + 1} tại Serpente Nail Room`}
+                fill
+                sizes="(max-width: 767px) 100vw, (max-width: 1023px) 50vw, 25vw"
+                className="motion-image object-cover transition-transform duration-500 group-hover:scale-[1.025]"
+            />
+            <figcaption className="absolute inset-x-0 bottom-0 flex items-end justify-between bg-gradient-to-t from-black/45 via-black/10 to-transparent px-5 pb-5 pt-16 text-white">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.16em]">Hot trend</span>
+                <span className="font-serif text-xl">{String(index + 1).padStart(2, "0")}</span>
+            </figcaption>
+        </figure>
+    );
+}
+
+function MobileHotTrendCarousel({ items }: { items: HotTrendImage[] }) {
+    const carousel = useAutoCarousel(items.length, 4600);
+
+    return (
+        <div className="mt-8">
+            <div ref={carousel.emblaRef} className="overflow-hidden">
+                <div className="flex">
+                    {items.map((item, index) => (
+                        <div key={item.id} className="min-w-0 flex-[0_0_100%]">
+                            <HotTrendCard item={item} index={index} />
+                        </div>
+                    ))}
+                </div>
+            </div>
+            <CarouselDots
+                count={items.length}
+                selectedIndex={carousel.selectedIndex}
+                onSelect={(index) => carousel.emblaApi?.scrollTo(index)}
+            />
         </div>
     );
 }
@@ -217,10 +259,11 @@ export function HomeShowcase({ content }: { content: SalonContent | null }) {
         );
     }
 
+    const hotTrendImages = content.hot_trend_images ?? [];
     const instagramItems = [...content.instagram_showcase].sort((a, b) => a.sort_order - b.sort_order);
     const reviews = content.customer_reviews;
     const instagramUrl = getInstagramUrl(content.instagram_handle);
-    const mapsUrl = getMapsSearchUrl(content.google_maps_location);
+    const mapsUrl = getMapsUrl(content.google_maps_url, content.google_maps_location);
 
     const details = [
         content.has_refreshments
@@ -248,6 +291,36 @@ export function HomeShowcase({ content }: { content: SalonContent | null }) {
 
     return (
         <>
+            {hotTrendImages.length > 0 ? (
+                <section className="border-t border-line">
+                    <div className="site-shell py-14 lg:py-20">
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                            <div>
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">
+                                    Hot trend
+                                </p>
+                                <h2 className="mt-3 max-w-3xl font-serif text-4xl tracking-[-0.025em] sm:text-5xl">
+                                    Mẫu nail đang được yêu thích
+                                </h2>
+                            </div>
+                            <p className="max-w-sm text-sm leading-6 text-muted">
+                                Bộ sưu tập được cập nhật trực tiếp từ thư viện mẫu của Serpente.
+                            </p>
+                        </div>
+
+                        {isMobile === true ? (
+                            <MobileHotTrendCarousel items={hotTrendImages} />
+                        ) : (
+                            <div className="mt-8 hidden gap-4 md:grid md:grid-cols-2 lg:grid-cols-4">
+                                {hotTrendImages.map((item, index) => (
+                                    <HotTrendCard key={item.id} item={item} index={index} />
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </section>
+            ) : null}
+
             {instagramItems.length > 0 ? (
                 <section className="border-t border-line">
                     <div className="site-shell py-14 lg:py-20">

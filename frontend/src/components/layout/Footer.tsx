@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { apiRequest, type Branch, type BranchList, type SalonContent } from "@/lib/api";
-import { getInstagramUrl, getMapsSearchUrl, localizeBranchName } from "@/lib/studio-data";
+import { getInstagramUrl, getMapsUrl, localizeBranchName } from "@/lib/studio-data";
 
 export function Footer() {
     const pathname = usePathname();
@@ -40,7 +40,7 @@ export function Footer() {
     if (pathname.startsWith("/admin")) return null;
 
     const instagramUrl = getInstagramUrl(content?.instagram_handle);
-    const mapsUrl = getMapsSearchUrl(content?.google_maps_location);
+    const mapsUrl = getMapsUrl(content?.google_maps_url, content?.google_maps_location);
     const phone = branch?.phone || content?.hotline;
     const phoneHref = phone ? `tel:${phone.replace(/[^+\d]/g, "")}` : null;
 

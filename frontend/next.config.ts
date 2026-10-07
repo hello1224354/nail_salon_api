@@ -12,6 +12,15 @@ const apiOrigin = (() => {
 })();
 
 const nextConfig: NextConfig = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "drive.google.com",
+        pathname: "/thumbnail",
+      },
+    ],
+  },
   async rewrites() {
     return [
       {
