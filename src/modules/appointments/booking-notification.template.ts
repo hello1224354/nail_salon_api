@@ -46,7 +46,7 @@ export function buildNewBookingEmail(booking: NewBookingEmailData) {
             " (" + service.durationMinutes + " phút)"
     );
 
-    const subject = "[Serpente] Đặt lịch mới - " + booking.bookingGroupId.slice(0, 8);
+    const subject = "Serpente Nail Room - Có khách hàng vừa đặt lịch";
 
     const body = [
         "Có một yêu cầu đặt lịch mới đang chờ xác nhận.",
