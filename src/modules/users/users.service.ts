@@ -7,6 +7,7 @@ import { User, UserRole } from "./users.entity";
 import { RefreshSession } from "./refresh-session.entity";
 import { LoginMfaChallenge } from "./login-mfa-challenge.entity";
 import { PasswordResetChallenge } from "./password-reset-challenge.entity";
+import { consumePasswordChangeCode } from "./password-change.service";
 
 const userRepo = AppDataSource.getRepository(User);
 const DUMMY_PASSWORD_HASH = bcrypt.hashSync("timing-equalization-password", 12);
@@ -87,7 +88,7 @@ export const getUser = async (id: string) => {
 };
 
 export const changePassword = async (userId: string, data: ChangePasswordDto) => {
-    return await AppDataSource.transaction(async (manager) => {
+    const result = await AppDataSource.transaction(async (manager) => {
         const transactionUserRepo = manager.getRepository(User);
         const transactionRefreshSessionRepo = manager.getRepository(RefreshSession);
         const transactionLoginMfaRepo = manager.getRepository(LoginMfaChallenge);
@@ -98,11 +99,16 @@ export const changePassword = async (userId: string, data: ChangePasswordDto) =>
             lock: { mode: "pessimistic_write" },
         });
 
-        if (!user) return null;
+        if (!user) return { kind: "not_found" as const };
 
         const currentMatches = await bcrypt.compare(data.current_password, user.password_hash);
         if (!currentMatches) {
-            throw new AppError("Current password is incorrect", 401, "INVALID_CURRENT_PASSWORD");
+            return { kind: "invalid_current_password" as const };
+        }
+
+        const otpValid = await consumePasswordChangeCode(manager, user.id, data.code);
+        if (!otpValid) {
+            return { kind: "invalid_code" as const };
         }
 
         const nextPasswordHash = await bcrypt.hash(data.new_password, 12);
@@ -126,8 +132,24 @@ export const changePassword = async (userId: string, data: ChangePasswordDto) =>
             { consumed_at: changedAt }
         );
 
-        return saved;
+        return { kind: "ok" as const, user: saved };
     });
+
+    if (result.kind === "not_found") return null;
+
+    if (result.kind === "invalid_current_password") {
+        throw new AppError("Current password is incorrect", 401, "INVALID_CURRENT_PASSWORD");
+    }
+
+    if (result.kind === "invalid_code") {
+        throw new AppError(
+            "Invalid or expired password change code",
+            400,
+            "INVALID_PASSWORD_CHANGE_CODE"
+        );
+    }
+
+    return result.user;
 };
 
 export const deleteOwnUser = async (id: string, currentPassword: string) => {
