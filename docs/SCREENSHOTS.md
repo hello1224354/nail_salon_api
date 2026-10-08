@@ -29,7 +29,7 @@ The public homepage and services pages were inspected through a browser on 2026-
 1. Log into an authorized test environment/profile (never share credentials or OTP in README).
 2. Capture real website views at desktop and mobile viewport sizes. Ensure public screenshots use live production styling.
 3. Remove/replace personal information, live booking reference codes and privileged data **before** adding the files to Git.
-4. Add photos to `docs/assets/` and render them via relative Markdown links, e.g. `![Service catalog](assets/services-desktop.webp)`.
+4. Add photos to `docs/assets/`, then reference the existing file with a relative Markdown image link.
 5. Verify on GitHub that images load and reflect the current app version. Update the gallery when the UI changes.
 
 ## Short video demo (optional)
