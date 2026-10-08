@@ -838,9 +838,11 @@ export function BookingForm() {
                         type="button"
                         aria-label="Đóng thông báo"
                         onClick={closeSuccessModal}
-                        className="focus-ring absolute right-5 top-5 grid size-9 place-items-center rounded-full border border-line bg-cream text-lg leading-none text-muted transition-colors hover:border-accent hover:text-ink"
+                        className="focus-ring absolute right-5 top-5 flex size-9 items-center justify-center rounded-full border border-line bg-cream text-muted transition-colors hover:border-accent hover:text-ink"
                     >
-                        ×
+                        <svg viewBox="0 0 24 24" aria-hidden="true" className="block size-5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                            <path d="M4 4 20 20M20 4 4 20" />
+                        </svg>
                     </button>
 
                     <div className="grid size-12 place-items-center rounded-full bg-tint text-accent sm:size-14">
