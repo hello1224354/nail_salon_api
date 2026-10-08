@@ -602,6 +602,13 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
         if (!appointment) return null;
 
         if (role === UserRole.CUSTOMER) throw new AppError("Customers cannot update appointments", 403, "FORBIDDEN");
+        if (role === UserRole.STAFF && data.customer_phone !== undefined) {
+            throw new AppError("Staff cannot change customer contact information", 403, "FORBIDDEN");
+        }
+        if (role === UserRole.ADMIN && data.customer_phone !== undefined &&
+            [AppointmentStatus.COMPLETED, AppointmentStatus.CANCELLED].includes(appointment.status)) {
+            throw new AppError("Closed appointment contact information cannot be modified", 409, "APPOINTMENT_NOT_EDITABLE");
+        }
 
         if (role === UserRole.STAFF) {
             if (data.staff_id !== undefined) throw new AppError("Staff cannot change appointment staff", 403, "FORBIDDEN");
@@ -625,6 +632,10 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
         }
 
         if ((appointment.status === AppointmentStatus.IN_PROGRESS || appointment.status === AppointmentStatus.COMPLETED || appointment.status === AppointmentStatus.CANCELLED) && (data.staff_id !== undefined || data.service_ids !== undefined || data.start_time !== undefined)) throw new AppError("In-progress, completed, or cancelled appointment cannot be modified", 409, "APPOINTMENT_NOT_EDITABLE");
+
+        if (data.customer_phone !== undefined) {
+            appointment.customer_phone = data.customer_phone;
+        }
 
         let targetStaffId = appointment.staff_id;
         let targetStaffFullName = appointment.staff_full_name;
