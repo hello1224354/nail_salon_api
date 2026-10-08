@@ -93,7 +93,7 @@ Trên production, backup DB trước migration, dùng `DB_SYNCHRONIZE=false`. Kh
 Script `src/jobs/retention-cleanup.ts` dọn:
 
 - `audit_logs` quá 90 ngày;
-- OTP login/registration? **Script đang dọn `login_mfa_challenges`, `password_reset_challenges`** quá 7 ngày; không dọn registration/password-change challenges trong script này.
+- `login_mfa_challenges` và `password_reset_challenges` quá 7 ngày; script **không** dọn `registration_email_challenges` hay `password_change_challenges`.
 - `refresh_sessions`, `trusted_login_devices` hết hạn hoặc đã revoke quá 30 ngày.
 
 VPS Compose có service `retention` chạy vòng lặp 24 giờ. **Không suy ra Railway đã có scheduler này** chỉ vì source có script. Dữ liệu booking/khách hàng không bị script retention này tự động xóa.
