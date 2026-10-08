@@ -423,12 +423,14 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
 // All timestamps are stored as UTC DATETIME. A Vietnam business day starts
 // at 17:00 UTC on the previous calendar day; Vietnam does not observe DST.
 function vietnamDayWindow(now = new Date()) {
-    const today = new Intl.DateTimeFormat("en-CA", {
+    const parts = new Intl.DateTimeFormat("en-US", {
         timeZone: BUSINESS_TIMEZONE,
         year: "numeric",
         month: "2-digit",
         day: "2-digit",
-    }).format(now);
+    }).formatToParts(now);
+    const value = (type: "year" | "month" | "day") => parts.find((part) => part.type === type)?.value;
+    const today = `${value("year")}-${value("month")}-${value("day")}`;
     const start = new Date(`${today}T00:00:00+07:00`);
     const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
     return { start, end };
