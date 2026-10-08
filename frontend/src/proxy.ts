@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 
 function buildContentSecurityPolicy(nonce: string) {
@@ -18,7 +19,9 @@ function buildContentSecurityPolicy(nonce: string) {
 }
 
 export function proxy(request: NextRequest) {
-  const nonce = crypto.randomUUID().replace(/-/g, "");
+  // One unique, unpredictable nonce per HTML request. Next.js reads the CSP
+  // from the forwarded request header and applies it to its own script tags.
+  const nonce = randomBytes(16).toString("base64");
   const contentSecurityPolicy = buildContentSecurityPolicy(nonce);
   const requestHeaders = new Headers(request.headers);
 
@@ -41,6 +44,10 @@ export const config = {
     {
       source:
         "/((?!api|_next/static|_next/image|favicon.ico|icon.svg|.*\\.(?:png|jpg|jpeg|gif|webp|svg)$).*)",
+      missing: [
+        { type: "header", key: "next-router-prefetch" },
+        { type: "header", key: "purpose", value: "prefetch" },
+      ],
     },
   ],
 };
