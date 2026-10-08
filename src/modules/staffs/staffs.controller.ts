@@ -125,6 +125,7 @@ export const updateStaff = async (req: Request, res: Response) => {
     if (!data) throw new AppError("Staff not found", 404, "STAFF_NOT_FOUND");
 
     const staff = await staffService.getStaff(staffId);
+    await auditStaffEvent(req, res, "STAFF_UPDATED", staffId);
 
     return res.status(200).json({
         success: {
