@@ -10,6 +10,7 @@ import { User, UserRole } from "../users/users.entity";
 import { AppointmentService } from "./appointment-services.entity";
 import { StaffBookingSlot } from "./staff-booking-slots.entity";
 import { randomUUID } from "crypto";
+import { notifyAdminsOfNewBooking } from "./booking-notification.service";
 
 const appointmentRepo = AppDataSource.getRepository(Appointment);
 
@@ -286,7 +287,7 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
 
     if (businessEndMinute > BUSINESS_CLOSE_MINUTE) throw new AppError(`Appointment must end by ${formatMinuteOfDay(BUSINESS_CLOSE_MINUTE)}`, 400, "OUTSIDE_BUSINESS_HOURS");
 
-    return await AppDataSource.transaction(async (manager) => {
+    const created = await AppDataSource.transaction(async (manager) => {
         const transactionAppointmentRepo = manager.getRepository(Appointment);
         const appointmentServiceRepo = manager.getRepository(AppointmentService);
         const transactionUserRepo = manager.getRepository(User);
@@ -416,8 +417,38 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
             savedAppointments.push(savedAppointment);
         }
 
-        return savedAppointments[0];
+        return {
+            appointment: savedAppointments[0],
+            assignedStaffNames: reservedStaffs.map((staff) => staff.user.full_name),
+        };
     });
+
+    // Notify only after the booking transaction commits. Email cannot invalidate a booking.
+    // Group bookings generate one email per ADMIN recipient, not one per staff assignment.
+    void notifyAdminsOfNewBooking({
+        bookingGroupId: created.appointment.booking_group_id!,
+        customerName: created.appointment.customer_full_name,
+        customerPhone: created.appointment.customer_phone,
+        customerEmail: created.appointment.customer_email,
+        branchName: created.appointment.branch_name,
+        branchAddress: created.appointment.branch_address,
+        startTime: created.appointment.start_time,
+        endTime: created.appointment.end_time,
+        partySize: created.appointment.party_size,
+        staffNames: created.assignedStaffNames,
+        services: services.map((service) => ({
+            name: service.name,
+            price: service.price,
+            durationMinutes: service.duration_minutes!,
+        })),
+    }).catch((error) => {
+        console.error("New booking admin notification failed", {
+            bookingGroupId: created.appointment.booking_group_id,
+            error,
+        });
+    });
+
+    return created.appointment;
 };
 
 // All timestamps are stored as UTC DATETIME. A Vietnam business day starts
