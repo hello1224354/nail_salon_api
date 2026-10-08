@@ -25,6 +25,7 @@ export interface GetAppointmentsQueryDto {
     branch_id?: number;
     staff_id?: string;
     status?: AppointmentStatus;
+    booking_code?: string;
     from?: Date;
     to?: Date;
     page: number;
@@ -147,6 +148,14 @@ export function parseGetAppointmentsQuery(query: unknown): GetAppointmentsQueryD
 
     if (status !== undefined && !(status in AppointmentStatus)) throw new AppError("Status must be pending, confirmed, in_progress, completed, or cancelled", 400, "VALIDATION_ERROR");
 
+    let bookingCode: string | undefined;
+    if (data.booking_code !== undefined) {
+        if (typeof data.booking_code !== "string" || !/^[0-9a-f]{1,8}$/i.test(data.booking_code.trim())) {
+            throw new AppError("Booking_code must be 1 to 8 hexadecimal characters", 400, "VALIDATION_ERROR");
+        }
+        bookingCode = data.booking_code.trim().toLowerCase();
+    }
+
     const from = data.from === undefined ? undefined : parseDateTime(data.from, "From");
     const to = data.to === undefined ? undefined : parseDateTime(data.to, "To");
 
@@ -167,6 +176,7 @@ export function parseGetAppointmentsQuery(query: unknown): GetAppointmentsQueryD
         branch_id: branchId,
         staff_id: data.staff_id as string | undefined,
         status: status === undefined ? undefined : AppointmentStatus[status as keyof typeof AppointmentStatus],
+        booking_code: bookingCode,
         from,
         to,
         page,
