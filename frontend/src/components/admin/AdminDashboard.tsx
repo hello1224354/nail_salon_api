@@ -680,6 +680,8 @@ export function AdminDashboard() {
                                         pages={appointmentPages}
                                         setPage={setAppointmentPage}
                                         updateStatus={updateAppointmentStatus}
+                                        onAdd={() => { setEditingAppointment(null); setModal("appointment"); }}
+                                        onEdit={(appointment) => { setEditingAppointment(appointment); setModal("appointment"); }}
                                         onDelete={deleteAppointment}
                                         submitting={submitting}
                                     />
@@ -706,8 +708,8 @@ export function AdminDashboard() {
                                     <StaffPanel
                                         staff={data.staff}
                                         branches={data.branches}
-                                        onAdd={() => setModal("staff")}
-                                        onUpdate={updateStaff}
+                                        onAdd={() => { setEditingStaff(null); setModal("staff"); }}
+                                        onEdit={(person) => { setEditingStaff(person); setModal("staff"); }}
                                         onDelete={deleteStaff}
                                         submitting={submitting}
                                     />
@@ -750,6 +752,25 @@ export function AdminDashboard() {
                 </main>
             </div>
 
+            {modal === "appointment" ? (
+                <Modal
+                    title={editingAppointment ? "Sửa lịch hẹn" : "Thêm lịch hẹn"}
+                    description="Kiểm tra staff, dịch vụ và slot trước khi đặt."
+                    onClose={() => { setModal(null); setEditingAppointment(null); }}
+                >
+                    <AdminAppointmentForm
+                        key={editingAppointment?.id ?? "new"}
+                        appointment={editingAppointment}
+                        branches={data.branches}
+                        staff={data.staff}
+                        services={data.services}
+                        submitting={submitting}
+                        onSave={saveAppointment}
+                        onCancel={() => { setModal(null); setEditingAppointment(null); }}
+                    />
+                </Modal>
+            ) : null}
+
             {modal === "branch" ? (
                 <Modal
                     title={editingBranch ? "Sửa chi nhánh" : "Thêm chi nhánh"}
@@ -764,6 +785,12 @@ export function AdminDashboard() {
                         </Field>
                         <Field label="Địa chỉ" span>
                             <input name="address" defaultValue={editingBranch?.address || ""} className={inputClass} required maxLength={255} />
+                        </Field>
+                        <Field label="Điện thoại chi nhánh">
+                            <input name="phone" type="tel" defaultValue={editingBranch?.phone ?? ""} className={inputClass} maxLength={255} />
+                        </Field>
+                        <Field label="Giờ mở cửa">
+                            <input name="opening_hours" defaultValue={editingBranch?.opening_hours ?? ""} className={inputClass} maxLength={255} placeholder="09:00–20:30" />
                         </Field>
                         <div className="flex justify-end gap-3 md:col-span-2">
                             <button type="button" onClick={() => setModal(null)} className="rounded-full border border-line px-5 py-2.5 text-xs font-semibold">
@@ -809,8 +836,21 @@ export function AdminDashboard() {
                             <input name="price" type="number" min="0" step="1" defaultValue={editingService?.price ?? ""} className={inputClass} required />
                         </Field>
                         <Field label="Thời lượng (phút)">
-                            <input name="duration_minutes" type="number" min="1" step="1" defaultValue={editingService?.duration_minutes ?? ""} className={inputClass} required />
+                            <input name="duration_minutes" type="number" min="1" step="1" defaultValue={editingService?.duration_minutes ?? ""} className={inputClass} placeholder="Để trống nếu chưa nhận đặt lịch" />
                         </Field>
+                        <Field label="Nhóm dịch vụ">
+                            <input name="category" defaultValue={editingService?.category ?? ""} className={inputClass} maxLength={255} />
+                        </Field>
+                        <Field label="Phân nhóm">
+                            <input name="subcategory" defaultValue={editingService?.subcategory ?? ""} className={inputClass} maxLength={255} />
+                        </Field>
+                        <Field label="Mô tả dịch vụ" span>
+                            <textarea name="description" defaultValue={editingService?.description ?? ""} className={textareaClass} maxLength={2000} />
+                        </Field>
+                        <label className="flex items-center gap-3 text-xs font-semibold text-ink md:col-span-2">
+                            <input type="checkbox" name="booking_enabled" defaultChecked={editingService?.booking_enabled ?? true} className="size-4 accent-[#9e7562]" />
+                            Cho phép đặt trực tuyến (cần có thời lượng)
+                        </label>
                         <div className="flex justify-end gap-3 md:col-span-2">
                             <button type="button" onClick={() => setModal(null)} className="rounded-full border border-line px-5 py-2.5 text-xs font-semibold">Hủy</button>
                             <button disabled={submitting} className="rounded-full bg-ink px-5 py-2.5 text-xs font-semibold text-white disabled:opacity-50">
