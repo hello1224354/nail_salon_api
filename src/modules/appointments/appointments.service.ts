@@ -248,7 +248,7 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
     let ownerId: string;
 
     if (actorRole === UserRole.CUSTOMER) {
-        if (data.user_id !== undefined) throw new AppError("Customers cannot specify user_id", 403, "FORBIDDEN");
+        if (data.user_id !== undefined || data.customer_email !== undefined) throw new AppError("Customers cannot specify another customer", 403, "FORBIDDEN");
 
         ownerId = actorId;
 
@@ -259,13 +259,22 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
 
         if (startTime > now + CUSTOMER_MAX_BOOKING_HORIZON_MS) throw new AppError("Customers cannot book more than 14 days in advance", 400, "VALIDATION_ERROR");
     } else if (actorRole === UserRole.ADMIN) {
-        if (data.user_id === undefined) throw new AppError("User_id is required when admin creates an appointment", 400, "VALIDATION_ERROR");
+        if (!data.user_id && !data.customer_email) {
+            throw new AppError("Customer email is required for admin booking", 400, "VALIDATION_ERROR");
+        }
 
-        const targetUser = await userService.getUser(data.user_id);
+        const targetUser = data.customer_email
+            ? await AppDataSource.getRepository(User).findOneBy({
+                  email: data.customer_email,
+                  role: UserRole.CUSTOMER,
+              })
+            : await userService.getUser(data.user_id!);
 
-        if (!targetUser) throw new AppError("User not found", 404, "USER_NOT_FOUND");
+        if (!targetUser || targetUser.role !== UserRole.CUSTOMER) {
+            throw new AppError("Customer account not found", 404, "CUSTOMER_NOT_FOUND");
+        }
 
-        ownerId = data.user_id;
+        ownerId = targetUser.id;
     } else {
         throw new AppError("You do not have permission to perform this action", 403, "FORBIDDEN");
     }
@@ -593,6 +602,13 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
         if (!appointment) return null;
 
         if (role === UserRole.CUSTOMER) throw new AppError("Customers cannot update appointments", 403, "FORBIDDEN");
+        if (role === UserRole.STAFF && data.customer_phone !== undefined) {
+            throw new AppError("Staff cannot change customer contact information", 403, "FORBIDDEN");
+        }
+        if (role === UserRole.ADMIN && data.customer_phone !== undefined &&
+            [AppointmentStatus.COMPLETED, AppointmentStatus.CANCELLED].includes(appointment.status)) {
+            throw new AppError("Closed appointment contact information cannot be modified", 409, "APPOINTMENT_NOT_EDITABLE");
+        }
 
         if (role === UserRole.STAFF) {
             if (data.staff_id !== undefined) throw new AppError("Staff cannot change appointment staff", 403, "FORBIDDEN");
@@ -616,6 +632,10 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
         }
 
         if ((appointment.status === AppointmentStatus.IN_PROGRESS || appointment.status === AppointmentStatus.COMPLETED || appointment.status === AppointmentStatus.CANCELLED) && (data.staff_id !== undefined || data.service_ids !== undefined || data.start_time !== undefined)) throw new AppError("In-progress, completed, or cancelled appointment cannot be modified", 409, "APPOINTMENT_NOT_EDITABLE");
+
+        if (data.customer_phone !== undefined) {
+            appointment.customer_phone = data.customer_phone;
+        }
 
         let targetStaffId = appointment.staff_id;
         let targetStaffFullName = appointment.staff_full_name;

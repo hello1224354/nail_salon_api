@@ -185,7 +185,7 @@ export function CurrentOffers({ offers, instagramHandle }: CurrentOffersProps) {
             </div>
 
             {offers.length > 1 ? (
-                <div className="pointer-events-none absolute inset-x-2 top-1/2 z-20 flex -translate-y-1/2 items-center justify-between sm:inset-x-3">
+                <div className="pointer-events-none absolute inset-x-3 top-1/2 z-20 hidden -translate-y-1/2 items-center justify-between lg:flex">
                     <button
                         type="button"
                         aria-label="Ưu đãi trước"

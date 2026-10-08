@@ -18,6 +18,7 @@ import {
     type ServiceList,
 } from "@/lib/api";
 import { getAuthUser, logoutSession, restoreSession, type AuthUser } from "@/lib/auth";
+import { AdminAppointmentForm, type AppointmentPayload } from "./AdminAppointmentForm";
 import { formatAppointmentStatus, formatServicePrice, formatVnd, localizeBranchName, shortBranchName } from "@/lib/studio-data";
 
 type TabKey = "overview" | "appointments" | "services" | "staff" | "branches" | "offers";
@@ -180,9 +181,11 @@ export function AdminDashboard() {
     const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState("");
     const [toast, setToast] = useState("");
-    const [modal, setModal] = useState<null | "branch" | "service" | "staff" | "offer">(null);
+    const [modal, setModal] = useState<null | "branch" | "service" | "staff" | "offer" | "appointment">(null);
     const [editingBranch, setEditingBranch] = useState<Branch | null>(null);
     const [editingService, setEditingService] = useState<Service | null>(null);
+    const [editingStaff, setEditingStaff] = useState<AdminStaff | null>(null);
+    const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
     const [editingOffer, setEditingOffer] = useState<Offer | null>(null);
     const [appointmentStatus, setAppointmentStatus] = useState("");
     const [appointmentBranch, setAppointmentBranch] = useState("");
@@ -216,19 +219,34 @@ export function AdminDashboard() {
     }, [router]);
 
     const loadStaticData = useCallback(async () => {
-        const [branchesResult, servicesResult, staffResult, offersResult] = await Promise.all([
-            apiRequest<BranchList>("/api/branches/admin?page=1&limit=100"),
-            apiRequest<ServiceList>("/api/services/admin?page=1&limit=100"),
+        async function loadPages<T extends { total_pages: number }, R>(
+            basePath: string,
+            extract: (result: T) => R[]
+        ): Promise<R[]> {
+            const rows: R[] = [];
+            let page = 1;
+            while (page <= 1000) {
+                const result = await apiRequest<T>(`${basePath}?page=${page}&limit=100`);
+                rows.push(...extract(result));
+                if (page >= result.total_pages) break;
+                page += 1;
+            }
+            return rows;
+        }
+
+        const [branches, services, staff, offers] = await Promise.all([
+            loadPages<BranchList, Branch>("/api/branches/admin", (result) => result.branches),
+            loadPages<ServiceList, Service>("/api/services/admin", (result) => result.services),
             apiRequest<AdminStaff[]>("/api/staffs/admin"),
-            apiRequest<OfferList>("/api/offers/admin?page=1&limit=100"),
+            loadPages<OfferList, Offer>("/api/offers/admin", (result) => result.offers),
         ]);
 
         setData((current) => ({
             ...current,
-            branches: branchesResult.branches,
-            services: servicesResult.services,
-            staff: staffResult,
-            offers: offersResult.offers,
+            branches,
+            services,
+            staff,
+            offers,
         }));
     }, []);
 
@@ -340,6 +358,26 @@ export function AdminDashboard() {
         }
     }
 
+    async function saveAppointment(payload: AppointmentPayload) {
+        setSubmitting(true);
+        try {
+            await apiRequest<Appointment>(
+                editingAppointment ? `/api/appointments/${editingAppointment.id}` : "/api/appointments",
+                {
+                    method: editingAppointment ? "PUT" : "POST",
+                    body: JSON.stringify(payload),
+                }
+            );
+            setModal(null);
+            setEditingAppointment(null);
+            await refresh(editingAppointment ? "Đã cập nhật lịch hẹn." : "Đã tạo lịch hẹn.");
+        } catch (saveError) {
+            setToast(getApiErrorMessage(saveError, "Chưa lưu được lịch hẹn. Kiểm tra tài khoản khách và tình trạng trống của nhân viên."));
+        } finally {
+            setSubmitting(false);
+        }
+    }
+
     async function deleteAppointment(appointment: Appointment) {
         if (!window.confirm(`Xóa vĩnh viễn lịch hẹn #${appointment.id.slice(0, 8).toUpperCase()}? Dữ liệu này sẽ không thể khôi phục.`)) return;
 
@@ -360,6 +398,8 @@ export function AdminDashboard() {
         const payload = {
             name: String(form.get("name") || "").trim(),
             address: String(form.get("address") || "").trim(),
+            phone: String(form.get("phone") || "").trim() || null,
+            opening_hours: String(form.get("opening_hours") || "").trim() || null,
         };
 
         setSubmitting(true);
@@ -398,10 +438,15 @@ export function AdminDashboard() {
     async function saveService(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
         const form = new FormData(event.currentTarget);
+        const duration = String(form.get("duration_minutes") || "").trim();
         const base = {
             name: String(form.get("name") || "").trim(),
             price: Number(form.get("price")),
-            duration_minutes: Number(form.get("duration_minutes")),
+            duration_minutes: duration ? Number(duration) : null,
+            booking_enabled: form.get("booking_enabled") === "on",
+            category: String(form.get("category") || "").trim() || null,
+            subcategory: String(form.get("subcategory") || "").trim() || null,
+            description: String(form.get("description") || "").trim() || null,
         };
         const payload = editingService
             ? base
@@ -443,39 +488,26 @@ export function AdminDashboard() {
     async function saveStaff(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
         const form = new FormData(event.currentTarget);
+        const password = String(form.get("password") || "");
         const payload = {
             full_name: String(form.get("full_name") || "").trim(),
             phone: String(form.get("phone") || "").trim(),
-            email: String(form.get("email") || "").trim() || null,
-            password: String(form.get("password") || ""),
+            email: String(form.get("email") || "").trim(),
             branch_id: Number(form.get("branch_id")),
+            ...(editingStaff ? (password ? { password } : {}) : { password }),
         };
 
         setSubmitting(true);
         try {
             await apiRequest<AdminStaff>(
-                "/api/staffs",
-                { method: "POST", body: JSON.stringify(payload) }
+                editingStaff ? `/api/staffs/${editingStaff.id}` : "/api/staffs",
+                { method: editingStaff ? "PUT" : "POST", body: JSON.stringify(payload) }
             );
             setModal(null);
-            await refresh("Đã thêm nhân viên.");
+            setEditingStaff(null);
+            await refresh(editingStaff ? "Đã cập nhật nhân viên." : "Đã thêm nhân viên.");
         } catch (saveError) {
             setToast(getApiErrorMessage(saveError, "Chưa thêm được nhân viên."));
-        } finally {
-            setSubmitting(false);
-        }
-    }
-
-    async function updateStaff(staff: AdminStaff, payload: { branch_id: number }) {
-        setSubmitting(true);
-        try {
-            await apiRequest<AdminStaff>(
-                `/api/staffs/${staff.id}`,
-                { method: "PUT", body: JSON.stringify(payload) }
-            );
-            await refresh("Đã cập nhật nhân viên.");
-        } catch (staffError) {
-            setToast(getApiErrorMessage(staffError, "Chưa cập nhật được nhân viên."));
         } finally {
             setSubmitting(false);
         }
@@ -663,6 +695,8 @@ export function AdminDashboard() {
                                         pages={appointmentPages}
                                         setPage={setAppointmentPage}
                                         updateStatus={updateAppointmentStatus}
+                                        onAdd={() => { setEditingAppointment(null); setModal("appointment"); }}
+                                        onEdit={(appointment) => { setEditingAppointment(appointment); setModal("appointment"); }}
                                         onDelete={deleteAppointment}
                                         submitting={submitting}
                                     />
@@ -689,8 +723,8 @@ export function AdminDashboard() {
                                     <StaffPanel
                                         staff={data.staff}
                                         branches={data.branches}
-                                        onAdd={() => setModal("staff")}
-                                        onUpdate={updateStaff}
+                                        onAdd={() => { setEditingStaff(null); setModal("staff"); }}
+                                        onEdit={(person) => { setEditingStaff(person); setModal("staff"); }}
                                         onDelete={deleteStaff}
                                         submitting={submitting}
                                     />
@@ -733,6 +767,25 @@ export function AdminDashboard() {
                 </main>
             </div>
 
+            {modal === "appointment" ? (
+                <Modal
+                    title={editingAppointment ? "Sửa lịch hẹn" : "Thêm lịch hẹn"}
+                    description="Kiểm tra staff, dịch vụ và slot trước khi đặt."
+                    onClose={() => { setModal(null); setEditingAppointment(null); }}
+                >
+                    <AdminAppointmentForm
+                        key={editingAppointment?.id ?? "new"}
+                        appointment={editingAppointment}
+                        branches={data.branches}
+                        staff={data.staff}
+                        services={data.services}
+                        submitting={submitting}
+                        onSave={saveAppointment}
+                        onCancel={() => { setModal(null); setEditingAppointment(null); }}
+                    />
+                </Modal>
+            ) : null}
+
             {modal === "branch" ? (
                 <Modal
                     title={editingBranch ? "Sửa chi nhánh" : "Thêm chi nhánh"}
@@ -747,6 +800,12 @@ export function AdminDashboard() {
                         </Field>
                         <Field label="Địa chỉ" span>
                             <input name="address" defaultValue={editingBranch?.address || ""} className={inputClass} required maxLength={255} />
+                        </Field>
+                        <Field label="Điện thoại chi nhánh">
+                            <input name="phone" type="tel" defaultValue={editingBranch?.phone ?? ""} className={inputClass} maxLength={255} />
+                        </Field>
+                        <Field label="Giờ mở cửa">
+                            <input name="opening_hours" defaultValue={editingBranch?.opening_hours ?? ""} className={inputClass} maxLength={255} placeholder="09:00–20:30" />
                         </Field>
                         <div className="flex justify-end gap-3 md:col-span-2">
                             <button type="button" onClick={() => setModal(null)} className="rounded-full border border-line px-5 py-2.5 text-xs font-semibold">
@@ -792,8 +851,21 @@ export function AdminDashboard() {
                             <input name="price" type="number" min="0" step="1" defaultValue={editingService?.price ?? ""} className={inputClass} required />
                         </Field>
                         <Field label="Thời lượng (phút)">
-                            <input name="duration_minutes" type="number" min="1" step="1" defaultValue={editingService?.duration_minutes ?? ""} className={inputClass} required />
+                            <input name="duration_minutes" type="number" min="1" step="1" defaultValue={editingService?.duration_minutes ?? ""} className={inputClass} placeholder="Để trống nếu chưa nhận đặt lịch" />
                         </Field>
+                        <Field label="Nhóm dịch vụ">
+                            <input name="category" defaultValue={editingService?.category ?? ""} className={inputClass} maxLength={255} />
+                        </Field>
+                        <Field label="Phân nhóm">
+                            <input name="subcategory" defaultValue={editingService?.subcategory ?? ""} className={inputClass} maxLength={255} />
+                        </Field>
+                        <Field label="Mô tả dịch vụ" span>
+                            <textarea name="description" defaultValue={editingService?.description ?? ""} className={textareaClass} maxLength={2000} />
+                        </Field>
+                        <label className="flex items-center gap-3 text-xs font-semibold text-ink md:col-span-2">
+                            <input type="checkbox" name="booking_enabled" defaultChecked={editingService?.booking_enabled ?? true} className="size-4 accent-[#9e7562]" />
+                            Cho phép đặt trực tuyến (cần có thời lượng)
+                        </label>
                         <div className="flex justify-end gap-3 md:col-span-2">
                             <button type="button" onClick={() => setModal(null)} className="rounded-full border border-line px-5 py-2.5 text-xs font-semibold">Hủy</button>
                             <button disabled={submitting} className="rounded-full bg-ink px-5 py-2.5 text-xs font-semibold text-white disabled:opacity-50">
@@ -805,13 +877,17 @@ export function AdminDashboard() {
             ) : null}
 
             {modal === "staff" ? (
-                <Modal title="Thêm nhân viên" description="Tài khoản nhân viên được tạo đồng thời với hồ sơ nhân sự." onClose={() => setModal(null)}>
+                <Modal
+                    title={editingStaff ? "Sửa nhân viên" : "Thêm nhân viên"}
+                    description="Chỉ chỉnh sửa tài khoản STAFF. Đổi email hoặc mật khẩu sẽ đăng xuất các phiên nhân viên hiện tại."
+                    onClose={() => { setModal(null); setEditingStaff(null); }}
+                >
                     <form onSubmit={saveStaff} className="grid gap-5 md:grid-cols-2">
                         <Field label="Họ tên">
-                            <input name="full_name" className={inputClass} required />
+                            <input name="full_name" defaultValue={editingStaff?.full_name ?? ""} className={inputClass} required maxLength={255} />
                         </Field>
                         <Field label="Chi nhánh">
-                            <select name="branch_id" className={selectClass} required defaultValue="">
+                            <select name="branch_id" className={selectClass} required defaultValue={editingStaff?.branch_id ?? ""}>
                                 <option value="" disabled>Chọn chi nhánh</option>
                                 {data.branches.map((branch) => (
                                     <option key={branch.id} value={branch.id}>{shortBranchName(branch.name)}</option>
@@ -819,18 +895,18 @@ export function AdminDashboard() {
                             </select>
                         </Field>
                         <Field label="Số điện thoại">
-                            <input name="phone" type="tel" className={inputClass} required />
+                            <input name="phone" type="tel" defaultValue={editingStaff?.phone ?? ""} className={inputClass} required />
                         </Field>
-                        <Field label="Email">
-                            <input name="email" type="email" className={inputClass} />
+                        <Field label="Email đăng nhập">
+                            <input name="email" type="email" defaultValue={editingStaff?.email ?? ""} className={inputClass} required />
                         </Field>
-                        <Field label="Mật khẩu khởi tạo" span>
-                            <input name="password" type="password" minLength={8} className={inputClass} required />
+                        <Field label={editingStaff ? "Mật khẩu mới (bỏ trống nếu giữ nguyên)" : "Mật khẩu khởi tạo"} span>
+                            <input name="password" type="password" autoComplete="new-password" minLength={8} className={inputClass} required={!editingStaff} />
                         </Field>
                         <div className="flex justify-end gap-3 md:col-span-2">
-                            <button type="button" onClick={() => setModal(null)} className="rounded-full border border-line px-5 py-2.5 text-xs font-semibold">Hủy</button>
+                            <button type="button" onClick={() => { setModal(null); setEditingStaff(null); }} className="rounded-full border border-line px-5 py-2.5 text-xs font-semibold">Hủy</button>
                             <button disabled={submitting} className="rounded-full bg-ink px-5 py-2.5 text-xs font-semibold text-white disabled:opacity-50">
-                                {submitting ? "Đang tạo…" : "Tạo nhân viên"}
+                                {submitting ? "Đang lưu…" : editingStaff ? "Lưu nhân viên" : "Tạo nhân viên"}
                             </button>
                         </div>
                     </form>
@@ -985,6 +1061,8 @@ function AppointmentsPanel({
     pages,
     setPage,
     updateStatus,
+    onAdd,
+    onEdit,
     onDelete,
     submitting,
 }: {
@@ -998,6 +1076,8 @@ function AppointmentsPanel({
     pages: number;
     setPage: (page: number) => void;
     updateStatus: (appointment: Appointment, status: string) => Promise<void>;
+    onAdd: () => void;
+    onEdit: (appointment: Appointment) => void;
     onDelete: (appointment: Appointment) => Promise<void>;
     submitting: boolean;
 }) {
@@ -1009,6 +1089,9 @@ function AppointmentsPanel({
                     <h2 className="mt-1 font-serif text-3xl">Lịch hẹn</h2>
                 </div>
                 <div className="flex flex-col gap-2 sm:flex-row">
+                    <button type="button" onClick={onAdd} className="h-10 rounded-full bg-ink px-4 text-xs font-semibold text-white">
+                        + Thêm lịch hẹn
+                    </button>
                     <select value={branchFilter} onChange={(event) => setBranchFilter(event.target.value)} className="h-10 rounded-xl border border-line bg-cream px-3 text-xs outline-none">
                         <option value="">Tất cả chi nhánh</option>
                         {branches.map((branch) => <option key={branch.id} value={branch.id}>{shortBranchName(branch.name)}</option>)}
@@ -1052,7 +1135,8 @@ function AppointmentsPanel({
                                     </td>
                                     <td className="px-5 py-4">
                                         <p className="font-medium">{appointment.customer?.full_name || "—"}</p>
-                                        <p className="mt-1 text-[10px] text-muted">{appointment.customer?.phone || appointment.user_id.slice(0, 8)}</p>
+                                        <p className="mt-1 text-[10px] text-muted">{appointment.customer?.phone || "—"}</p>
+                                        <p className="mt-1 text-[10px] text-muted">{appointment.customer?.email || "—"}</p>
                                     </td>
                                     <td className="max-w-[240px] px-5 py-4">
                                         <p className="leading-5">{appointment.appointment_services?.map((service) => service.service_name).join(", ") || "—"}</p>
@@ -1069,6 +1153,9 @@ function AppointmentsPanel({
                                     </td>
                                     <td className="px-5 py-4">
                                         <div className="flex items-center gap-3">
+                                            {["pending", "confirmed"].includes(appointment.status) ? (
+                                                <button type="button" onClick={() => onEdit(appointment)} className="font-semibold text-accent">Sửa</button>
+                                            ) : null}
                                             {allowed.length ? (
                                                 <select
                                                     defaultValue=""
@@ -1175,14 +1262,14 @@ function StaffPanel({
     staff,
     branches,
     onAdd,
-    onUpdate,
+    onEdit,
     onDelete,
     submitting,
 }: {
     staff: AdminStaff[];
     branches: Branch[];
     onAdd: () => void;
-    onUpdate: (staff: AdminStaff, payload: { branch_id: number }) => Promise<void>;
+    onEdit: (staff: AdminStaff) => void;
     onDelete: (staff: AdminStaff) => Promise<void>;
     submitting: boolean;
 }) {
@@ -1207,24 +1294,21 @@ function StaffPanel({
                                     <p>{person.phone}</p>
                                     <p className="mt-1 text-[10px] text-muted">{person.email || "Chưa có email"}</p>
                                 </td>
+                                <td className="px-5 py-4">{shortBranchName(branches.find((branch) => branch.id === person.branch_id)?.name ?? person.branch_name ?? `#${person.branch_id}`)}</td>
                                 <td className="px-5 py-4">
-                                    <select
-                                        value={person.branch_id}
-                                        disabled={submitting}
-                                        onChange={(event) => void onUpdate(person, { branch_id: Number(event.target.value) })}
-                                        className="h-9 rounded-lg border border-line bg-white px-2 text-[11px]"
-                                    >
-                                        {branches.map((branch) => <option key={branch.id} value={branch.id}>{shortBranchName(branch.name)}</option>)}
-                                    </select>
-                                </td>
-                                <td className="px-5 py-4">
-                                    <button
-                                        disabled={submitting}
-                                        onClick={() => void onDelete(person)}
-                                        className="font-semibold text-[#8a5147]"
-                                    >
-                                        Xóa
-                                    </button>
+                                    <div className="flex items-center gap-3">
+                                        <button type="button" onClick={() => onEdit(person)} className="font-semibold text-accent">
+                                            Sửa
+                                        </button>
+                                        <button
+                                            type="button"
+                                            disabled={submitting}
+                                            onClick={() => void onDelete(person)}
+                                            className="font-semibold text-[#8a5147]"
+                                        >
+                                            Xóa
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         ))}
@@ -1259,6 +1343,10 @@ function BranchesPanel({
                             <h3 className="mt-2 font-serif text-2xl">{shortBranchName(branch.name)}</h3>
                         </div>
                         <p className="mt-4 min-h-10 text-xs leading-5 text-muted">{branch.address}</p>
+                        <div className="mt-3 space-y-1 text-xs text-muted">
+                            <p>Điện thoại: {branch.phone || "Chưa có"}</p>
+                            <p>Giờ mở cửa: {branch.opening_hours || "Chưa có"}</p>
+                        </div>
                         <div className="mt-5 flex gap-4 border-t border-line pt-4 text-[11px]">
                             <button onClick={() => onEdit(branch)} className="font-semibold text-accent">Chỉnh sửa</button>
                             <button disabled={submitting} onClick={() => void onDelete(branch)} className="font-semibold text-[#8a5147]">Xóa</button>
