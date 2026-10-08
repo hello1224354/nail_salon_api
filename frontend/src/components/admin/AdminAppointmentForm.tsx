@@ -4,13 +4,12 @@ import { useMemo, useState, type FormEvent } from "react";
 import type { AdminStaff, Appointment, Branch, Service } from "@/lib/api";
 import { formatVnd, shortBranchName } from "@/lib/studio-data";
 
+// ADMIN may adjust an existing appointment, never create one on behalf of a customer.
 export type AppointmentPayload = {
-    customer_email?: string;
     customer_phone?: string;
     staff_id?: string;
     service_ids?: string[];
     start_time?: string;
-    party_size?: number;
 };
 
 function vietnamDateTime(iso: string) {
@@ -37,7 +36,7 @@ export function AdminAppointmentForm({
     onSave,
     onCancel,
 }: {
-    appointment: Appointment | null;
+    appointment: Appointment;
     branches: Branch[];
     staff: AdminStaff[];
     services: Service[];
@@ -45,16 +44,13 @@ export function AdminAppointmentForm({
     onSave: (payload: AppointmentPayload) => Promise<void>;
     onCancel: () => void;
 }) {
-    const [branchId, setBranchId] = useState(appointment?.branch_id ?? branches[0]?.id ?? 0);
-    const [staffId, setStaffId] = useState(appointment?.staff_id ?? "");
+    const [branchId, setBranchId] = useState(appointment.branch_id);
+    const [staffId, setStaffId] = useState(appointment.staff_id);
     const [serviceIds, setServiceIds] = useState<string[]>(
-        appointment?.appointment_services?.map((service) => service.service_id) ?? []
+        appointment.appointment_services?.map((service) => service.service_id) ?? []
     );
-    const [localDateTime, setLocalDateTime] = useState(
-        appointment ? vietnamDateTime(appointment.start_time) : ""
-    );
-    const [customerEmail, setCustomerEmail] = useState("");
-    const [customerPhone, setCustomerPhone] = useState(appointment?.customer?.phone ?? "");
+    const [localDateTime, setLocalDateTime] = useState(vietnamDateTime(appointment.start_time));
+    const [customerPhone, setCustomerPhone] = useState(appointment.customer?.phone ?? "");
     const [formError, setFormError] = useState("");
 
     const branchStaff = useMemo(
@@ -62,7 +58,9 @@ export function AdminAppointmentForm({
         [staff, branchId]
     );
     const branchServices = useMemo(
-        () => services.filter((service) => service.branch_id === branchId && service.booking_enabled && service.duration_minutes !== null),
+        () => services.filter((service) =>
+            service.branch_id === branchId && service.booking_enabled && service.duration_minutes !== null
+        ),
         [services, branchId]
     );
     const selectedServices = branchServices.filter((service) => serviceIds.includes(service.id));
@@ -77,11 +75,13 @@ export function AdminAppointmentForm({
             setFormError("Chọn chi nhánh, nhân viên, ít nhất một dịch vụ và thời gian hẹn.");
             return;
         }
+
         if (branchStaff.every((person) => person.id !== staffId) ||
             serviceIds.some((id) => branchServices.every((service) => service.id !== id))) {
             setFormError("Nhân viên và dịch vụ phải cùng chi nhánh, đồng thời đang nhận đặt lịch.");
             return;
         }
+
         if (Number(localDateTime.slice(14, 16)) % 15 !== 0) {
             setFormError("Giờ hẹn phải nằm trên các mốc 15 phút.");
             return;
@@ -93,85 +93,45 @@ export function AdminAppointmentForm({
             return;
         }
 
-        if (appointment) {
-            const payload: AppointmentPayload = {};
-            const oldIds = appointment.appointment_services?.map((service) => service.service_id) ?? [];
-            if (customerPhone.trim() !== (appointment.customer?.phone ?? "")) {
-                payload.customer_phone = customerPhone.trim();
-            }
-            if (staffId !== appointment.staff_id) payload.staff_id = staffId;
-            if (serviceIds.length !== oldIds.length || serviceIds.some((id) => !oldIds.includes(id))) {
-                payload.service_ids = serviceIds;
-            }
-            if (new Date(startTime).getTime() !== new Date(appointment.start_time).getTime()) {
-                payload.start_time = startTime;
-            }
-            if (!Object.keys(payload).length) {
-                setFormError("Chưa có thay đổi nào để lưu.");
-                return;
-            }
-            await onSave(payload);
+        const payload: AppointmentPayload = {};
+        const oldIds = appointment.appointment_services?.map((service) => service.service_id) ?? [];
+
+        if (customerPhone.trim() !== (appointment.customer?.phone ?? "")) {
+            payload.customer_phone = customerPhone.trim();
+        }
+        if (staffId !== appointment.staff_id) payload.staff_id = staffId;
+        if (serviceIds.length !== oldIds.length || serviceIds.some((id) => !oldIds.includes(id))) {
+            payload.service_ids = serviceIds;
+        }
+        if (new Date(startTime).getTime() !== new Date(appointment.start_time).getTime()) {
+            payload.start_time = startTime;
+        }
+
+        if (!Object.keys(payload).length) {
+            setFormError("Chưa có thay đổi nào để lưu.");
             return;
         }
 
-        if (!customerEmail.trim() || !customerPhone.trim()) {
-            setFormError("Nhập email tài khoản khách và số điện thoại của lịch hẹn.");
-            return;
-        }
-
-        await onSave({
-            customer_email: customerEmail.trim(),
-            customer_phone: customerPhone.trim(),
-            staff_id: staffId,
-            service_ids: serviceIds,
-            start_time: startTime,
-            party_size: 1,
-        });
+        await onSave(payload);
     }
 
     return (
         <form onSubmit={(event) => void handleSubmit(event)} className="space-y-5">
-            {appointment ? (
-                <div className="rounded-xl border border-line bg-white p-4 text-xs leading-5 text-muted">
-                    Khách: <strong className="text-ink">{appointment.customer?.full_name ?? "—"}</strong>
-                    {" · "}{appointment.customer?.email ?? "Không có email"}
-                    {appointment.party_size > 1 ? (
-                        <p className="mt-2 text-[#8a5147]">
-                            Lịch nhóm: thao tác chỉnh sửa áp dụng riêng cho suất hẹn này.
-                        </p>
-                    ) : null}
-                </div>
-            ) : (
-                <div className="rounded-xl border border-line bg-white p-4 text-xs leading-5 text-muted">
-                    Tạo lịch cho khách đã có tài khoản bằng email. Admin chỉ nhập email khi đặt lịch,
-                    không có quyền mở hoặc sửa tài khoản CUSTOMER. Mỗi lượt tạo là một lịch cho một người.
-                </div>
-            )}
+            <div className="rounded-xl border border-line bg-white p-4 text-xs leading-5 text-muted">
+                Khách: <strong className="text-ink">{appointment.customer?.full_name ?? "—"}</strong>
+                {" · "}{appointment.customer?.email ?? "Không có email"}
+                {appointment.party_size > 1 ? (
+                    <p className="mt-2 text-[#8a5147]">
+                        Lịch nhóm: thao tác chỉnh sửa áp dụng riêng cho suất hẹn này.
+                    </p>
+                ) : null}
+            </div>
 
-            {!appointment ? (
-                <div className="grid gap-4 sm:grid-cols-2">
-                    <label>
-                        <span className={captionClass}>Email tài khoản khách</span>
-                        <input className={inputClass} type="email" required autoComplete="off"
-                            value={customerEmail} onChange={(event) => setCustomerEmail(event.target.value)}
-                            placeholder="khach@example.com" />
-                    </label>
-                    <label>
-                        <span className={captionClass}>SĐT liên hệ cho lịch hẹn</span>
-                        <input className={inputClass} type="tel" required autoComplete="off"
-                            value={customerPhone} onChange={(event) => setCustomerPhone(event.target.value)}
-                            placeholder="0901 234 567" />
-                    </label>
-                </div>
-            ) : null}
-
-            {appointment ? (
-                <label className="block">
-                    <span className={captionClass}>SĐT liên hệ cho lịch hẹn (không sửa tài khoản khách)</span>
-                    <input className={inputClass} type="tel" required value={customerPhone}
-                        onChange={(event) => setCustomerPhone(event.target.value)} />
-                </label>
-            ) : null}
+            <label className="block">
+                <span className={captionClass}>SĐT liên hệ cho lịch hẹn (không sửa tài khoản khách)</span>
+                <input className={inputClass} type="tel" required value={customerPhone}
+                    onChange={(event) => setCustomerPhone(event.target.value)} />
+            </label>
 
             <div className="grid gap-4 sm:grid-cols-2">
                 <label>
@@ -182,7 +142,9 @@ export function AdminAppointmentForm({
                             setStaffId("");
                             setServiceIds([]);
                         }} required>
-                        {branches.map((branch) => <option key={branch.id} value={branch.id}>{shortBranchName(branch.name)}</option>)}
+                        {branches.map((branch) => (
+                            <option key={branch.id} value={branch.id}>{shortBranchName(branch.name)}</option>
+                        ))}
                     </select>
                 </label>
                 <label>
@@ -190,7 +152,9 @@ export function AdminAppointmentForm({
                     <select className={inputClass} value={staffId}
                         onChange={(event) => setStaffId(event.target.value)} required>
                         <option value="">Chọn nhân viên</option>
-                        {branchStaff.map((person) => <option key={person.id} value={person.id}>{person.full_name}</option>)}
+                        {branchStaff.map((person) => (
+                            <option key={person.id} value={person.id}>{person.full_name}</option>
+                        ))}
                     </select>
                 </label>
                 <label className="sm:col-span-2">
@@ -208,12 +172,9 @@ export function AdminAppointmentForm({
                             <span className="flex items-center gap-2">
                                 <input type="checkbox" className="accent-[#9e7562]"
                                     checked={serviceIds.includes(service.id)}
-                                    onChange={(event) =>
-                                        setServiceIds((ids) => event.target.checked
-                                            ? [...ids, service.id]
-                                            : ids.filter((id) => id !== service.id)
-                                        )
-                                    } />
+                                    onChange={(event) => setServiceIds((ids) =>
+                                        event.target.checked ? [...ids, service.id] : ids.filter((id) => id !== service.id)
+                                    )} />
                                 <span>{service.display_name || service.name}</span>
                             </span>
                             <span className="shrink-0 text-muted">{service.duration_minutes}p · {formatVnd(service.price)}đ</span>
@@ -232,7 +193,7 @@ export function AdminAppointmentForm({
                 <button type="button" onClick={onCancel} className="rounded-full border border-line px-5 py-2.5 text-xs font-semibold">Hủy</button>
                 <button type="submit" disabled={submitting || !branches.length || !branchStaff.length}
                     className="rounded-full bg-ink px-5 py-2.5 text-xs font-semibold text-white disabled:opacity-50">
-                    {submitting ? "Đang lưu…" : appointment ? "Lưu thay đổi" : "Tạo lịch hẹn"}
+                    {submitting ? "Đang lưu…" : "Lưu thay đổi"}
                 </button>
             </div>
         </form>

@@ -266,6 +266,15 @@ export type Appointment = {
     };
 };
 
+export type AdminTodaySummary = {
+    total: number;
+    pending: number;
+    confirmed: number;
+    completed: number;
+    cancelled: number;
+    revenue: number;
+};
+
 export type AppointmentList = {
     appointments: Appointment[];
     total: number;
