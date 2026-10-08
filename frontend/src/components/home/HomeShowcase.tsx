@@ -102,7 +102,7 @@ function CarouselArrows({
         "focus-ring pointer-events-auto flex size-11 items-center justify-center rounded-full border border-line bg-surface/95 font-semibold text-ink shadow-[0_10px_30px_rgba(48,40,35,0.12)] backdrop-blur-sm transition hover:bg-tint";
 
     return (
-        <div className="pointer-events-none absolute inset-x-2 top-1/2 z-20 flex -translate-y-1/2 items-center justify-between sm:inset-x-3">
+        <div className="pointer-events-none absolute inset-x-3 top-1/2 z-20 hidden -translate-y-1/2 items-center justify-between lg:flex">
             <button
                 type="button"
                 aria-label={`${label} trước`}
@@ -209,7 +209,7 @@ function HotTrendCarousel({ items }: { items: InstagramTrendItem[] }) {
                     {items.map((item, index) => (
                         <div
                             key={item.id}
-                            className="min-w-0 shrink-0 grow-0 basis-1/2 pl-4 lg:basis-1/3"
+                            className="min-w-0 shrink-0 grow-0 basis-full pl-4 lg:basis-1/3"
                         >
                             <HotTrendCard item={item} index={index} />
                         </div>
@@ -234,20 +234,20 @@ function HotTrendCarousel({ items }: { items: InstagramTrendItem[] }) {
 
 function ReviewCard({ review }: { review: CustomerReview }) {
     return (
-        <article className="flex h-[250px] w-full flex-col rounded-[22px] border border-line bg-surface p-5 shadow-[0_14px_42px_rgba(48,40,35,0.04)] sm:h-[270px] sm:p-6">
-            <blockquote className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-contain whitespace-pre-line pr-2 font-serif text-[19px] leading-[1.3] tracking-[-0.015em] sm:text-[21px]">
+        <article className="flex h-[250px] w-full min-w-0 flex-col overflow-hidden rounded-[22px] border border-line bg-surface px-4 pb-3 pt-4 shadow-[0_14px_42px_rgba(48,40,35,0.04)] sm:h-[270px] sm:px-5 sm:pt-5">
+            <blockquote className="min-h-0 min-w-0 flex-1 touch-pan-y overflow-y-auto overscroll-contain whitespace-pre-line break-words [overflow-wrap:anywhere] pr-2 font-serif text-[19px] leading-[1.3] tracking-[-0.015em] sm:text-[21px]">
                 “{review.content}”
             </blockquote>
-            <div className="mt-4 flex shrink-0 items-end justify-between gap-4 border-t border-line pt-4">
-                <div>
-                    <p className="text-sm font-semibold">{review.display_name}</p>
-                    <p className="mt-1 text-[10px] uppercase tracking-[0.14em] text-muted">{review.source}</p>
+            <div className="mt-2 flex min-w-0 shrink-0 items-center justify-between gap-2 border-t border-line pt-2">
+                <div className="min-w-0 flex-1">
+                    <p className="truncate text-xs font-semibold sm:text-sm">{review.display_name}</p>
+                    <p className="mt-0.5 truncate text-[9px] uppercase tracking-[0.1em] text-muted">{review.source}</p>
                 </div>
                 <a
                     href={review.source_url}
                     target="_blank"
                     rel="noreferrer"
-                    className="focus-ring shrink-0 text-xs font-semibold text-accent hover:underline"
+                    className="focus-ring min-w-0 shrink-0 max-w-[48%] text-right text-[11px] font-semibold leading-4 text-accent [overflow-wrap:anywhere] hover:underline"
                 >
                     Xem đánh giá ↗
                 </a>
@@ -266,7 +266,7 @@ function ReviewsCarousel({ reviews }: { reviews: CustomerReview[] }) {
                     {reviews.map((review) => (
                         <div
                             key={review.id}
-                            className="flex min-w-0 shrink-0 grow-0 basis-1/2 pl-4 lg:basis-1/3"
+                            className="flex min-w-0 shrink-0 grow-0 basis-full pl-4 lg:basis-1/3"
                         >
                             <ReviewCard review={review} />
                         </div>
