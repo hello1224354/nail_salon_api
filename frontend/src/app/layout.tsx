@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
+import { connection } from "next/server";
 import "./globals.css";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
@@ -32,7 +33,11 @@ export const viewport: Viewport = {
     colorScheme: "light",
 };
 
-export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
+    // CSP uses a fresh nonce for every response. The HTML and Next.js hydration
+    // scripts must be rendered within that same request, never at build time.
+    await connection();
+
     return (
         <html lang="vi" className="h-full antialiased">
             <body className="flex min-h-screen flex-col bg-cream text-ink">
