@@ -114,7 +114,7 @@ export function Header() {
                         {branches.length === 0 ? <option value="">Chưa có chi nhánh</option> : null}
                         {branches.map((branch) => (
                             <option key={branch.id} value={branch.id}>
-                                {localizeBranchName(branch.name)}
+                                {localizeBranchName(branch.name).replace(/^Tiệm Nail\s*/i, "")}
                             </option>
                         ))}
                     </select>
@@ -241,7 +241,7 @@ export function Header() {
                                 {branches.length === 0 ? <option value="">Chưa có chi nhánh</option> : null}
                                 {branches.map((branch) => (
                                     <option key={branch.id} value={branch.id}>
-                                        {localizeBranchName(branch.name)}
+                                        {localizeBranchName(branch.name).replace(/^Tiệm Nail\s*/i, "")}
                                     </option>
                                 ))}
                             </select>

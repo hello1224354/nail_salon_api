@@ -72,7 +72,7 @@ function CarouselArrows({
     label: string;
 }) {
     const buttonClass =
-        "focus-ring pointer-events-auto flex size-14 items-center justify-center rounded-full border border-line bg-surface/95 text-2xl font-semibold text-ink shadow-[0_12px_34px_rgba(48,40,35,0.14)] backdrop-blur-sm transition hover:bg-tint";
+        "focus-ring pointer-events-auto flex size-11 items-center justify-center rounded-full border border-line bg-surface/95 font-semibold text-ink shadow-[0_10px_30px_rgba(48,40,35,0.12)] backdrop-blur-sm transition hover:bg-tint";
 
     return (
         <div className="pointer-events-none absolute inset-x-2 top-1/2 z-20 flex -translate-y-1/2 items-center justify-between sm:inset-x-3">
@@ -82,7 +82,7 @@ function CarouselArrows({
                 className={buttonClass}
                 onClick={onPrevious}
             >
-                ←
+                <span aria-hidden="true" className="text-[28px] leading-none">←</span>
             </button>
             <button
                 type="button"
@@ -90,7 +90,7 @@ function CarouselArrows({
                 className={buttonClass}
                 onClick={onNext}
             >
-                →
+                <span aria-hidden="true" className="text-[28px] leading-none">→</span>
             </button>
         </div>
     );
