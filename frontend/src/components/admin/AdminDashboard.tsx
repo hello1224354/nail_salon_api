@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import {
     apiRequest,
     getApiErrorMessage,
     type AdminStaff,
+    type AdminTodaySummary,
     type Appointment,
     type AppointmentList,
     type Branch,
@@ -30,6 +31,7 @@ type LoadState = {
     offers: Offer[];
     appointments: Appointment[];
     appointmentTotal: number;
+    todayStats: AdminTodaySummary;
 };
 
 const emptyState: LoadState = {
@@ -39,6 +41,7 @@ const emptyState: LoadState = {
     offers: [],
     appointments: [],
     appointmentTotal: 0,
+    todayStats: { total: 0, pending: 0, confirmed: 0, completed: 0, cancelled: 0, revenue: 0 },
 };
 
 const tabItems: Array<{ key: TabKey; label: string; short: string }> = [
@@ -274,6 +277,11 @@ export function AdminDashboard() {
         [appointmentBranch, appointmentPage, appointmentStatus]
     );
 
+    const loadTodayStats = useCallback(async () => {
+        const todayStats = await apiRequest<AdminTodaySummary>("/api/appointments/admin/today-summary");
+        setData((current) => ({ ...current, todayStats }));
+    }, []);
+
     const loadAll = useCallback(
         async (quiet = false) => {
             if (quiet) setRefreshing(true);
@@ -281,7 +289,7 @@ export function AdminDashboard() {
             setError("");
 
             try {
-                await Promise.all([loadStaticData(), loadAppointments(appointmentPage)]);
+                await Promise.all([loadStaticData(), loadAppointments(appointmentPage), loadTodayStats()]);
             } catch (loadError) {
                 setError(getApiErrorMessage(loadError, "Chưa tải được dữ liệu quản trị."));
             } finally {
@@ -289,7 +297,7 @@ export function AdminDashboard() {
                 setRefreshing(false);
             }
         },
-        [appointmentPage, loadAppointments, loadStaticData]
+        [appointmentPage, loadAppointments, loadStaticData, loadTodayStats]
     );
 
     useEffect(() => {
@@ -323,23 +331,6 @@ export function AdminDashboard() {
     const serviceCount = data.services.length;
     const staffCount = data.staff.length;
 
-    const todayStats = useMemo(() => {
-        const formatter = new Intl.DateTimeFormat("en-CA", {
-            timeZone: "Asia/Ho_Chi_Minh",
-            year: "numeric",
-            month: "2-digit",
-            day: "2-digit",
-        });
-        const today = formatter.format(new Date());
-        const todays = data.appointments.filter((appointment) => formatter.format(new Date(appointment.start_time)) === today);
-        return {
-            total: todays.length,
-            pending: todays.filter((appointment) => appointment.status === "pending").length,
-            confirmed: todays.filter((appointment) => appointment.status === "confirmed").length,
-            completed: todays.filter((appointment) => appointment.status === "completed").length,
-        };
-    }, [data.appointments]);
-
     async function updateAppointmentStatus(appointment: Appointment, status: string) {
         setSubmitting(true);
         try {
@@ -359,18 +350,19 @@ export function AdminDashboard() {
     }
 
     async function saveAppointment(payload: AppointmentPayload) {
+        if (!editingAppointment) return;
         setSubmitting(true);
         try {
             await apiRequest<Appointment>(
-                editingAppointment ? `/api/appointments/${editingAppointment.id}` : "/api/appointments",
+                `/api/appointments/${editingAppointment?.id}`,
                 {
-                    method: editingAppointment ? "PUT" : "POST",
+                    method: "PUT",
                     body: JSON.stringify(payload),
                 }
             );
             setModal(null);
             setEditingAppointment(null);
-            await refresh(editingAppointment ? "Đã cập nhật lịch hẹn." : "Đã tạo lịch hẹn.");
+            await refresh("Đã cập nhật lịch hẹn.");
         } catch (saveError) {
             setToast(getApiErrorMessage(saveError, "Chưa lưu được lịch hẹn. Kiểm tra tài khoản khách và tình trạng trống của nhân viên."));
         } finally {
@@ -669,7 +661,7 @@ export function AdminDashboard() {
                                 {tab === "overview" ? (
                                     <Overview
                                         data={data}
-                                        todayStats={todayStats}
+                                        todayStats={data.todayStats}
                                         branchCount={branchCount}
                                         serviceCount={serviceCount}
                                         staffCount={staffCount}
@@ -695,7 +687,6 @@ export function AdminDashboard() {
                                         pages={appointmentPages}
                                         setPage={setAppointmentPage}
                                         updateStatus={updateAppointmentStatus}
-                                        onAdd={() => { setEditingAppointment(null); setModal("appointment"); }}
                                         onEdit={(appointment) => { setEditingAppointment(appointment); setModal("appointment"); }}
                                         onDelete={deleteAppointment}
                                         submitting={submitting}
@@ -767,14 +758,14 @@ export function AdminDashboard() {
                 </main>
             </div>
 
-            {modal === "appointment" ? (
+            {modal === "appointment" && editingAppointment ? (
                 <Modal
-                    title={editingAppointment ? "Sửa lịch hẹn" : "Thêm lịch hẹn"}
-                    description="Kiểm tra staff, dịch vụ và slot trước khi đặt."
+                    title="Sửa lịch hẹn"
+                    description="Cập nhật thông tin của lịch hẹn hiện có."
                     onClose={() => { setModal(null); setEditingAppointment(null); }}
                 >
                     <AdminAppointmentForm
-                        key={editingAppointment?.id ?? "new"}
+                        key={editingAppointment.id}
                         appointment={editingAppointment}
                         branches={data.branches}
                         staff={data.staff}
@@ -969,7 +960,7 @@ function Overview({
     setTab,
 }: {
     data: LoadState;
-    todayStats: { total: number; pending: number; confirmed: number; completed: number };
+    todayStats: AdminTodaySummary;
     branchCount: number;
     serviceCount: number;
     staffCount: number;
@@ -1030,20 +1021,32 @@ function Overview({
 
                 <section className="rounded-[22px] border border-line bg-[#2d2926] p-5 text-white">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#d0ad97]">Hôm nay</p>
-                    <h2 className="mt-2 font-serif text-3xl">Nhịp vận hành</h2>
-                    <div className="mt-7 space-y-3">
+                    <div className="mt-5 border-b border-white/15 pb-5">
+                        <h2 className="text-sm font-medium text-white/75">Tổng doanh thu hôm nay</h2>
+                        <p className="mt-2 font-serif text-[clamp(1.8rem,3vw,2.5rem)] leading-tight tracking-[-0.025em] tabular-nums">
+                            {formatVnd(todayStats.revenue)}đ
+                        </p>
+                        <p className="mt-2 text-[10px] leading-4 text-white/50">
+                            Giá trị dịch vụ hoàn thành trong ngày · chưa đối soát thanh toán
+                        </p>
+                    </div>
+                    <div className="mt-5 space-y-3">
                         {[
                             ["Tổng lịch", todayStats.total],
                             ["Chờ xác nhận", todayStats.pending],
                             ["Đã xác nhận", todayStats.confirmed],
                             ["Hoàn thành", todayStats.completed],
+                            ["Đã hủy", todayStats.cancelled],
                         ].map(([label, value]) => (
                             <div key={String(label)} className="flex items-center justify-between border-b border-white/10 pb-3 text-xs">
                                 <span className="text-white/55">{label}</span>
-                                <span className="font-serif text-xl">{value}</span>
+                                <span className="font-serif text-xl tabular-nums">{value}</span>
                             </div>
                         ))}
                     </div>
+                    <p className="mt-3 text-[10px] leading-4 text-white/40">
+                        Số lịch theo ngày hẹn (giờ Việt Nam).
+                    </p>
                 </section>
             </div>
         </div>
@@ -1061,7 +1064,6 @@ function AppointmentsPanel({
     pages,
     setPage,
     updateStatus,
-    onAdd,
     onEdit,
     onDelete,
     submitting,
@@ -1076,7 +1078,6 @@ function AppointmentsPanel({
     pages: number;
     setPage: (page: number) => void;
     updateStatus: (appointment: Appointment, status: string) => Promise<void>;
-    onAdd: () => void;
     onEdit: (appointment: Appointment) => void;
     onDelete: (appointment: Appointment) => Promise<void>;
     submitting: boolean;
@@ -1089,9 +1090,6 @@ function AppointmentsPanel({
                     <h2 className="mt-1 font-serif text-3xl">Lịch hẹn</h2>
                 </div>
                 <div className="flex flex-col gap-2 sm:flex-row">
-                    <button type="button" onClick={onAdd} className="h-10 rounded-full bg-ink px-4 text-xs font-semibold text-white">
-                        + Thêm lịch hẹn
-                    </button>
                     <select value={branchFilter} onChange={(event) => setBranchFilter(event.target.value)} className="h-10 rounded-xl border border-line bg-cream px-3 text-xs outline-none">
                         <option value="">Tất cả chi nhánh</option>
                         {branches.map((branch) => <option key={branch.id} value={branch.id}>{shortBranchName(branch.name)}</option>)}
