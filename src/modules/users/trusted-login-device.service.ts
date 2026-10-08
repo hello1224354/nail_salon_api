@@ -38,7 +38,7 @@ export async function issueTrustedLoginDevice(
     await AppDataSource.transaction(async (manager) => {
         if (previousProof && /^[A-Za-z0-9_-]{43}$/.test(previousProof)) {
             await manager.getRepository(TrustedLoginDevice).update(
-                { token_hash: hashToken(previousProof), revoked_at: IsNull() },
+                { token_hash: hashToken(previousProof), user_id: user.id, revoked_at: IsNull() },
                 { revoked_at: now }
             );
         }
