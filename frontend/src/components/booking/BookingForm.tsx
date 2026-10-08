@@ -37,7 +37,9 @@ type TimeGroup = {
 };
 
 const BUSINESS_TIMEZONE = "Asia/Ho_Chi_Minh";
-const CUSTOMER_ROLE = "customer";
+function canBook(role: string): boolean {
+    return role.toLowerCase() === "customer" || role.toLowerCase() === "admin";
+}
 
 function getBusinessDates(): BookingDate[] {
     const formatter = new Intl.DateTimeFormat("en-CA", {
@@ -208,8 +210,8 @@ export function BookingForm() {
 
                 if (cancelled) return;
 
-                if (currentUser.role.toLowerCase() !== CUSTOMER_ROLE) {
-                    setFormError("Trang đặt lịch này chỉ dành cho tài khoản khách hàng.");
+                if (!canBook(currentUser.role)) {
+                    setFormError("Trang đặt lịch dành cho tài khoản CUSTOMER hoặc ADMIN.");
                     setUser(currentUser);
                     setBranches(branchData.branches);
                     return;
@@ -242,7 +244,7 @@ export function BookingForm() {
     }, [router]);
 
     useEffect(() => {
-        if (selectedBranchId === null || !user || user.role.toLowerCase() !== CUSTOMER_ROLE) {
+        if (selectedBranchId === null || !user || !canBook(user.role)) {
             return;
         }
 
@@ -279,7 +281,7 @@ export function BookingForm() {
     }, [selectedBranchId, user]);
 
     useEffect(() => {
-        if (!user || user.role.toLowerCase() !== CUSTOMER_ROLE || selectedServiceIds.length === 0 || !selectedDate) {
+        if (!user || !canBook(user.role) || selectedServiceIds.length === 0 || !selectedDate) {
             return;
         }
 
@@ -413,8 +415,8 @@ export function BookingForm() {
             return;
         }
 
-        if (user.role.toLowerCase() !== CUSTOMER_ROLE) {
-            setFormError("Trang đặt lịch này chỉ dành cho tài khoản khách hàng.");
+        if (!canBook(user.role)) {
+            setFormError("Trang đặt lịch dành cho tài khoản CUSTOMER hoặc ADMIN.");
             return;
         }
 
@@ -473,7 +475,7 @@ export function BookingForm() {
         selectedTime.length > 0 &&
         availableSlots.has(selectedTime) &&
         isValidVietnamesePhone(customerPhone) &&
-        user?.role.toLowerCase() === CUSTOMER_ROLE;
+        (user !== null && canBook(user.role));
 
     if (initialLoading) {
         return (
