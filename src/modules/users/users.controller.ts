@@ -26,6 +26,8 @@ import {
 } from "../audit/audit-log.service";
 import { AppError } from "../../common/errors";
 import { clearRefreshCookie, readRefreshCookie, setRefreshCookie } from "./session-cookie";
+import { clearTrustedLoginCookie, readTrustedLoginCookie, setTrustedLoginCookie } from "./trusted-login-device.cookie";
+import { isTrustedLoginDevice, issueTrustedLoginDevice } from "./trusted-login-device.service";
 
 const ACCOUNT_LOGIN_WINDOW_MS = 30 * 60 * 1000;
 const ACCOUNT_LOGIN_FAILURE_LIMIT = 10;
@@ -147,7 +149,14 @@ export const loginUser = async (req: Request, res: Response) => {
     try {
         const user = await userService.loginUser(credentials);
 
-        if (user.role === UserRole.ADMIN) {
+        const usesOtp = user.role === UserRole.ADMIN || user.role === UserRole.CUSTOMER;
+        const trusted = usesOtp && await isTrustedLoginDevice(
+            user,
+            readTrustedLoginCookie(req),
+            context.fingerprint.userAgentHash,
+        );
+
+        if (usesOtp && !trusted) {
             const recentMfaSends = await countRecentIdentifierAuditEvents(
                 AuditEventType.MFA_CHALLENGE_SENT,
                 credentials.email,
@@ -172,7 +181,7 @@ export const loginUser = async (req: Request, res: Response) => {
                 );
             }
 
-            const challenge = await loginMfaService.createLoginMfaChallenge(user);
+            const challenge = await loginMfaService.createLoginMfaChallenge(user, credentials.remember_me);
 
             await createAuditLog({
                 event_type: AuditEventType.MFA_CHALLENGE_SENT,
@@ -243,15 +252,23 @@ export const verifyLoginMfa = async (req: Request, res: Response) => {
     const context = requestSecurityContext(req, res);
 
     try {
-        const user = await loginMfaService.verifyLoginMfaChallenge(data.challenge_id, data.code);
+        const verified = await loginMfaService.verifyLoginMfaChallenge(data.challenge_id, data.code);
+        const { user } = verified;
 
-        if (user.role !== UserRole.ADMIN) {
+        if (user.role !== UserRole.ADMIN && user.role !== UserRole.CUSTOMER) {
             throw new AppError("Invalid or expired MFA code", 401, "INVALID_MFA_CODE");
         }
 
-        const session = await authSessionService.createLoginSession(user, context.fingerprint);
+        const session = await authSessionService.createLoginSession(user, context.fingerprint, verified.persistent);
+        const browserProof = await issueTrustedLoginDevice(
+            user,
+            context.fingerprint.userAgentHash,
+            readTrustedLoginCookie(req),
+            session.refreshExpiresAt,
+        );
 
         setRefreshCookie(res, session.refreshToken, session.refreshExpiresAt, session.persistent);
+        setTrustedLoginCookie(res, browserProof, session.refreshExpiresAt);
         res.setHeader("Cache-Control", "no-store");
 
         await createAuditLog({
@@ -404,6 +421,7 @@ export const changePassword = async (req: Request, res: Response) => {
     if (!user) throw new AppError("User not found", 404, "USER_NOT_FOUND");
 
     clearRefreshCookie(res);
+    clearTrustedLoginCookie(res);
 
     await createAuditLog({
         event_type: AuditEventType.PASSWORD_CHANGED,
@@ -460,6 +478,7 @@ export const resetPassword = async (req: Request, res: Response) => {
     );
 
     clearRefreshCookie(res);
+    clearTrustedLoginCookie(res);
 
     await createAuditLog({
         event_type: AuditEventType.PASSWORD_RESET_COMPLETED,
@@ -486,6 +505,7 @@ export const deleteMe = async (req: Request, res: Response) => {
     if (!user) throw new AppError("User not found", 404, "USER_NOT_FOUND");
 
     clearRefreshCookie(res);
+    clearTrustedLoginCookie(res);
 
     return res.status(200).json({
         success: {
