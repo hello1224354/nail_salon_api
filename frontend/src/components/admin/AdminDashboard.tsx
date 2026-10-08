@@ -1046,6 +1046,8 @@ function AppointmentsPanel({
     pages,
     setPage,
     updateStatus,
+    onAdd,
+    onEdit,
     onDelete,
     submitting,
 }: {
@@ -1059,6 +1061,8 @@ function AppointmentsPanel({
     pages: number;
     setPage: (page: number) => void;
     updateStatus: (appointment: Appointment, status: string) => Promise<void>;
+    onAdd: () => void;
+    onEdit: (appointment: Appointment) => void;
     onDelete: (appointment: Appointment) => Promise<void>;
     submitting: boolean;
 }) {
@@ -1070,6 +1074,9 @@ function AppointmentsPanel({
                     <h2 className="mt-1 font-serif text-3xl">Lịch hẹn</h2>
                 </div>
                 <div className="flex flex-col gap-2 sm:flex-row">
+                    <button type="button" onClick={onAdd} className="h-10 rounded-full bg-ink px-4 text-xs font-semibold text-white">
+                        + Thêm lịch hẹn
+                    </button>
                     <select value={branchFilter} onChange={(event) => setBranchFilter(event.target.value)} className="h-10 rounded-xl border border-line bg-cream px-3 text-xs outline-none">
                         <option value="">Tất cả chi nhánh</option>
                         {branches.map((branch) => <option key={branch.id} value={branch.id}>{shortBranchName(branch.name)}</option>)}
@@ -1113,7 +1120,8 @@ function AppointmentsPanel({
                                     </td>
                                     <td className="px-5 py-4">
                                         <p className="font-medium">{appointment.customer?.full_name || "—"}</p>
-                                        <p className="mt-1 text-[10px] text-muted">{appointment.customer?.phone || appointment.user_id.slice(0, 8)}</p>
+                                        <p className="mt-1 text-[10px] text-muted">{appointment.customer?.phone || "—"}</p>
+                                        <p className="mt-1 text-[10px] text-muted">{appointment.customer?.email || "—"}</p>
                                     </td>
                                     <td className="max-w-[240px] px-5 py-4">
                                         <p className="leading-5">{appointment.appointment_services?.map((service) => service.service_name).join(", ") || "—"}</p>
@@ -1130,6 +1138,9 @@ function AppointmentsPanel({
                                     </td>
                                     <td className="px-5 py-4">
                                         <div className="flex items-center gap-3">
+                                            {["pending", "confirmed"].includes(appointment.status) ? (
+                                                <button type="button" onClick={() => onEdit(appointment)} className="font-semibold text-accent">Sửa</button>
+                                            ) : null}
                                             {allowed.length ? (
                                                 <select
                                                     defaultValue=""
@@ -1236,14 +1247,14 @@ function StaffPanel({
     staff,
     branches,
     onAdd,
-    onUpdate,
+    onEdit,
     onDelete,
     submitting,
 }: {
     staff: AdminStaff[];
     branches: Branch[];
     onAdd: () => void;
-    onUpdate: (staff: AdminStaff, payload: { branch_id: number }) => Promise<void>;
+    onEdit: (staff: AdminStaff) => void;
     onDelete: (staff: AdminStaff) => Promise<void>;
     submitting: boolean;
 }) {
@@ -1268,24 +1279,21 @@ function StaffPanel({
                                     <p>{person.phone}</p>
                                     <p className="mt-1 text-[10px] text-muted">{person.email || "Chưa có email"}</p>
                                 </td>
+                                <td className="px-5 py-4">{shortBranchName(branches.find((branch) => branch.id === person.branch_id)?.name ?? person.branch_name ?? `#${person.branch_id}`)}</td>
                                 <td className="px-5 py-4">
-                                    <select
-                                        value={person.branch_id}
-                                        disabled={submitting}
-                                        onChange={(event) => void onUpdate(person, { branch_id: Number(event.target.value) })}
-                                        className="h-9 rounded-lg border border-line bg-white px-2 text-[11px]"
-                                    >
-                                        {branches.map((branch) => <option key={branch.id} value={branch.id}>{shortBranchName(branch.name)}</option>)}
-                                    </select>
-                                </td>
-                                <td className="px-5 py-4">
-                                    <button
-                                        disabled={submitting}
-                                        onClick={() => void onDelete(person)}
-                                        className="font-semibold text-[#8a5147]"
-                                    >
-                                        Xóa
-                                    </button>
+                                    <div className="flex items-center gap-3">
+                                        <button type="button" onClick={() => onEdit(person)} className="font-semibold text-accent">
+                                            Sửa
+                                        </button>
+                                        <button
+                                            type="button"
+                                            disabled={submitting}
+                                            onClick={() => void onDelete(person)}
+                                            className="font-semibold text-[#8a5147]"
+                                        >
+                                            Xóa
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         ))}
@@ -1320,6 +1328,10 @@ function BranchesPanel({
                             <h3 className="mt-2 font-serif text-2xl">{shortBranchName(branch.name)}</h3>
                         </div>
                         <p className="mt-4 min-h-10 text-xs leading-5 text-muted">{branch.address}</p>
+                        <div className="mt-3 space-y-1 text-xs text-muted">
+                            <p>Điện thoại: {branch.phone || "Chưa có"}</p>
+                            <p>Giờ mở cửa: {branch.opening_hours || "Chưa có"}</p>
+                        </div>
                         <div className="mt-5 flex gap-4 border-t border-line pt-4 text-[11px]">
                             <button onClick={() => onEdit(branch)} className="font-semibold text-accent">Chỉnh sửa</button>
                             <button disabled={submitting} onClick={() => void onDelete(branch)} className="font-semibold text-[#8a5147]">Xóa</button>
