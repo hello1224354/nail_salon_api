@@ -152,7 +152,7 @@ export const loginUser = async (req: Request, res: Response) => {
         const usesOtp = user.role === UserRole.ADMIN || user.role === UserRole.CUSTOMER;
         const trusted = usesOtp && await isTrustedLoginDevice(
             user,
-            readTrustedLoginCookie(req),
+            readTrustedLoginCookie(req, user.id),
             context.fingerprint.userAgentHash,
         );
 
@@ -263,12 +263,12 @@ export const verifyLoginMfa = async (req: Request, res: Response) => {
         const browserProof = await issueTrustedLoginDevice(
             user,
             context.fingerprint.userAgentHash,
-            readTrustedLoginCookie(req),
+            readTrustedLoginCookie(req, user.id),
             session.refreshExpiresAt,
         );
 
         setRefreshCookie(res, session.refreshToken, session.refreshExpiresAt, session.persistent);
-        setTrustedLoginCookie(res, browserProof, session.refreshExpiresAt);
+        setTrustedLoginCookie(res, user.id, browserProof, session.refreshExpiresAt);
         res.setHeader("Cache-Control", "no-store");
 
         await createAuditLog({
@@ -421,7 +421,7 @@ export const changePassword = async (req: Request, res: Response) => {
     if (!user) throw new AppError("User not found", 404, "USER_NOT_FOUND");
 
     clearRefreshCookie(res);
-    clearTrustedLoginCookie(res);
+    clearTrustedLoginCookie(res, user.id);
 
     await createAuditLog({
         event_type: AuditEventType.PASSWORD_CHANGED,
@@ -478,7 +478,7 @@ export const resetPassword = async (req: Request, res: Response) => {
     );
 
     clearRefreshCookie(res);
-    clearTrustedLoginCookie(res);
+    clearTrustedLoginCookie(res, user.id);
 
     await createAuditLog({
         event_type: AuditEventType.PASSWORD_RESET_COMPLETED,
@@ -505,7 +505,7 @@ export const deleteMe = async (req: Request, res: Response) => {
     if (!user) throw new AppError("User not found", 404, "USER_NOT_FOUND");
 
     clearRefreshCookie(res);
-    clearTrustedLoginCookie(res);
+    clearTrustedLoginCookie(res, user.id);
 
     return res.status(200).json({
         success: {
