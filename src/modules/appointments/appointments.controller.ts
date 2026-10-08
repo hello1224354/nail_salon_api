@@ -80,6 +80,16 @@ export const getAvailability = async (req: Request, res: Response) => {
     });
 };
 
+export const getAdminTodaySummary = async (_req: Request, res: Response) => {
+    const data = await appointmentService.getAdminTodaySummary();
+    return res.status(200).json({
+        success: {
+            message: "Get admin daily appointment and revenue summary successfully",
+            data,
+        },
+    });
+};
+
 export const getAppointmentById = async (req: Request, res: Response) => {
     if (!req.user) throw new AppError("Authentication required", 401, "AUTHENTICATION_REQUIRED");
 
