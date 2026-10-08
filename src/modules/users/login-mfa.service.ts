@@ -32,13 +32,13 @@ export function maskEmail(email: string) {
     return `${visible}${"*".repeat(Math.max(3, local.length - visible.length))}@${domain}`;
 }
 
-export async function createLoginMfaChallenge(user: User) {
+export async function createLoginMfaChallenge(user: User, persistent: boolean) {
     if (!user.email) {
-        throw new AppError("Admin account requires an email address for MFA", 403, "MFA_EMAIL_REQUIRED");
+        throw new AppError("Account requires an email address for login verification", 403, "MFA_EMAIL_REQUIRED");
     }
 
     if (!isEmailDeliveryConfigured()) {
-        throw new AppError("Admin MFA email delivery is not configured", 503, "MFA_NOT_CONFIGURED");
+        throw new AppError("Login OTP email delivery is not configured", 503, "MFA_NOT_CONFIGURED");
     }
 
     const id = randomUUID();
@@ -55,7 +55,7 @@ export async function createLoginMfaChallenge(user: User) {
         });
 
         if (!lockedUser || !lockedUser.email) {
-            throw new AppError("Admin account requires an email address for MFA", 403, "MFA_EMAIL_REQUIRED");
+            throw new AppError("Account requires an email address for login verification", 403, "MFA_EMAIL_REQUIRED");
         }
 
         await transactionChallengeRepo.update(
@@ -70,6 +70,8 @@ export async function createLoginMfaChallenge(user: User) {
             expires_at: expiresAt,
             attempts_remaining: OTP_ATTEMPTS,
             consumed_at: null,
+            persistent,
+            token_version: lockedUser.token_version,
         });
 
         await transactionChallengeRepo.save(challenge);
@@ -83,9 +85,9 @@ export async function createLoginMfaChallenge(user: User) {
     try {
         await sendPlainTextEmail(
             issued.email,
-            "Mã xác nhận đăng nhập quản trị Serpente Nail Room",
+            "Mã xác nhận đăng nhập Serpente Nail Room",
             [
-                `Mã OTP đăng nhập quản trị của bạn là: ${code}`,
+                `Mã OTP đăng nhập của bạn là: ${code}`,
                 "",
                 "Mã có hiệu lực trong 5 phút và chỉ dùng được một lần.",
                 "Nếu bạn không thực hiện đăng nhập này, hãy đổi mật khẩu ngay.",
@@ -133,7 +135,8 @@ export async function verifyLoginMfaChallenge(challengeId: string, code: string)
             challenge.user_id !== user.id ||
             challenge.consumed_at ||
             challenge.expires_at.getTime() <= Date.now() ||
-            challenge.attempts_remaining <= 0
+            challenge.attempts_remaining <= 0 ||
+            challenge.token_version !== user.token_version
         ) {
             return { ok: false as const };
         }
@@ -151,12 +154,12 @@ export async function verifyLoginMfaChallenge(challengeId: string, code: string)
         challenge.consumed_at = new Date();
         await transactionChallengeRepo.save(challenge);
 
-        return { ok: true as const, user };
+        return { ok: true as const, user, persistent: challenge.persistent };
     });
 
     if (!result.ok) {
         throw new AppError("Invalid or expired MFA code", 401, "INVALID_MFA_CODE");
     }
 
-    return result.user;
+    return { user: result.user, persistent: result.persistent };
 }
