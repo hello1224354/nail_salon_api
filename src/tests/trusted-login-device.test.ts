@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { matchesTrustedLoginDevice } from "../modules/users/trusted-login-device.logic";
+import { matchesTrustedLoginDevice, readAccountTrustCookie, trustedCookieName } from "../modules/users/trusted-login-device.logic";
 import type { TrustedLoginDevice } from "../modules/users/trusted-login-device.entity";
 import { UserRole } from "../modules/users/users.entity";
 
@@ -37,5 +37,47 @@ describe("login OTP trusted browser", () => {
     it("denies revoked and missing proofs", () => {
         assert.equal(matchesTrustedLoginDevice({ ...device, revoked_at: new Date(NOW) }, user, "known-browser-hash", NOW), false);
         assert.equal(matchesTrustedLoginDevice(null, user, "known-browser-hash", NOW), false);
+    });
+});
+
+describe("OTP trust across separate accounts on one browser", () => {
+    const base = "__Secure-ns_login_trust";
+    const firstUserId = "account-A";
+    const secondUserId = "account-B";
+    const cookieA = trustedCookieName(base, firstUserId);
+    const cookieB = trustedCookieName(base, secondUserId);
+    const header = `${cookieA}=first-proof; ${cookieB}=second-proof`;
+
+    it("assigns stable distinct cookie names per account", () => {
+        assert.notEqual(cookieA, cookieB);
+        assert.equal(cookieA, trustedCookieName(base, firstUserId));
+    });
+
+    it("keeps account A remembered after account B is verified", () => {
+        assert.equal(readAccountTrustCookie(header, base, firstUserId), "first-proof");
+        assert.equal(readAccountTrustCookie(header, base, secondUserId), "second-proof");
+    });
+
+    it("does not read another account's scoped cookie", () => {
+        assert.equal(readAccountTrustCookie(`${cookieA}=first-proof`, base, secondUserId), null);
+    });
+
+    it("supports existing legacy trust on initial rollout", () => {
+        assert.equal(readAccountTrustCookie(`${base}=legacy-proof`, base, firstUserId), "legacy-proof");
+    });
+
+    it("prefers an account-specific proof to legacy trust", () => {
+        assert.equal(readAccountTrustCookie(`${base}=legacy-proof; ${cookieA}=first-proof`, base, firstUserId), "first-proof");
+    });
+
+    it("does not mix up account A and account B's active trust", () => {
+        const deviceA = { ...device, user_id: firstUserId } as TrustedLoginDevice;
+        const deviceB = { ...device, user_id: secondUserId } as TrustedLoginDevice;
+        const accountA = { ...user, id: firstUserId };
+        const accountB = { ...user, id: secondUserId };
+        assert.equal(matchesTrustedLoginDevice(deviceA, accountA, "known-browser-hash", NOW), true);
+        assert.equal(matchesTrustedLoginDevice(deviceA, accountB, "known-browser-hash", NOW), false);
+        assert.equal(matchesTrustedLoginDevice(deviceB, accountB, "known-browser-hash", NOW), true);
+        assert.equal(matchesTrustedLoginDevice(deviceB, accountA, "known-browser-hash", NOW), false);
     });
 });
