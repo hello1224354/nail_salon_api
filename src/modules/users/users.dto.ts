@@ -9,6 +9,7 @@ export interface RegisterUserDto {
 export interface LoginUserDto {
     email: string;
     password: string;
+    remember_me: boolean;
 }
 
 export interface ChangePasswordDto {
@@ -123,9 +124,14 @@ export function parseLoginUserDto(body: unknown): LoginUserDto {
         throw new AppError("Password is too long", 400, "VALIDATION_ERROR");
     }
 
+    if (data.remember_me !== undefined && typeof data.remember_me !== "boolean") {
+        throw new AppError("Remember_me must be a boolean", 400, "VALIDATION_ERROR");
+    }
+
     return {
         email: parseEmail(data.email),
         password: data.password,
+        remember_me: data.remember_me ?? true,
     };
 }
 
