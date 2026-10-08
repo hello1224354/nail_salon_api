@@ -127,6 +127,20 @@ function addMinutes(time: string, minutesToAdd: number) {
     return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
 }
 
+function normalizeVietnamesePhone(value: string) {
+    const compact = value.replace(/[\s.-]/g, "");
+
+    if (compact.startsWith("+84")) return compact;
+    if (compact.startsWith("84")) return `+${compact}`;
+    if (compact.startsWith("0")) return `+84${compact.slice(1)}`;
+
+    return compact;
+}
+
+function isValidVietnamesePhone(value: string) {
+    return /^\+84\d{9}$/.test(normalizeVietnamesePhone(value));
+}
+
 function SectionHeading({ number, title, helper }: { number: string; title: string; helper?: string }) {
     return (
         <div>
@@ -152,6 +166,7 @@ export function BookingForm() {
     const [selectedDate, setSelectedDate] = useState(dates[0]?.value ?? "");
     const [availableSlots, setAvailableSlots] = useState<Map<string, string>>(new Map());
     const [selectedTime, setSelectedTime] = useState("");
+    const [customerPhone, setCustomerPhone] = useState("");
     const [initialLoading, setInitialLoading] = useState(true);
     const [servicesLoading, setServicesLoading] = useState(false);
     const [availabilityLoading, setAvailabilityLoading] = useState(false);
@@ -403,6 +418,11 @@ export function BookingForm() {
             return;
         }
 
+        if (!isValidVietnamesePhone(customerPhone)) {
+            setFormError("Vui lòng nhập số điện thoại Việt Nam hợp lệ để tiệm xác nhận lịch.");
+            return;
+        }
+
         if (selectedServiceIds.length === 0) {
             setFormError("Vui lòng chọn ít nhất một dịch vụ.");
             return;
@@ -425,6 +445,7 @@ export function BookingForm() {
                         service_ids: selectedServiceIds,
                         start_time: startTime,
                         party_size: partySize,
+                        customer_phone: normalizeVietnamesePhone(customerPhone),
                     }),
                 }
             );
@@ -451,6 +472,7 @@ export function BookingForm() {
         selectedDate.length > 0 &&
         selectedTime.length > 0 &&
         availableSlots.has(selectedTime) &&
+        isValidVietnamesePhone(customerPhone) &&
         user?.role.toLowerCase() === CUSTOMER_ROLE;
 
     if (initialLoading) {
@@ -682,20 +704,38 @@ export function BookingForm() {
                 <div className="mx-5 h-px bg-line sm:mx-7 lg:mx-8" />
 
                 <section className="p-5 sm:p-7 lg:p-8">
-                    <SectionHeading number="06" title="Thông tin tài khoản" helper="Serpente sẽ dùng thông tin này để xác nhận lịch với bạn." />
+                    <SectionHeading
+                        number="06"
+                        title="Thông tin liên hệ"
+                        helper="Số điện thoại chỉ dùng cho lịch hẹn này và không được lưu vào tài khoản."
+                    />
                     <div className="mt-6 grid gap-4 sm:grid-cols-2 sm:pl-[60px]">
                         <div className="rounded-[12px] border border-line bg-cream px-4 py-3">
                             <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">Họ và tên</p>
                             <p className="mt-1 text-sm font-semibold">{user?.full_name || "—"}</p>
                         </div>
                         <div className="rounded-[12px] border border-line bg-cream px-4 py-3">
-                            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">Số điện thoại</p>
-                            <p className="mt-1 text-sm font-semibold">{user?.phone || "—"}</p>
+                            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">Email tài khoản</p>
+                            <p className="mt-1 truncate text-sm font-semibold">{user?.email || "—"}</p>
                         </div>
-                        <div className="rounded-[12px] border border-line bg-cream px-4 py-3 sm:col-span-2">
-                            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">Email</p>
-                            <p className="mt-1 text-sm font-semibold">{user?.email || "Chưa cung cấp"}</p>
-                        </div>
+                        <label className="block sm:col-span-2">
+                            <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">
+                                Số điện thoại xác nhận lịch
+                            </span>
+                            <input
+                                type="tel"
+                                value={customerPhone}
+                                onChange={(event) => {
+                                    setCustomerPhone(event.target.value);
+                                    setFormError("");
+                                }}
+                                placeholder="0901 234 567"
+                                autoComplete="tel"
+                                inputMode="tel"
+                                required
+                                className="focus-ring mt-2.5 h-12 w-full rounded-[12px] border border-line bg-cream px-4 text-sm outline-none placeholder:text-muted/45 hover:border-accent/45"
+                            />
+                        </label>
                     </div>
                 </section>
             </div>
