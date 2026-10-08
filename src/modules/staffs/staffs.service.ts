@@ -87,7 +87,8 @@ export const updateStaff = async (userId: string, data: UpdateStaffDto) => {
             staff.branch_id = data.branch_id;
         }
 
-        if (data.email && data.email !== user.email) {
+        const emailChanged = data.email !== undefined && data.email !== user.email;
+        if (data.email && emailChanged) {
             const duplicate = await users.findOneBy({ email: data.email });
             if (duplicate && duplicate.id !== user.id) throw new AppError("Email already exists", 409, "EMAIL_ALREADY_EXISTS");
             user.email = data.email;
@@ -102,7 +103,7 @@ export const updateStaff = async (userId: string, data: UpdateStaffDto) => {
             user.password_hash = await bcrypt.hash(data.password, 12);
         }
 
-        if (data.email !== undefined || data.password !== undefined) {
+        if (emailChanged || data.password !== undefined) {
             user.token_version += 1;
             await manager.getRepository(RefreshSession).update(
                 { user_id: user.id, revoked_at: IsNull() },
