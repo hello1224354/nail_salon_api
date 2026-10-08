@@ -66,6 +66,7 @@ function canAttemptSessionRefresh(path: string) {
     return ![
         "/api/users/login",
         "/api/users/register",
+        "/api/users/register/code",
         "/api/users/session/refresh",
         "/api/users/session/logout",
         "/api/users/password/forgot",
@@ -119,7 +120,10 @@ const errorMessagesByCode: Record<string, string> = {
     REFRESH_TOKEN_REUSE: "Phiên đăng nhập không còn an toàn. Vui lòng đăng nhập lại.",
     INVALID_CURRENT_PASSWORD: "Mật khẩu hiện tại không đúng.",
     INVALID_RESET_CODE: "Mã xác nhận không đúng hoặc đã hết hạn.",
+    INVALID_VERIFICATION_CODE: "Mã xác minh email không đúng hoặc đã hết hạn.",
+    INVALID_PASSWORD_CHANGE_CODE: "Mã OTP đổi mật khẩu không đúng hoặc đã hết hạn.",
     INVALID_MFA_CODE: "Mã OTP không đúng hoặc đã hết hạn.",
+    EMAIL_REQUIRED: "Tài khoản cần có email để nhận mã OTP.",
     MFA_EMAIL_REQUIRED: "Tài khoản quản trị chưa có email để nhận OTP.",
     MFA_NOT_CONFIGURED: "Hệ thống OTP quản trị chưa được cấu hình.",
     REGISTRATION_UNAVAILABLE: "Chưa tạo được tài khoản với thông tin này.",
