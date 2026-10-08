@@ -44,7 +44,6 @@ async function waitForMinimumDuration(startedAt: number, minimumMs: number, jitt
 function publicUser(user: {
     id: string;
     full_name: string;
-    phone: string;
     email: string | null;
     role: string;
     created_at?: Date;
@@ -53,7 +52,6 @@ function publicUser(user: {
     return {
         id: user.id,
         full_name: user.full_name,
-        phone: user.phone,
         email: user.email,
         role: user.role,
         created_at: user.created_at,
@@ -94,7 +92,7 @@ export const loginUser = async (req: Request, res: Response) => {
 
     const failedAttempts = await countRecentIdentifierAuditEvents(
         AuditEventType.LOGIN_FAILED,
-        credentials.phone,
+        credentials.email,
         since
     );
 
@@ -113,7 +111,7 @@ export const loginUser = async (req: Request, res: Response) => {
         await createAuditLog({
             event_type: AuditEventType.LOGIN_RATE_LIMITED,
             request_id: context.requestId,
-            identifier: credentials.phone,
+            identifier: credentials.email,
             ip: context.ip,
             user_agent: context.userAgent,
             detail:
@@ -131,7 +129,7 @@ export const loginUser = async (req: Request, res: Response) => {
         if (user.role === UserRole.ADMIN) {
             const recentMfaSends = await countRecentIdentifierAuditEvents(
                 AuditEventType.MFA_CHALLENGE_SENT,
-                credentials.phone,
+                credentials.email,
                 new Date(Date.now() - MFA_SEND_WINDOW_MS)
             );
 
@@ -140,7 +138,7 @@ export const loginUser = async (req: Request, res: Response) => {
                     event_type: AuditEventType.LOGIN_RATE_LIMITED,
                     request_id: context.requestId,
                     user_id: user.id,
-                    identifier: credentials.phone,
+                    identifier: credentials.email,
                     ip: context.ip,
                     user_agent: context.userAgent,
                     detail: "mfa_send_limit",
@@ -159,7 +157,7 @@ export const loginUser = async (req: Request, res: Response) => {
                 event_type: AuditEventType.MFA_CHALLENGE_SENT,
                 request_id: context.requestId,
                 user_id: user.id,
-                identifier: credentials.phone,
+                identifier: credentials.email,
                 ip: context.ip,
                 user_agent: context.userAgent,
             });
@@ -189,7 +187,7 @@ export const loginUser = async (req: Request, res: Response) => {
             event_type: AuditEventType.LOGIN_SUCCESS,
             request_id: context.requestId,
             user_id: user.id,
-            identifier: credentials.phone,
+            identifier: credentials.email,
             ip: context.ip,
             user_agent: context.userAgent,
         });
@@ -208,7 +206,7 @@ export const loginUser = async (req: Request, res: Response) => {
             await createAuditLog({
                 event_type: AuditEventType.LOGIN_FAILED,
                 request_id: context.requestId,
-                identifier: credentials.phone,
+                identifier: credentials.email,
                 ip: context.ip,
                 user_agent: context.userAgent,
                 detail: error.code,
