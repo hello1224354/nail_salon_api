@@ -1,4 +1,5 @@
 import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn } from "typeorm";
+import type { UserRole } from "./users.entity";
 
 @Entity("trusted_login_devices")
 @Index(["user_id", "expires_at"])
@@ -15,6 +16,9 @@ export class TrustedLoginDevice {
 
     @Column({ type: "int" })
     token_version: number;
+
+    @Column({ type: "varchar", length: 16 })
+    role: UserRole;
 
     @Column({ type: "varchar", length: 64, nullable: true })
     user_agent_hash: string | null;
