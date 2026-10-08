@@ -36,7 +36,7 @@ export function Header() {
     const [mobileOpen, setMobileOpen] = useState(false);
     const [accountOpen, setAccountOpen] = useState(false);
     const [authUser, setAuthUser] = useState<AuthUser | null>(null);
-    const { branches, selectedBranchId, setSelectedBranchId, loading: branchesLoading } = useBranch();
+    const { branches, selectedBranch, selectedBranchId, setSelectedBranchId, loading: branchesLoading } = useBranch();
 
     useEffect(() => {
         let cancelled = false;
@@ -107,9 +107,7 @@ export function Header() {
                     <div className="relative h-9 w-[112px] shrink-0 rounded-full border border-line bg-surface focus-within:ring-2 focus-within:ring-accent/50">
                         <span className="pointer-events-none absolute inset-0 flex items-center justify-center gap-1.5 text-xs font-semibold text-ink">
                             <span className="max-w-[78px] truncate">
-                                {branches.find((branch) => branch.id === selectedBranchId)
-                                    ? shortBranchName(branches.find((branch) => branch.id === selectedBranchId)!.name)
-                                    : "Chi nhánh"}
+                                {selectedBranch ? shortBranchName(selectedBranch.name) : "Chi nhánh"}
                             </span>
                             <svg aria-hidden="true" viewBox="0 0 12 12" className="size-3 shrink-0">
                                 <path d="M2.25 4.25 6 8l3.75-3.75" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />
