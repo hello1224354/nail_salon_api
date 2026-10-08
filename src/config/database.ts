@@ -12,6 +12,7 @@ import { Offer } from "../modules/offers/offer.entity";
 import { RefreshSession } from "../modules/users/refresh-session.entity";
 import { PasswordResetChallenge } from "../modules/users/password-reset-challenge.entity";
 import { LoginMfaChallenge } from "../modules/users/login-mfa-challenge.entity";
+import { TrustedLoginDevice } from "../modules/users/trusted-login-device.entity";
 import { RegistrationEmailChallenge } from "../modules/users/registration-email-challenge.entity";
 import { PasswordChangeChallenge } from "../modules/users/password-change-challenge.entity";
 import { SalonContent } from "../modules/site-content/salon-content.entity";
@@ -40,6 +41,7 @@ export const AppDataSource = new DataSource({
         RefreshSession,
         PasswordResetChallenge,
         LoginMfaChallenge,
+        TrustedLoginDevice,
         RegistrationEmailChallenge,
         PasswordChangeChallenge,
         SalonContent,
