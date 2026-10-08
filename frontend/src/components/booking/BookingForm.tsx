@@ -19,7 +19,6 @@ import {
     formatServicePrice,
     formatVnd,
     localizeAddress,
-    localizeBranchName,
     shortBranchName,
     type StudioService,
 } from "@/lib/studio-data";
