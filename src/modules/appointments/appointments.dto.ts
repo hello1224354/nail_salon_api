@@ -16,6 +16,7 @@ export interface UpdateAppointmentDto {
     staff_id?: string;
     service_ids?: string[];
     start_time?: Date;
+    customer_phone?: string;
     status?: AppointmentStatus;
 }
 
@@ -207,11 +208,11 @@ export function parseUpdateAppointmentDto(body: unknown): UpdateAppointmentDto {
 
     const data = body as Record<string, unknown>;
 
-    const hasScheduleChanges = data.staff_id !== undefined || data.service_ids !== undefined || data.start_time !== undefined;
+    const hasDetailChanges = data.staff_id !== undefined || data.service_ids !== undefined || data.start_time !== undefined || data.customer_phone !== undefined;
 
-    if (data.status !== undefined && hasScheduleChanges) throw new AppError("Status cannot be updated together with appointment details", 400, "VALIDATION_ERROR");
+    if (data.status !== undefined && hasDetailChanges) throw new AppError("Status cannot be updated together with appointment details", 400, "VALIDATION_ERROR");
 
-    if (data.staff_id === undefined && data.service_ids === undefined && data.start_time === undefined && data.status === undefined) throw new AppError("At least one field must be provided", 400, "VALIDATION_ERROR");
+    if (!hasDetailChanges && data.status === undefined) throw new AppError("At least one field must be provided", 400, "VALIDATION_ERROR");
 
     if (data.staff_id !== undefined && (typeof data.staff_id !== "string" || !isUuid(data.staff_id))) throw new AppError("Staff_id must be a valid UUID", 400, "VALIDATION_ERROR");
 
@@ -237,6 +238,7 @@ export function parseUpdateAppointmentDto(body: unknown): UpdateAppointmentDto {
         staff_id: data.staff_id as string | undefined,
         service_ids: data.service_ids as string[] | undefined,
         start_time: startTime,
+        customer_phone: data.customer_phone === undefined ? undefined : parseVietnamesePhone(data.customer_phone, "Customer_phone"),
         status: status === undefined ? undefined : AppointmentStatus[status as keyof typeof AppointmentStatus],
     };
 }
