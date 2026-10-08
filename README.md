@@ -4,19 +4,17 @@
 
 **A deployed nail salon booking platform with concurrency-safe staff allocation, account security, and an administrative dashboard.**
 
-[**Live website**](https://nail-salon-web-v2.vercel.app/) · [**Service catalog**](https://nail-salon-web-v2.vercel.app/services) · [**API health**](https://api-production-e911.up.railway.app/health) · [**Technical documentation**](docs/README.md) · [**Engineering case study**](docs/PORTFOLIO.md)
+[**Live website**](https://nail-salon-web-v2.vercel.app/) · [**Service catalog**](https://nail-salon-web-v2.vercel.app/services) · [**API health**](https://api-production-e911.up.railway.app/health) · [**Technical documentation**](docs/README.md) · [**Engineering case study**](docs/PORTFOLIO.md) · [**Product tour**](docs/DEMO.md)
 
 ![Security Hardening CI](https://github.com/hello1224354/nail_salon_api/actions/workflows/security-hardening-ci.yml/badge.svg)
 
-> **Portfolio focus:** Backend architecture and transactional booking logic. The live site is a working application, not a static landing-page prototype. Authenticated booking and admin pages require a legitimate account; no public test credentials are shared here.
-
-## 1. The problem
+## Problem and approach
 
 A salon with multiple employees must let customers find bookable times without selecting an employee. Two customers may attempt the same time simultaneously, so simply displaying an available slot and checking again with a SQL `SELECT` is not sufficient to prevent double booking. The system must also support multi-person reservations and give administrators an operational workflow.
 
 **The solution:** A Next.js frontend backed by an Express + MySQL API. The backend calculates available times, chooses eligible free staff, and atomically reserves each required 15-minute interval before committing an appointment or group booking.
 
-## 2. What the product does
+## Features
 
 | Customer experience | Staff / admin operations |
 |---|---|
@@ -26,9 +24,9 @@ A salon with multiple employees must let customers find bookable times without s
 | Book without choosing staff; receive confirmation code | Receive Gmail notification for a new booking |
 | Review personal appointment status | View assigned appointments according to server-side role rules |
 
-**Try it:** [Homepage](https://nail-salon-web-v2.vercel.app/) → [Service catalog](https://nail-salon-web-v2.vercel.app/services) → [Book](https://nail-salon-web-v2.vercel.app/book). Booking requires an account and must not be used to create test records in production without authorization.
+**Application:** [Homepage](https://nail-salon-web-v2.vercel.app/) · [Services](https://nail-salon-web-v2.vercel.app/services) · [Booking](https://nail-salon-web-v2.vercel.app/book) · [Admin](https://nail-salon-web-v2.vercel.app/admin/login). Booking and management features are accessible to authenticated users with the appropriate role.
 
-## 3. System design
+## Architecture
 
 ```mermaid
 flowchart LR
@@ -51,7 +49,7 @@ flowchart LR
 | Integration | Gmail API via OAuth2 |
 | Delivery | GitHub Actions CI, Vercel (web), Railway (API); alternative VPS/Docker Compose configuration |
 
-## 4. The engineering challenges
+## Engineering highlights
 
 ### Preventing double booking
 
@@ -73,7 +71,7 @@ The admin appointments table supports date-range filters and customer-visible 8-
 
 **Source:** [admin dashboard](frontend/src/components/admin/AdminDashboard.tsx) · [API contract](docs/API.md).
 
-## 5. Architecture decisions and limitations
+## Design decisions
 
 | Decision | Rationale | Trade-off |
 |---|---|---|
@@ -84,18 +82,20 @@ The admin appointments table supports date-range filters and customer-visible 8-
 | Gmail notifications after DB commit | Email outages do not roll back valid bookings | **Best-effort delivery:** no persistent retry/outbox yet |
 | JWT + rotating refresh sessions | Short-lived access credentials and revocable sessions | Additional state and cookie/origin management |
 
-No payment gateway or per-staff shift scheduling is claimed. CI runs unit/regression tests plus real-MySQL concurrency integration tests (16 parallel bookings, group atomicity, rollback and adjacent intervals). A comprehensive browser E2E suite is still **future work**. Details: [Engineering case study](docs/PORTFOLIO.md).
+The current implementation focuses on appointment scheduling rather than online payments or employee-specific shift planning. Technical analysis and design constraints are covered in the [engineering case study](docs/PORTFOLIO.md).
 
-## 6. Demo and visuals
+## Live application
 
-- [Live homepage](https://nail-salon-web-v2.vercel.app/) — public salon content and service discovery.
-- [Live service catalog](https://nail-salon-web-v2.vercel.app/services) — categories, prices and branch context.
-- [Booking flow](https://nail-salon-web-v2.vercel.app/book) — available slots and confirmation (authentication required).
-- [Admin login](https://nail-salon-web-v2.vercel.app/admin/login) — admin dashboard is access-controlled.
+| Area | URL | What it provides |
+|---|---|---|
+| Salon homepage | [Open](https://nail-salon-web-v2.vercel.app/) | Branch information, promotions, gallery and customer reviews |
+| Service catalog | [Open](https://nail-salon-web-v2.vercel.app/services) | Services grouped by category with pricing |
+| Appointment booking | [Open](https://nail-salon-web-v2.vercel.app/book) | Service selection, available time slots and booking confirmation (login required) |
+| Admin dashboard | [Login](https://nail-salon-web-v2.vercel.app/admin/login) | Booking management, search, filters and business data (admin access required) |
 
-**Booking confirmation:** the interface shows the branch, scheduled time, services, party size, estimated total and short booking code. See [screenshot guidance / media](docs/SCREENSHOTS.md). Actual screen captures should have private customer and staff data removed before publication.
+See the [product tour](docs/DEMO.md) for the principal user journeys.
 
-## 7. Run locally
+## Getting started
 
 Requirements: **Node.js 22+**, npm, Docker Compose v2. See [detailed setup](docs/SETUP.md).
 
@@ -120,7 +120,7 @@ npm run dev
 
 Frontend: http://localhost:3001 · Backend: http://localhost:3000 · Health: http://localhost:3000/health. Email OTP requires separate Gmail OAuth configuration; never commit credentials.
 
-## 8. Testing and documentation
+## Verification
 
 ```bash
 # Repository root
@@ -129,6 +129,7 @@ npx tsx --test src/tests/trusted-login-device.test.ts
 npx tsx --test src/tests/booking-notification.test.ts
 npx tsx --test src/tests/admin-appointment-filters.test.ts
 npm run build
+# Real MySQL 8 integration suite runs in GitHub Actions using an isolated database
 
 # Frontend
 cd frontend
@@ -136,10 +137,7 @@ npx tsc --noEmit
 npm run build
 ```
 
-Additional CI checks include dependency audit and frontend CSP checks; check the [workflow](.github/workflows/security-hardening-ci.yml) for the source of truth.
+The [GitHub Actions workflow](.github/workflows/security-hardening-ci.yml) also provisions an isolated MySQL 8 instance for **16-request booking contention**, group atomicity, transaction rollback and adjacent-slot regression tests. Backend/frontend builds, dependency audits and frontend CSP checks run alongside it.
 
 **Deep dives:** [API](docs/API.md) · [DB schema](docs/DATABASE.md) · [Booking rules](docs/BOOKING.md) · [Security](docs/AUTH-SECURITY.md) · [Deployment](docs/DEPLOYMENT.md) · [Operations](docs/TESTING-OPERATIONS.md).
 
----
-
-**Scope note:** This README describes features observed in repository source and the public deployment. It does not independently establish an individual's exact contribution history, production load, measured performance, or security certification. Source code and executable tests remain authoritative.
