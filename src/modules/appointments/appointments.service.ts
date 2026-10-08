@@ -545,6 +545,19 @@ export const getAllAppointments = async (userId: string, role: UserRole, query: 
         });
     }
 
+    if (query.booking_code !== undefined) {
+        if (role !== UserRole.ADMIN) {
+            throw new AppError("Booking reference search is available to admins only", 403, "FORBIDDEN");
+        }
+        // Booking confirmation uses the first 8 chars of booking_group_id,
+        // or the appointment id for legacy records without a booking group.
+        // Prefix matching uses the existing booking_group_id index.
+        queryBuilder.andWhere(
+            "(appointment.booking_group_id LIKE :booking_code OR (appointment.booking_group_id IS NULL AND appointment.id LIKE :booking_code))",
+            { booking_code: query.booking_code + "%" },
+        );
+    }
+
     if (query.from !== undefined) {
         queryBuilder.andWhere("appointment.start_time >= :start_time_from", {
             start_time_from: query.from,
