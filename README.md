@@ -1,5 +1,7 @@
 # Serpente Nail Room — Full-stack Appointment Booking System
 
+<p align="center"><img src="frontend/public/brand/serpente-logo.svg" alt="Serpente Nail Room logo" width="120" /></p>
+
 **A deployed nail salon booking platform with concurrency-safe staff allocation, account security, and an administrative dashboard.**
 
 [**Live website**](https://nail-salon-web-v2.vercel.app/) · [**Service catalog**](https://nail-salon-web-v2.vercel.app/services) · [**API health**](https://api-production-e911.up.railway.app/health) · [**Technical documentation**](docs/README.md) · [**Engineering case study**](docs/PORTFOLIO.md)
