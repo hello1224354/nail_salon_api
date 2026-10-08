@@ -4,3 +4,6 @@ dist/
 .env
 .env.*
 !.env.example
+# Only the public, placeholder-only VPS template is tracked
+!.env.production.example
+backups/
