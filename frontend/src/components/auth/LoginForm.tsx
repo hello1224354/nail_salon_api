@@ -7,10 +7,19 @@ import { useState } from "react";
 import { apiRequest, getApiErrorMessage } from "@/lib/api";
 import { logoutSession, saveSession, type AuthUser } from "@/lib/auth";
 
-type LoginData = {
+type SessionLoginData = {
+    mfa_required?: false;
     access_token: string;
     user: AuthUser;
 };
+type MfaLoginData = {
+    mfa_required: true;
+    challenge_id: string;
+    masked_email: string;
+    expires_at: string;
+    user: AuthUser;
+};
+type LoginData = SessionLoginData | MfaLoginData;
 
 export function LoginForm() {
     const router = useRouter();
@@ -19,6 +28,9 @@ export function LoginForm() {
     const [rememberMe, setRememberMe] = useState(true);
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState("");
+    const [challengeId, setChallengeId] = useState("");
+    const [maskedEmail, setMaskedEmail] = useState("");
+    const [otp, setOtp] = useState("");
     const [submitting, setSubmitting] = useState(false);
 
     async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -36,9 +48,21 @@ export function LoginForm() {
                 }),
             });
 
-            if (data.user.role.toLowerCase() !== "customer") {
+            if ("mfa_required" in data && data.mfa_required) {
+                // Never bypass the email OTP challenge for an ADMIN login.
+                if (data.user.role.toLowerCase() !== "admin") {
+                    throw new Error("Tài khoản này không được phép đăng nhập tại đây.");
+                }
+                setChallengeId(data.challenge_id);
+                setMaskedEmail(data.masked_email);
+                setOtp("");
+                setPassword("");
+                return;
+            }
+
+            if (data.user.role.toLowerCase() !== "customer" && data.user.role.toLowerCase() !== "admin") {
                 await logoutSession();
-                throw new Error("Tài khoản quản trị hoặc nhân viên không dùng trang đặt lịch dành cho khách.");
+                throw new Error("Tài khoản nhân viên không dùng trang đặt lịch dành cho khách.");
             }
 
             saveSession(data.access_token, data.user);
@@ -49,6 +73,80 @@ export function LoginForm() {
         } finally {
             setSubmitting(false);
         }
+    }
+
+    async function handleOtpSubmit(event: FormEvent<HTMLFormElement>) {
+        event.preventDefault();
+        if (!challengeId || otp.length !== 6) return;
+        setError("");
+        setSubmitting(true);
+
+        try {
+            const data = await apiRequest<SessionLoginData>("/api/users/login/mfa/verify", {
+                method: "POST",
+                body: JSON.stringify({ challenge_id: challengeId, code: otp }),
+            });
+
+            if (data.user.role.toLowerCase() !== "admin") {
+                await logoutSession();
+                throw new Error("Tài khoản này không có quyền quản trị.");
+            }
+
+            saveSession(data.access_token, data.user);
+            router.push("/book");
+            router.refresh();
+        } catch (submitError) {
+            setError(getApiErrorMessage(
+                submitError,
+                submitError instanceof Error ? submitError.message : "Mã OTP không hợp lệ.",
+            ));
+        } finally {
+            setSubmitting(false);
+        }
+    }
+
+    if (challengeId) {
+        return (
+            <form onSubmit={handleOtpSubmit} className="mt-9 space-y-5" noValidate>
+                <div className="rounded-xl border border-line bg-cream p-4 text-xs leading-5 text-muted">
+                    Xác minh ADMIN: mã OTP 6 số đã gửi tới <strong className="text-ink">{maskedEmail}</strong>.
+                    Mã có hiệu lực trong 5 phút.
+                </div>
+                <label className="block">
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">
+                        Mã xác nhận
+                    </span>
+                    <input
+                        type="text"
+                        inputMode="numeric"
+                        autoComplete="one-time-code"
+                        value={otp}
+                        onChange={(event) => setOtp(event.target.value.replace(/\\D/g, "").slice(0, 6))}
+                        maxLength={6}
+                        pattern="\\d{6}"
+                        required
+                        placeholder="000000"
+                        className="focus-ring mt-2.5 h-12 w-full rounded-[12px] border border-line bg-cream px-4 text-center text-lg tracking-[0.25em] text-ink outline-none"
+                    />
+                </label>
+                {error ? <div role="alert" className="rounded-xl border border-[#cdaea1] bg-[#f5e8e1] px-4 py-3 text-xs leading-5 text-[#734738]">{error}</div> : null}
+                <button
+                    type="submit"
+                    disabled={submitting || otp.length !== 6}
+                    className="focus-ring flex h-12 w-full items-center justify-center rounded-full bg-ink px-6 text-sm font-semibold text-white disabled:opacity-50"
+                >
+                    {submitting ? "Đang xác minh…" : "Xác nhận OTP"}
+                </button>
+                <button type="button" onClick={() => {
+                    setChallengeId("");
+                    setMaskedEmail("");
+                    setOtp("");
+                    setError("");
+                }} className="focus-ring w-full text-center text-xs font-semibold text-accent hover:underline">
+                    ← Nhập lại email và mật khẩu
+                </button>
+            </form>
+        );
     }
 
     return (

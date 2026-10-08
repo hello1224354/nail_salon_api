@@ -1026,9 +1026,6 @@ function Overview({
                         <p className="mt-2 font-serif text-[clamp(1.8rem,3vw,2.5rem)] leading-tight tracking-[-0.025em] tabular-nums">
                             {formatVnd(todayStats.revenue)}đ
                         </p>
-                        <p className="mt-2 text-[10px] leading-4 text-white/50">
-                            Giá trị dịch vụ hoàn thành trong ngày · chưa đối soát thanh toán
-                        </p>
                     </div>
                     <div className="mt-5 space-y-3">
                         {[
@@ -1044,9 +1041,6 @@ function Overview({
                             </div>
                         ))}
                     </div>
-                    <p className="mt-3 text-[10px] leading-4 text-white/40">
-                        Số lịch theo ngày hẹn (giờ Việt Nam).
-                    </p>
                 </section>
             </div>
         </div>

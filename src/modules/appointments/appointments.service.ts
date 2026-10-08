@@ -244,12 +244,14 @@ export const getAvailability = async (data: GetAvailabilityQueryDto) => {
 };
 
 export const createAppointment = async (actorId: string, actorRole: UserRole, data: CreateAppointmentDto) => {
-    if (actorRole !== UserRole.CUSTOMER) {
-        throw new AppError("Only customers can create appointments", 403, "FORBIDDEN");
+    // ADMIN can book for themselves via the public flow, subject to the same
+    // rules as CUSTOMER. Neither role may impersonate another user or pick staff.
+    if (actorRole !== UserRole.CUSTOMER && actorRole !== UserRole.ADMIN) {
+        throw new AppError("Only customers and admins can create personal appointments", 403, "FORBIDDEN");
     }
 
     if (data.user_id !== undefined || data.customer_email !== undefined || data.staff_id !== undefined) {
-        throw new AppError("Customers cannot specify another customer or staff", 403, "FORBIDDEN");
+        throw new AppError("Public bookings cannot specify another customer or staff", 403, "FORBIDDEN");
     }
 
     const now = Date.now();
@@ -277,14 +279,12 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
 
     assertFifteenMinuteAligned(data.start_time);
 
-    if (actorRole === UserRole.CUSTOMER) {
-        const businessStartMinute = getBusinessMinuteOfDay(data.start_time);
-        const businessEndMinute = getBusinessMinuteOfDay(endTime);
+    const businessStartMinute = getBusinessMinuteOfDay(data.start_time);
+    const businessEndMinute = getBusinessMinuteOfDay(endTime);
 
-        if (businessStartMinute < BUSINESS_OPEN_MINUTE) throw new AppError(`Appointment must start at or after ${formatMinuteOfDay(BUSINESS_OPEN_MINUTE)}`, 400, "OUTSIDE_BUSINESS_HOURS");
+    if (businessStartMinute < BUSINESS_OPEN_MINUTE) throw new AppError(`Appointment must start at or after ${formatMinuteOfDay(BUSINESS_OPEN_MINUTE)}`, 400, "OUTSIDE_BUSINESS_HOURS");
 
-        if (businessEndMinute > BUSINESS_CLOSE_MINUTE) throw new AppError(`Appointment must end by ${formatMinuteOfDay(BUSINESS_CLOSE_MINUTE)}`, 400, "OUTSIDE_BUSINESS_HOURS");
-    }
+    if (businessEndMinute > BUSINESS_CLOSE_MINUTE) throw new AppError(`Appointment must end by ${formatMinuteOfDay(BUSINESS_CLOSE_MINUTE)}`, 400, "OUTSIDE_BUSINESS_HOURS");
 
     return await AppDataSource.transaction(async (manager) => {
         const transactionAppointmentRepo = manager.getRepository(Appointment);
@@ -302,7 +302,7 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
 
         if (!owner) throw new AppError("User not found", 404, "USER_NOT_FOUND");
 
-        if (actorRole === UserRole.CUSTOMER) {
+        {
             const pendingBookingCountRaw = await transactionAppointmentRepo
                 .createQueryBuilder("appointment")
                 .select(
@@ -480,7 +480,7 @@ export const getAllAppointments = async (userId: string, role: UserRole, query: 
     const queryBuilder = appointmentRepo.createQueryBuilder("appointment")
         .leftJoinAndSelect("appointment.appointment_services", "appointment_services");
 
-    if (role === UserRole.CUSTOMER) {
+    if (role === UserRole.CUSTOMER || (role === UserRole.ADMIN && query.scope === "mine")) {
         queryBuilder.andWhere("appointment.user_id = :user_id", {
             user_id: userId,
         });
