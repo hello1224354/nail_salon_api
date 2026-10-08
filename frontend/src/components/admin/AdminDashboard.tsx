@@ -219,19 +219,34 @@ export function AdminDashboard() {
     }, [router]);
 
     const loadStaticData = useCallback(async () => {
-        const [branchesResult, servicesResult, staffResult, offersResult] = await Promise.all([
-            apiRequest<BranchList>("/api/branches/admin?page=1&limit=100"),
-            apiRequest<ServiceList>("/api/services/admin?page=1&limit=100"),
+        async function loadPages<T extends { total_pages: number }, R>(
+            basePath: string,
+            extract: (result: T) => R[]
+        ): Promise<R[]> {
+            const rows: R[] = [];
+            let page = 1;
+            while (page <= 1000) {
+                const result = await apiRequest<T>(`${basePath}?page=${page}&limit=100`);
+                rows.push(...extract(result));
+                if (page >= result.total_pages) break;
+                page += 1;
+            }
+            return rows;
+        }
+
+        const [branches, services, staff, offers] = await Promise.all([
+            loadPages<BranchList, Branch>("/api/branches/admin", (result) => result.branches),
+            loadPages<ServiceList, Service>("/api/services/admin", (result) => result.services),
             apiRequest<AdminStaff[]>("/api/staffs/admin"),
-            apiRequest<OfferList>("/api/offers/admin?page=1&limit=100"),
+            loadPages<OfferList, Offer>("/api/offers/admin", (result) => result.offers),
         ]);
 
         setData((current) => ({
             ...current,
-            branches: branchesResult.branches,
-            services: servicesResult.services,
-            staff: staffResult,
-            offers: offersResult.offers,
+            branches,
+            services,
+            staff,
+            offers,
         }));
     }, []);
 
