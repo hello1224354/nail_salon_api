@@ -4,3 +4,12 @@ dist
 .git
 .gitignore
 *.ps1
+# Production VPS build contexts must not upload secret or local data
+.env.*
+frontend/.env*
+frontend/.next
+frontend/node_modules
+frontend/out
+backups
+*.sql
+*.sql.gz
