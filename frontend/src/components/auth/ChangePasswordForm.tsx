@@ -5,16 +5,24 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { apiRequest, getApiErrorMessage } from "@/lib/api";
-import { clearSession, getAuthUser, restoreSession, type AuthUser } from "@/lib/auth";
+import { clearSession, getAuthUser, restoreSession } from "@/lib/auth";
+
+type VerificationData = {
+    masked_email: string;
+    expires_at: string;
+};
 
 export function ChangePasswordForm({ admin = false }: { admin?: boolean }) {
     const router = useRouter();
-    const [user, setUser] = useState<AuthUser | null>(null);
     const [currentPassword, setCurrentPassword] = useState("");
     const [newPassword, setNewPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
+    const [verificationCode, setVerificationCode] = useState("");
+    const [maskedEmail, setMaskedEmail] = useState("");
     const [showPassword, setShowPassword] = useState(false);
+    const [codeSent, setCodeSent] = useState(false);
     const [ready, setReady] = useState(false);
+    const [sendingCode, setSendingCode] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState("");
 
@@ -35,10 +43,7 @@ export function ChangePasswordForm({ admin = false }: { admin?: boolean }) {
                 return;
             }
 
-            if (!cancelled) {
-                setUser(currentUser);
-                setReady(true);
-            }
+            if (!cancelled) setReady(true);
         }
 
         void bootstrap();
@@ -48,22 +53,69 @@ export function ChangePasswordForm({ admin = false }: { admin?: boolean }) {
         };
     }, [admin, router]);
 
-    async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-        event.preventDefault();
-        setError("");
+    function passwordsAreValid() {
+        if (!currentPassword) {
+            setError("Vui lòng nhập mật khẩu hiện tại.");
+            return false;
+        }
 
         if (newPassword.length < 8) {
             setError("Mật khẩu mới phải có ít nhất 8 ký tự.");
-            return;
+            return false;
         }
 
         if (newPassword !== confirmPassword) {
             setError("Xác nhận mật khẩu không khớp.");
-            return;
+            return false;
         }
 
         if (currentPassword === newPassword) {
             setError("Mật khẩu mới phải khác mật khẩu hiện tại.");
+            return false;
+        }
+
+        return true;
+    }
+
+    async function requestCode() {
+        setError("");
+        if (!passwordsAreValid()) return;
+
+        setSendingCode(true);
+
+        try {
+            const data = await apiRequest<VerificationData>("/api/users/password/change/code", {
+                method: "POST",
+            });
+
+            setMaskedEmail(data.masked_email);
+            setVerificationCode("");
+            setCodeSent(true);
+        } catch (submitError) {
+            setError(
+                getApiErrorMessage(
+                    submitError,
+                    "Chưa gửi được mã OTP. Vui lòng thử lại."
+                )
+            );
+        } finally {
+            setSendingCode(false);
+        }
+    }
+
+    async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+        event.preventDefault();
+        setError("");
+
+        if (!passwordsAreValid()) return;
+
+        if (!codeSent) {
+            await requestCode();
+            return;
+        }
+
+        if (!/^\d{6}$/.test(verificationCode)) {
+            setError("Vui lòng nhập đủ mã OTP 6 số.");
             return;
         }
 
@@ -75,6 +127,7 @@ export function ChangePasswordForm({ admin = false }: { admin?: boolean }) {
                 body: JSON.stringify({
                     current_password: currentPassword,
                     new_password: newPassword,
+                    code: verificationCode,
                 }),
             });
 
@@ -82,7 +135,12 @@ export function ChangePasswordForm({ admin = false }: { admin?: boolean }) {
             router.replace(admin ? "/admin/login?password_changed=1" : "/login?password_changed=1");
             router.refresh();
         } catch (submitError) {
-            setError(getApiErrorMessage(submitError, "Chưa đổi được mật khẩu. Vui lòng thử lại."));
+            setError(
+                getApiErrorMessage(
+                    submitError,
+                    "Chưa đổi được mật khẩu. Vui lòng thử lại."
+                )
+            );
         } finally {
             setSubmitting(false);
         }
@@ -94,15 +152,17 @@ export function ChangePasswordForm({ admin = false }: { admin?: boolean }) {
 
     return (
         <form onSubmit={handleSubmit} className="mt-8 space-y-5" noValidate>
-            <div className="rounded-xl border border-line bg-tint/40 px-4 py-3 text-xs leading-5 text-muted">
-                Tài khoản đang đổi mật khẩu: <span className="font-semibold text-ink">{user?.full_name}</span>. Sau khi đổi xong, tài khoản sẽ được đăng xuất khỏi tất cả thiết bị.
-            </div>
-
             <label className="block">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">Mật khẩu hiện tại</span>
+                <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">
+                    Mật khẩu hiện tại
+                </span>
                 <input
                     value={currentPassword}
-                    onChange={(event) => setCurrentPassword(event.target.value)}
+                    onChange={(event) => {
+                        setCurrentPassword(event.target.value);
+                        setCodeSent(false);
+                        setVerificationCode("");
+                    }}
                     type={showPassword ? "text" : "password"}
                     autoComplete="current-password"
                     required
@@ -111,10 +171,16 @@ export function ChangePasswordForm({ admin = false }: { admin?: boolean }) {
             </label>
 
             <label className="block">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">Mật khẩu mới</span>
+                <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">
+                    Mật khẩu mới
+                </span>
                 <input
                     value={newPassword}
-                    onChange={(event) => setNewPassword(event.target.value)}
+                    onChange={(event) => {
+                        setNewPassword(event.target.value);
+                        setCodeSent(false);
+                        setVerificationCode("");
+                    }}
                     type={showPassword ? "text" : "password"}
                     autoComplete="new-password"
                     minLength={8}
@@ -124,10 +190,16 @@ export function ChangePasswordForm({ admin = false }: { admin?: boolean }) {
             </label>
 
             <label className="block">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">Nhập lại mật khẩu mới</span>
+                <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">
+                    Nhập lại mật khẩu mới
+                </span>
                 <input
                     value={confirmPassword}
-                    onChange={(event) => setConfirmPassword(event.target.value)}
+                    onChange={(event) => {
+                        setConfirmPassword(event.target.value);
+                        setCodeSent(false);
+                        setVerificationCode("");
+                    }}
                     type={showPassword ? "text" : "password"}
                     autoComplete="new-password"
                     minLength={8}
@@ -137,27 +209,92 @@ export function ChangePasswordForm({ admin = false }: { admin?: boolean }) {
             </label>
 
             <label className="flex w-fit cursor-pointer items-center gap-2 text-xs text-muted">
-                <input type="checkbox" checked={showPassword} onChange={(event) => setShowPassword(event.target.checked)} />
+                <input
+                    type="checkbox"
+                    checked={showPassword}
+                    onChange={(event) => setShowPassword(event.target.checked)}
+                />
                 Hiện mật khẩu
             </label>
 
+            {codeSent ? (
+                <div>
+                    <div className="rounded-xl border border-line bg-tint/40 px-4 py-3 text-xs leading-5 text-muted">
+                        Mã OTP 6 số đã được gửi tới{" "}
+                        <span className="font-semibold text-ink">{maskedEmail}</span>. Mã có hiệu lực trong 5 phút.
+                    </div>
+
+                    <label className="mt-4 block">
+                        <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">
+                            Mã OTP
+                        </span>
+                        <input
+                            value={verificationCode}
+                            onChange={(event) =>
+                                setVerificationCode(
+                                    event.target.value.replace(/\D/g, "").slice(0, 6)
+                                )
+                            }
+                            type="text"
+                            inputMode="numeric"
+                            autoComplete="one-time-code"
+                            placeholder="000000"
+                            required
+                            pattern="\d{6}"
+                            className="focus-ring mt-2.5 h-12 w-full rounded-xl border border-line bg-cream px-4 text-center text-lg tracking-[0.32em] text-ink outline-none"
+                        />
+                    </label>
+
+                    <div className="mt-3 flex justify-end">
+                        <button
+                            type="button"
+                            onClick={requestCode}
+                            disabled={sendingCode}
+                            className="text-xs font-semibold text-accent disabled:opacity-50"
+                        >
+                            {sendingCode ? "Đang gửi…" : "Gửi lại OTP"}
+                        </button>
+                    </div>
+                </div>
+            ) : null}
+
             {error ? (
-                <div role="alert" className="rounded-xl border border-[#cdaea1] bg-[#f5e8e1] px-4 py-3 text-xs leading-5 text-[#734738]">
+                <div
+                    role="alert"
+                    className="rounded-xl border border-[#cdaea1] bg-[#f5e8e1] px-4 py-3 text-xs leading-5 text-[#734738]"
+                >
                     {error}
                 </div>
             ) : null}
 
             <button
                 type="submit"
-                disabled={submitting || !currentPassword || newPassword.length < 8 || confirmPassword.length < 8}
+                disabled={
+                    submitting ||
+                    sendingCode ||
+                    !currentPassword ||
+                    newPassword.length < 8 ||
+                    confirmPassword.length < 8 ||
+                    (codeSent && verificationCode.length !== 6)
+                }
                 className="focus-ring flex h-12 w-full items-center justify-center rounded-full bg-ink px-6 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
             >
-                {submitting ? "Đang đổi mật khẩu…" : "Đổi mật khẩu"}
+                {submitting
+                    ? "Đang đổi mật khẩu…"
+                    : sendingCode
+                      ? "Đang gửi OTP…"
+                      : codeSent
+                        ? "Xác nhận & đổi mật khẩu"
+                        : "Gửi OTP đổi mật khẩu"}
             </button>
 
             <div className="flex items-center justify-between text-xs">
-                <Link href="/forgot-password" className="font-semibold text-accent">Quên mật khẩu?</Link>
-                <Link href={admin ? "/admin" : "/"} className="font-semibold text-muted">Quay lại</Link>
+                <Link href="/forgot-password" className="font-semibold text-accent">
+                    Quên mật khẩu?
+                </Link>
+                <Link href={admin ? "/admin" : "/"} className="font-semibold text-muted">
+                    Quay lại
+                </Link>
             </div>
         </form>
     );

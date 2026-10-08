@@ -1,7 +1,7 @@
 export const REAL_SALON_DATA = {
   branch: {
     id: 1,
-    name: "Serpente Nail Room - Tiệm Nail Quận 8",
+    name: "Chi nhánh Quận 8",
     address: "Lô 02.12 - Tầng 2 Pega Square, Chung cư Pegasuite, 1002 Tạ Quang Bửu, Phường Bình Đông, Thành Phố Hồ Chí Minh",
     phone: "(+84)818798098",
     opening_hours: "09:00–20:30",
@@ -15,7 +15,7 @@ export const REAL_SALON_DATA = {
     hotline: "081 879 8098",
     contact_email: "serpentectv01@gmail.com",
     facebook_name: "Serpente Nail Room",
-    tiktok_name: "Serpente - Tiệm Nail Quận 8",
+    tiktok_name: "Serpente - Chi nhánh Quận 8",
     has_refreshments: true,
     has_warranty: true,
     warranty_days: 5,

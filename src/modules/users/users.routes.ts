@@ -5,6 +5,7 @@ import { requireRole } from "../../common/middleware/role.middleware";
 import { requireTrustedOrigin } from "../../common/middleware/origin.middleware";
 import { UserRole } from "./users.entity";
 import {
+    accountOtpRateLimiter,
     loginRateLimiter,
     mfaRateLimiter,
     passwordRecoveryRateLimiter,
@@ -15,6 +16,7 @@ import {
 
 const router = Router();
 
+router.post("/register/code", registerRateLimiter, controller.requestRegistrationCode);
 router.post("/register", registerRateLimiter, controller.registerUser);
 router.post("/login", loginRateLimiter, controller.loginUser);
 router.post("/login/mfa/verify", mfaRateLimiter, controller.verifyLoginMfa);
@@ -41,6 +43,12 @@ router.post(
     "/password/reset",
     passwordRecoveryRateLimiter,
     controller.resetPassword
+);
+router.post(
+    "/password/change/code",
+    authenticate,
+    accountOtpRateLimiter,
+    controller.requestPasswordChangeCode
 );
 router.post(
     "/password/change",

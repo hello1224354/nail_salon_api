@@ -68,7 +68,7 @@ export function getAccessTokenVerifyOptions(): VerifyOptions {
     };
 }
 
-export async function createLoginSession(user: User, fingerprint: SessionFingerprint) {
+export async function createLoginSession(user: User, fingerprint: SessionFingerprint, persistent = true) {
     return await AppDataSource.transaction(async (manager) => {
         const transactionUserRepo = manager.getRepository(User);
         const transactionSessionRepo = manager.getRepository(RefreshSession);
@@ -101,6 +101,7 @@ export async function createLoginSession(user: User, fingerprint: SessionFingerp
             replaced_by: null,
             ip_hash: fingerprint.ipHash,
             user_agent_hash: fingerprint.userAgentHash,
+            persistent,
         });
 
         await transactionSessionRepo.save(session);
@@ -109,6 +110,7 @@ export async function createLoginSession(user: User, fingerprint: SessionFingerp
             accessToken: signAccessToken(currentUser),
             refreshToken,
             refreshExpiresAt: expiresAt,
+            persistent,
         };
     });
 }
@@ -220,6 +222,7 @@ export async function refreshSession(refreshToken: string, fingerprint: SessionF
             replaced_by: null,
             ip_hash: fingerprint.ipHash,
             user_agent_hash: fingerprint.userAgentHash,
+            persistent: session.persistent,
         });
 
         session.revoked_at = new Date();
@@ -235,6 +238,7 @@ export async function refreshSession(refreshToken: string, fingerprint: SessionF
             refreshToken: newRefreshToken,
             refreshExpiresAt: replacement.expires_at,
             familyId: replacement.family_id,
+            persistent: replacement.persistent,
         };
     });
 

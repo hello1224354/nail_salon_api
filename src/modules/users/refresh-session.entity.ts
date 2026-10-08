@@ -30,6 +30,9 @@ export class RefreshSession {
     @Column({ type: "varchar", length: 64, nullable: true })
     user_agent_hash: string | null;
 
+    @Column({ type: "boolean", default: true })
+    persistent: boolean;
+
     @CreateDateColumn()
     created_at: Date;
 }

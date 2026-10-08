@@ -18,7 +18,7 @@ import {
     type ServiceList,
 } from "@/lib/api";
 import { getAuthUser, logoutSession, restoreSession, type AuthUser } from "@/lib/auth";
-import { formatAppointmentStatus, formatServicePrice, formatVnd, localizeBranchName } from "@/lib/studio-data";
+import { formatAppointmentStatus, formatServicePrice, formatVnd, localizeBranchName, shortBranchName } from "@/lib/studio-data";
 
 type TabKey = "overview" | "appointments" | "services" | "staff" | "branches" | "offers";
 
@@ -774,14 +774,14 @@ export function AdminDashboard() {
                                 <select name="branch_id" className={selectClass} required defaultValue="">
                                     <option value="" disabled>Chọn chi nhánh</option>
                                     {data.branches.map((branch) => (
-                                        <option key={branch.id} value={branch.id}>{localizeBranchName(branch.name)}</option>
+                                        <option key={branch.id} value={branch.id}>{shortBranchName(branch.name)}</option>
                                     ))}
                                 </select>
                             </Field>
                         ) : (
                             <Field label="Chi nhánh">
                                 <div className="flex h-11 items-center rounded-xl border border-line bg-[#eee9e3] px-3.5 text-sm text-muted">
-                                    {localizeBranchName(data.branches.find((branch) => branch.id === editingService.branch_id)?.name || `#${editingService.branch_id}`)}
+                                    {shortBranchName(data.branches.find((branch) => branch.id === editingService.branch_id)?.name || `#${editingService.branch_id}`)}
                                 </div>
                             </Field>
                         )}
@@ -814,7 +814,7 @@ export function AdminDashboard() {
                             <select name="branch_id" className={selectClass} required defaultValue="">
                                 <option value="" disabled>Chọn chi nhánh</option>
                                 {data.branches.map((branch) => (
-                                    <option key={branch.id} value={branch.id}>{localizeBranchName(branch.name)}</option>
+                                    <option key={branch.id} value={branch.id}>{shortBranchName(branch.name)}</option>
                                 ))}
                             </select>
                         </Field>
@@ -1011,7 +1011,7 @@ function AppointmentsPanel({
                 <div className="flex flex-col gap-2 sm:flex-row">
                     <select value={branchFilter} onChange={(event) => setBranchFilter(event.target.value)} className="h-10 rounded-xl border border-line bg-cream px-3 text-xs outline-none">
                         <option value="">Tất cả chi nhánh</option>
-                        {branches.map((branch) => <option key={branch.id} value={branch.id}>{localizeBranchName(branch.name)}</option>)}
+                        {branches.map((branch) => <option key={branch.id} value={branch.id}>{shortBranchName(branch.name)}</option>)}
                     </select>
                     <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="h-10 rounded-xl border border-line bg-cream px-3 text-xs outline-none">
                         <option value="">Tất cả trạng thái</option>
@@ -1061,7 +1061,7 @@ function AppointmentsPanel({
                                         </p>
                                     </td>
                                     <td className="px-5 py-4">{appointment.staff?.full_name || appointment.staff_id.slice(0, 8)}</td>
-                                    <td className="px-5 py-4">{appointment.branch?.name ? localizeBranchName(appointment.branch.name) : `#${appointment.branch_id}`}</td>
+                                    <td className="px-5 py-4">{appointment.branch?.name ? shortBranchName(appointment.branch.name) : `#${appointment.branch_id}`}</td>
                                     <td className="px-5 py-4">
                                         <span className={`inline-flex rounded-full border px-2.5 py-1 text-[9px] font-semibold ${badgeClass(appointment.status)}`}>
                                             {formatAppointmentStatus(appointment.status)}
@@ -1153,7 +1153,7 @@ function ServicesPanel({
                                         <p className="mt-1 text-[10px] font-semibold text-[#8a6a58]">Chưa mở đặt trực tuyến</p>
                                     ) : null}
                                 </td>
-                                <td className="px-5 py-4">{localizeBranchName(branches.find((branch) => branch.id === service.branch_id)?.name || `#${service.branch_id}`)}</td>
+                                <td className="px-5 py-4">{shortBranchName(branches.find((branch) => branch.id === service.branch_id)?.name || `#${service.branch_id}`)}</td>
                                 <td className="px-5 py-4">{formatServicePrice(service)}</td>
                                 <td className="px-5 py-4">{service.duration_minutes ? `${service.duration_minutes} phút` : "Chưa có"}</td>
                                 <td className="px-5 py-4">
@@ -1214,7 +1214,7 @@ function StaffPanel({
                                         onChange={(event) => void onUpdate(person, { branch_id: Number(event.target.value) })}
                                         className="h-9 rounded-lg border border-line bg-white px-2 text-[11px]"
                                     >
-                                        {branches.map((branch) => <option key={branch.id} value={branch.id}>{localizeBranchName(branch.name)}</option>)}
+                                        {branches.map((branch) => <option key={branch.id} value={branch.id}>{shortBranchName(branch.name)}</option>)}
                                     </select>
                                 </td>
                                 <td className="px-5 py-4">
@@ -1256,7 +1256,7 @@ function BranchesPanel({
                     <article key={branch.id} className="rounded-2xl border border-line bg-[#faf8f5] p-5">
                         <div>
                             <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-accent">Chi nhánh #{branch.id}</p>
-                            <h3 className="mt-2 font-serif text-2xl">{localizeBranchName(branch.name)}</h3>
+                            <h3 className="mt-2 font-serif text-2xl">{shortBranchName(branch.name)}</h3>
                         </div>
                         <p className="mt-4 min-h-10 text-xs leading-5 text-muted">{branch.address}</p>
                         <div className="mt-5 flex gap-4 border-t border-line pt-4 text-[11px]">

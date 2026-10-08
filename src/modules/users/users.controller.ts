@@ -5,6 +5,8 @@ import {
     parseForgotPasswordDto,
     parseLoginUserDto,
     parseRegisterUserDto,
+    parseRegistrationVerificationCode,
+    parseRegistrationVerificationRequestDto,
     parseResetPasswordDto,
     parseVerifyLoginMfaDto,
 } from "./users.dto";
@@ -12,6 +14,8 @@ import * as userService from "./users.service";
 import * as authSessionService from "./auth-session.service";
 import * as passwordResetService from "./password-reset.service";
 import * as loginMfaService from "./login-mfa.service";
+import * as registrationVerificationService from "./registration-verification.service";
+import * as passwordChangeService from "./password-change.service";
 import { UserRole } from "./users.entity";
 import {
     AuditEventType,
@@ -74,8 +78,25 @@ function requestSecurityContext(req: Request, res: Response) {
     };
 }
 
+export const requestRegistrationCode = async (req: Request, res: Response) => {
+    const data = parseRegistrationVerificationRequestDto(req.body);
+    const verification = await registrationVerificationService.requestRegistrationVerification(data.email);
+
+    return res.status(202).json({
+        success: {
+            message: "Registration verification code sent",
+            data: {
+                masked_email: verification.maskedEmail,
+                expires_at: verification.expiresAt,
+            },
+        },
+    });
+};
+
 export const registerUser = async (req: Request, res: Response) => {
-    const user = await userService.registerUser(parseRegisterUserDto(req.body));
+    const data = parseRegisterUserDto(req.body);
+    const code = parseRegistrationVerificationCode(req.body);
+    const user = await registrationVerificationService.registerVerifiedUser(data, code);
 
     return res.status(201).json({
         success: {
@@ -178,9 +199,9 @@ export const loginUser = async (req: Request, res: Response) => {
             });
         }
 
-        const session = await authSessionService.createLoginSession(user, context.fingerprint);
+        const session = await authSessionService.createLoginSession(user, context.fingerprint, credentials.remember_me);
 
-        setRefreshCookie(res, session.refreshToken, session.refreshExpiresAt);
+        setRefreshCookie(res, session.refreshToken, session.refreshExpiresAt, session.persistent);
         res.setHeader("Cache-Control", "no-store");
 
         await createAuditLog({
@@ -230,7 +251,7 @@ export const verifyLoginMfa = async (req: Request, res: Response) => {
 
         const session = await authSessionService.createLoginSession(user, context.fingerprint);
 
-        setRefreshCookie(res, session.refreshToken, session.refreshExpiresAt);
+        setRefreshCookie(res, session.refreshToken, session.refreshExpiresAt, session.persistent);
         res.setHeader("Cache-Control", "no-store");
 
         await createAuditLog({
@@ -275,7 +296,7 @@ export const refreshSession = async (req: Request, res: Response) => {
     try {
         const session = await authSessionService.refreshSession(refreshToken, context.fingerprint);
 
-        setRefreshCookie(res, session.refreshToken, session.refreshExpiresAt);
+        setRefreshCookie(res, session.refreshToken, session.refreshExpiresAt, session.persistent);
         res.setHeader("Cache-Control", "no-store");
 
         await createAuditLog({
@@ -355,6 +376,22 @@ export const getMe = async (req: Request, res: Response) => {
             message: "Get current user successfully",
             data: publicUser(user),
         }
+    });
+};
+
+export const requestPasswordChangeCode = async (req: Request, res: Response) => {
+    if (!req.user) throw new AppError("Authentication required", 401, "AUTHENTICATION_REQUIRED");
+
+    const verification = await passwordChangeService.requestPasswordChangeCode(req.user.id);
+
+    return res.status(202).json({
+        success: {
+            message: "Password change verification code sent",
+            data: {
+                masked_email: verification.maskedEmail,
+                expires_at: verification.expiresAt,
+            },
+        },
     });
 };
 
