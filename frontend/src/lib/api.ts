@@ -111,7 +111,7 @@ export async function apiRequest<T>(
 }
 
 const errorMessagesByCode: Record<string, string> = {
-    INVALID_CREDENTIALS: "Số điện thoại hoặc mật khẩu không đúng.",
+    INVALID_CREDENTIALS: "Email hoặc mật khẩu không đúng.",
     AUTHENTICATION_REQUIRED: "Vui lòng đăng nhập để tiếp tục.",
     INVALID_TOKEN: "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
     TOKEN_REVOKED: "Phiên đăng nhập đã bị thu hồi. Vui lòng đăng nhập lại.",
