@@ -15,6 +15,7 @@ export class TrustedLoginDeviceOtp1791449000000 implements MigrationInterface {
                 \`user_id\` varchar(36) NOT NULL,
                 \`token_hash\` varchar(64) NOT NULL,
                 \`token_version\` int NOT NULL,
+                \`role\` varchar(16) NOT NULL,
                 \`user_agent_hash\` varchar(64) NULL,
                 \`expires_at\` datetime(3) NOT NULL,
                 \`revoked_at\` datetime(3) NULL,
