@@ -103,21 +103,30 @@ export function Header() {
                     })}
                 </nav>
 
-                <div className="col-start-3 row-start-1 hidden items-center justify-self-end gap-2 xl:flex">
-                    <select
-                        value={selectedBranchId ?? ""}
-                        onChange={(event) => setSelectedBranchId(Number(event.target.value))}
-                        disabled={branchesLoading || branches.length === 0}
-                        aria-label="Chọn chi nhánh"
-                        className="focus-ring h-9 w-[112px] rounded-full border border-line bg-surface px-3 text-xs font-semibold text-ink outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                        {branches.length === 0 ? <option value="">Chưa có chi nhánh</option> : null}
-                        {branches.map((branch) => (
-                            <option key={branch.id} value={branch.id}>
-                                {shortBranchName(branch.name)}
-                            </option>
-                        ))}
-                    </select>
+                <div className="col-start-3 row-start-1 hidden translate-x-2 items-center justify-self-end gap-2 xl:flex">
+                    <div className="relative shrink-0">
+                        <select
+                            value={selectedBranchId ?? ""}
+                            onChange={(event) => setSelectedBranchId(Number(event.target.value))}
+                            disabled={branchesLoading || branches.length === 0}
+                            aria-label="Chọn chi nhánh"
+                            className="focus-ring h-9 w-[112px] appearance-none rounded-full border border-line bg-surface px-0 text-center text-xs font-semibold text-ink outline-none [text-align-last:center] disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            {branches.length === 0 ? <option value="">Chưa có chi nhánh</option> : null}
+                            {branches.map((branch) => (
+                                <option key={branch.id} value={branch.id}>
+                                    {shortBranchName(branch.name)}
+                                </option>
+                            ))}
+                        </select>
+                        <svg
+                            aria-hidden="true"
+                            viewBox="0 0 12 12"
+                            className="pointer-events-none absolute right-3.5 top-1/2 size-3 -translate-y-1/2 text-ink"
+                        >
+                            <path d="M2.25 4.25 6 8l3.75-3.75" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                    </div>
 
                     {authUser ? (
                         <>
