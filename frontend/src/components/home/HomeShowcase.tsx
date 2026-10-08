@@ -62,6 +62,33 @@ function useAutoCarousel(itemCount: number, delay: number) {
     return { emblaRef, emblaApi, selectedIndex };
 }
 
+function ArrowIcon({ direction }: { direction: "left" | "right" }) {
+    return (
+        <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            className="size-7 shrink-0"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+        >
+            {direction === "left" ? (
+                <>
+                    <path d="M14.5 5 7.5 12l7 7" />
+                    <path d="M8 12h9" />
+                </>
+            ) : (
+                <>
+                    <path d="m9.5 5 7 7-7 7" />
+                    <path d="M16 12H7" />
+                </>
+            )}
+        </svg>
+    );
+}
+
 function CarouselArrows({
     onPrevious,
     onNext,
@@ -82,7 +109,7 @@ function CarouselArrows({
                 className={buttonClass}
                 onClick={onPrevious}
             >
-                <span aria-hidden="true" className="text-[28px] leading-none">←</span>
+                <ArrowIcon direction="left" />
             </button>
             <button
                 type="button"
@@ -90,7 +117,7 @@ function CarouselArrows({
                 className={buttonClass}
                 onClick={onNext}
             >
-                <span aria-hidden="true" className="text-[28px] leading-none">→</span>
+                <ArrowIcon direction="right" />
             </button>
         </div>
     );
