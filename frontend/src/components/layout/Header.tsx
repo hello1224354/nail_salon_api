@@ -103,13 +103,13 @@ export function Header() {
                     })}
                 </nav>
 
-                <div className="col-start-3 row-start-1 hidden items-center justify-self-end gap-2.5 xl:flex">
+                <div className="col-start-3 row-start-1 hidden items-center justify-self-end gap-2 xl:flex">
                     <select
                         value={selectedBranchId ?? ""}
                         onChange={(event) => setSelectedBranchId(Number(event.target.value))}
                         disabled={branchesLoading || branches.length === 0}
                         aria-label="Chọn chi nhánh"
-                        className="focus-ring h-11 w-[132px] rounded-full border border-line bg-surface px-4 text-sm font-semibold text-ink outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                        className="focus-ring h-9 w-[112px] rounded-full border border-line bg-surface px-3 text-xs font-semibold text-ink outline-none disabled:cursor-not-allowed disabled:opacity-50"
                     >
                         {branches.length === 0 ? <option value="">Chưa có chi nhánh</option> : null}
                         {branches.map((branch) => (
@@ -121,7 +121,7 @@ export function Header() {
 
                     {authUser ? (
                         <>
-                            <Link href="/book" className="focus-ring flex h-11 min-w-[148px] items-center justify-center rounded-full bg-ink px-5 text-xs font-semibold text-white shadow-[0_6px_18px_rgba(45,39,35,0.12)] transition-all hover:-translate-y-0.5 hover:shadow-[0_9px_22px_rgba(45,39,35,0.16)]">
+                            <Link href="/book" className="focus-ring flex h-9 min-w-[126px] items-center justify-center rounded-full bg-ink px-4 text-xs font-semibold text-white shadow-[0_6px_18px_rgba(45,39,35,0.12)] transition-all hover:-translate-y-0.5 hover:shadow-[0_9px_22px_rgba(45,39,35,0.16)]">
                                 Đặt lịch ngay
                             </Link>
 
@@ -131,9 +131,9 @@ export function Header() {
                                 aria-expanded={accountOpen}
                                 aria-haspopup="menu"
                                 onClick={() => setAccountOpen((value) => !value)}
-                                className={`focus-ring flex h-11 min-w-[148px] items-center justify-center gap-2 rounded-full px-3 text-xs font-semibold transition-colors ${accountOpen ? "bg-tint text-accent" : "text-ink hover:bg-tint/70 hover:text-accent"}`}
+                                className={`focus-ring flex h-9 min-w-[126px] items-center justify-center gap-1.5 rounded-full px-2.5 text-xs font-semibold transition-colors ${accountOpen ? "bg-tint text-accent" : "text-ink hover:bg-tint/70 hover:text-accent"}`}
                             >
-                                <span className="flex size-7 items-center justify-center rounded-full bg-tint font-serif text-[12px] text-accent">
+                                <span className="flex size-6 items-center justify-center rounded-full bg-tint font-serif text-[11px] text-accent">
                                     {accountInitial}
                                 </span>
                                 <span>Tài khoản</span>
@@ -181,12 +181,12 @@ export function Header() {
                         <>
                             <Link
                                 href="/login"
-                            className={`focus-ring rounded-full px-4 py-2.5 text-xs font-semibold transition-colors hover:bg-tint hover:text-accent ${pathname.startsWith("/login") || pathname.startsWith("/register") ? "bg-tint text-accent" : "text-ink"}`}
+                            className={`focus-ring flex h-9 items-center justify-center rounded-full px-3 text-xs font-semibold transition-colors hover:bg-tint hover:text-accent ${pathname.startsWith("/login") || pathname.startsWith("/register") ? "bg-tint text-accent" : "text-ink"}`}
                             >
                                 Đăng nhập
                             </Link>
 
-                            <Link href="/book" className="focus-ring ml-0.5 rounded-full bg-ink px-5 py-2.5 text-xs font-semibold text-white shadow-[0_6px_18px_rgba(45,39,35,0.12)] transition-all hover:-translate-y-0.5 hover:shadow-[0_9px_22px_rgba(45,39,35,0.16)]">
+                            <Link href="/book" className="focus-ring flex h-9 min-w-[126px] items-center justify-center rounded-full bg-ink px-4 text-xs font-semibold text-white shadow-[0_6px_18px_rgba(45,39,35,0.12)] transition-all hover:-translate-y-0.5 hover:shadow-[0_9px_22px_rgba(45,39,35,0.16)]">
                                 Đặt lịch ngay
                             </Link>
                         </>
