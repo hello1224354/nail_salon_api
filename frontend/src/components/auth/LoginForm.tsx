@@ -49,8 +49,7 @@ export function LoginForm() {
             });
 
             if ("mfa_required" in data && data.mfa_required) {
-                // Never bypass the email OTP challenge for an ADMIN login.
-                if (data.user.role.toLowerCase() !== "admin") {
+                if (!["customer", "admin"].includes(data.user.role.toLowerCase())) {
                     throw new Error("Tài khoản này không được phép đăng nhập tại đây.");
                 }
                 setChallengeId(data.challenge_id);
@@ -87,9 +86,9 @@ export function LoginForm() {
                 body: JSON.stringify({ challenge_id: challengeId, code: otp }),
             });
 
-            if (data.user.role.toLowerCase() !== "admin") {
+            if (!["customer", "admin"].includes(data.user.role.toLowerCase())) {
                 await logoutSession();
-                throw new Error("Tài khoản này không có quyền quản trị.");
+                throw new Error("Tài khoản này không được phép đặt lịch.");
             }
 
             saveSession(data.access_token, data.user);
@@ -109,7 +108,7 @@ export function LoginForm() {
         return (
             <form onSubmit={handleOtpSubmit} className="mt-9 space-y-5" noValidate>
                 <div className="rounded-xl border border-line bg-cream p-4 text-xs leading-5 text-muted">
-                    Xác minh ADMIN: mã OTP 6 số đã gửi tới <strong className="text-ink">{maskedEmail}</strong>.
+                    Mã OTP 6 số đã được gửi tới <strong className="text-ink">{maskedEmail}</strong>.
                     Mã có hiệu lực trong 5 phút.
                 </div>
                 <label className="block">
