@@ -192,6 +192,7 @@ export function AdminDashboard() {
     const [editingOffer, setEditingOffer] = useState<Offer | null>(null);
     const [appointmentStatus, setAppointmentStatus] = useState("");
     const [appointmentBranch, setAppointmentBranch] = useState("");
+    const [appointmentPeriod, setAppointmentPeriod] = useState<"all" | "history" | "upcoming">("all");
     const [appointmentPage, setAppointmentPage] = useState(1);
     const [appointmentPages, setAppointmentPages] = useState(1);
     const [submitting, setSubmitting] = useState(false);
@@ -262,6 +263,9 @@ export function AdminDashboard() {
 
             if (appointmentStatus) params.set("status", appointmentStatus);
             if (appointmentBranch) params.set("branch_id", appointmentBranch);
+            // Filter scheduled appointments using the existing paginated API.
+            if (appointmentPeriod === "history") params.set("to", new Date().toISOString());
+            if (appointmentPeriod === "upcoming") params.set("from", new Date().toISOString());
 
             const result = await apiRequest<AppointmentList>(
                 `/api/appointments?${params.toString()}`
@@ -274,7 +278,7 @@ export function AdminDashboard() {
             }));
             setAppointmentPages(Math.max(result.total_pages, 1));
         },
-        [appointmentBranch, appointmentPage, appointmentStatus]
+        [appointmentBranch, appointmentPage, appointmentPeriod, appointmentStatus]
     );
 
     const loadTodayStats = useCallback(async () => {
@@ -675,6 +679,12 @@ export function AdminDashboard() {
                                         branches={data.branches}
                                         branchFilter={appointmentBranch}
                                         statusFilter={appointmentStatus}
+                                        periodFilter={appointmentPeriod}
+                                        total={data.appointmentTotal}
+                                        setPeriodFilter={(value) => {
+                                            setAppointmentPeriod(value);
+                                            setAppointmentPage(1);
+                                        }}
                                         setBranchFilter={(value) => {
                                             setAppointmentBranch(value);
                                             setAppointmentPage(1);
@@ -1052,6 +1062,9 @@ function AppointmentsPanel({
     branches,
     branchFilter,
     statusFilter,
+    periodFilter,
+    total,
+    setPeriodFilter,
     setBranchFilter,
     setStatusFilter,
     page,
@@ -1066,6 +1079,9 @@ function AppointmentsPanel({
     branches: Branch[];
     branchFilter: string;
     statusFilter: string;
+    periodFilter: "all" | "history" | "upcoming";
+    total: number;
+    setPeriodFilter: (value: "all" | "history" | "upcoming") => void;
     setBranchFilter: (value: string) => void;
     setStatusFilter: (value: string) => void;
     page: number;
@@ -1082,8 +1098,19 @@ function AppointmentsPanel({
                 <div>
                     <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-accent">Quản lý lịch hẹn</p>
                     <h2 className="mt-1 font-serif text-3xl">Lịch hẹn</h2>
+                    <p className="mt-2 text-xs text-muted">Tra cứu lịch hẹn từ trước đến nay, bao gồm lịch đã hoàn thành và đã hủy.</p>
                 </div>
-                <div className="flex flex-col gap-2 sm:flex-row">
+                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                    <select
+                        aria-label="Lọc lịch hẹn theo thời gian"
+                        value={periodFilter}
+                        onChange={(event) => setPeriodFilter(event.target.value as "all" | "history" | "upcoming")}
+                        className="h-10 rounded-xl border border-line bg-cream px-3 text-xs outline-none"
+                    >
+                        <option value="all">Toàn bộ thời gian</option>
+                        <option value="history">Từ trước đến hiện tại</option>
+                        <option value="upcoming">Sắp tới</option>
+                    </select>
                     <select value={branchFilter} onChange={(event) => setBranchFilter(event.target.value)} className="h-10 rounded-xl border border-line bg-cream px-3 text-xs outline-none">
                         <option value="">Tất cả chi nhánh</option>
                         {branches.map((branch) => <option key={branch.id} value={branch.id}>{shortBranchName(branch.name)}</option>)}
@@ -1183,8 +1210,8 @@ function AppointmentsPanel({
 
             {!appointments.length ? <p className="px-5 py-12 text-center text-xs text-muted">Không có lịch hẹn nào khớp với bộ lọc đã chọn.</p> : null}
 
-            <div className="flex items-center justify-between border-t border-line px-5 py-4">
-                <p className="text-[10px] text-muted">Trang {page}/{pages}</p>
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-5 py-4">
+                <p className="text-[10px] text-muted">{total.toLocaleString("vi-VN")} lịch hẹn · Trang {page}/{pages}</p>
                 <div className="flex gap-2">
                     <button disabled={page <= 1} onClick={() => setPage(page - 1)} className="rounded-full border border-line px-3 py-2 text-[10px] font-semibold disabled:opacity-35">← Trước</button>
                     <button disabled={page >= pages} onClick={() => setPage(page + 1)} className="rounded-full border border-line px-3 py-2 text-[10px] font-semibold disabled:opacity-35">Sau →</button>
