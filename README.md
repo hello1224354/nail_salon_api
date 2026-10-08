@@ -1,43 +1,113 @@
-# Serpente Nail Room — Website đặt lịch & quản trị salon
+# Serpente Nail Room — Full-stack Appointment Booking System
 
-Repository full-stack cho Serpente Nail Room: website giới thiệu, dịch vụ, đặt lịch trực tuyến theo khung giờ còn trống, quản lý nhân viên/chi nhánh/lịch/ưu đãi, OTP email và dashboard admin.
+**A deployed nail salon booking platform with concurrency-safe staff allocation, account security, and an administrative dashboard.**
 
-**Cơ sở tài liệu:** Source trên `main`, commit `ad110058` (09/10/2026 ICT). Mọi thay đổi nghiệp vụ phải cập nhật tài liệu tương ứng.
+[**Live website**](https://nail-salon-web-v2.vercel.app/) · [**Service catalog**](https://nail-salon-web-v2.vercel.app/services) · [**API health**](https://api-production-e911.up.railway.app/health) · [**Technical documentation**](docs/README.md) · [**Engineering case study**](docs/PORTFOLIO.md)
 
-## Công nghệ
+![Security Hardening CI](https://github.com/hello1224354/nail_salon_api/actions/workflows/security-hardening-ci.yml/badge.svg)
 
-| Tầng | Stack |
+> **Portfolio focus:** Backend architecture and transactional booking logic. The live site is a working application, not a static landing-page prototype. Authenticated booking and admin pages require a legitimate account; no public test credentials are shared here.
+
+## 1. The problem
+
+A salon with multiple employees must let customers find bookable times without selecting an employee. Two customers may attempt the same time simultaneously, so simply displaying an available slot and checking again with a SQL `SELECT` is not sufficient to prevent double booking. The system must also support multi-person reservations and give administrators an operational workflow.
+
+**The solution:** A Next.js frontend backed by an Express + MySQL API. The backend calculates available times, chooses eligible free staff, and atomically reserves each required 15-minute interval before committing an appointment or group booking.
+
+## 2. What the product does
+
+| Customer experience | Staff / admin operations |
 |---|---|
-| Frontend | Next.js 16 (App Router), React 19, TypeScript, Tailwind 4 |
-| Backend | Node.js, Express 5, TypeScript |
-| CSDL | MySQL 8, TypeORM, migrations |
-| Xác thực | JWT + refresh sessions + OTP Gmail + trusted browser |
-| Triển khai hiện tại | Vercel (web) + Railway (API/database) |
-| Triển khai thay thế | Docker Compose VPS + Caddy |
+| Browse salon information, promotions, branches, service prices | Maintain services, branches, employees and promotions |
+| Register/login with email OTP and trusted-browser recognition | View a dashboard and manage appointment states |
+| Select services, party size, date and **available time** | Search all appointments by date range, branch, status or customer-facing booking code |
+| Book without choosing staff; receive confirmation code | Receive Gmail notification for a new booking |
+| Review personal appointment status | View assigned appointments according to server-side role rules |
 
-## Chức năng
+**Try it:** [Homepage](https://nail-salon-web-v2.vercel.app/) → [Service catalog](https://nail-salon-web-v2.vercel.app/services) → [Book](https://nail-salon-web-v2.vercel.app/book). Booking requires an account and must not be used to create test records in production without authorization.
 
-- **Khách:** đăng ký xác minh email; login và OTP khi cần; xem chi nhánh/dịch vụ/ưu đãi; chọn ngày/giờ khả dụng, đặt lịch nhóm, xem lịch cá nhân.
-- **Booking:** backend tự phân nhân viên; slot 15 phút với khóa duy nhất theo nhân viên; hỗ trợ 1–N khách; lịch mới `pending`.
-- **Admin:** thống kê trong ngày, CRUD chi nhánh/dịch vụ/nhân viên/ưu đãi, quản lý trạng thái lịch, lọc từ ngày–đến ngày và tìm mã lịch 8 ký tự.
-- **Thông báo:** gửi email khi có booking mới đến tài khoản `admin` có email, sau DB commit, best-effort.
-- **Bảo mật:** role-based authorization, login OTP, refresh-token rotation, audit log và rate limiting.
+## 3. System design
 
-## Khởi động nhanh local
+```mermaid
+flowchart LR
+  Browser[Customer / Admin browser] --> Next[Next.js / React]
+  Next -->|Same-origin /api rewrite| API[Express / TypeScript]
+  API --> Auth[JWT, OTP, RBAC]
+  API --> Booking[Booking engine]
+  Booking --> DB[(MySQL / TypeORM)]
+  API --> Email[Gmail API / OAuth2]
+  CI[GitHub Actions] -.-> Next
+  CI -.-> API
+```
 
-Yêu cầu: Node.js 22+ (CI: Node 22, Docker: Node 24), npm, Docker Compose v2.
+| Layer | Technology |
+|---|---|
+| Web | Next.js 16 App Router, React 19, TypeScript, Tailwind CSS 4 |
+| API | Node.js, Express 5, TypeScript |
+| Persistence | MySQL 8, TypeORM, versioned migrations |
+| Security | JWT access tokens, refresh-token rotation/reuse detection, email OTP, account-scoped trusted-browser cookies, RBAC |
+| Integration | Gmail API via OAuth2 |
+| Delivery | GitHub Actions CI, Vercel (web), Railway (API); alternative VPS/Docker Compose configuration |
+
+## 4. The engineering challenges
+
+### Preventing double booking
+
+Availability is a read-only estimate: two clients can see the same slot. During booking, the API starts a **database transaction**, locks the requesting customer's row, checks eligible staff, then inserts all required records in `staff_booking_slots`. Its **composite primary key `(staff_id, slot_start)`** prevents concurrent transactions from reserving the same staff interval. If the staff allocation fails, the booking transaction rolls back.
+
+For multi-person bookings, a single `booking_group_id` links one appointment per assigned staff; the group is saved atomically. The client never chooses staff.
+
+**Source:** [booking service](src/modules/appointments/appointments.service.ts) · [slot entity](src/modules/appointments/staff-booking-slots.entity.ts) · [booking specification](docs/BOOKING.md).
+
+### Authentication across multiple accounts
+
+Admin/customer login uses email OTP on unrecognized browsers. The application issues short-lived JWTs and rotates refresh tokens, with reuse detection. Trusted-browser proof cookies are **scoped per account** so logging into account B does not overwrite account A's remembered-browser proof.
+
+**Source:** [user authentication](src/modules/users/users.controller.ts) · [trusted-device logic](src/modules/users/trusted-login-device.logic.ts) · [security documentation](docs/AUTH-SECURITY.md).
+
+### Operational booking visibility
+
+The admin appointments table supports date-range filters and customer-visible 8-character booking-code search on the **database side**, combined with status/branch and server-side pagination. Admin status transitions are validated on the server; e.g., a confirmed appointment cannot start before its scheduled time.
+
+**Source:** [admin dashboard](frontend/src/components/admin/AdminDashboard.tsx) · [API contract](docs/API.md).
+
+## 5. Architecture decisions and limitations
+
+| Decision | Rationale | Trade-off |
+|---|---|---|
+| Unique staff/15-minute slot key | Atomic conflict detection independent of frontend timing | Extra reservation rows; updates must release/reacquire slots |
+| Automatic staff assignment | Simple customer UX and central scheduling rules | Availability depends on current staff and active bookings |
+| One row per person in group booking | Staff-specific assignments with shared group ID | Group views must aggregate or identify `booking_group_id` |
+| Snapshot service price/name at booking | Historical bookings remain meaningful after catalog edits | Intentional duplication |
+| Gmail notifications after DB commit | Email outages do not roll back valid bookings | **Best-effort delivery:** no persistent retry/outbox yet |
+| JWT + rotating refresh sessions | Short-lived access credentials and revocable sessions | Additional state and cookie/origin management |
+
+No payment gateway or per-staff shift scheduling is claimed. Unit/regression tests and builds run in CI; a full automated MySQL concurrency and browser E2E test suite is **future work**, not a completed feature. Details: [Engineering case study](docs/PORTFOLIO.md).
+
+## 6. Demo and visuals
+
+- [Live homepage](https://nail-salon-web-v2.vercel.app/) — public salon content and service discovery.
+- [Live service catalog](https://nail-salon-web-v2.vercel.app/services) — categories, prices and branch context.
+- [Booking flow](https://nail-salon-web-v2.vercel.app/book) — available slots and confirmation (authentication required).
+- [Admin login](https://nail-salon-web-v2.vercel.app/admin/login) — admin dashboard is access-controlled.
+
+**Booking confirmation:** the interface shows the branch, scheduled time, services, party size, estimated total and short booking code. See [screenshot guidance / media](docs/SCREENSHOTS.md). Actual screen captures should have private customer and staff data removed before publication.
+
+## 7. Run locally
+
+Requirements: **Node.js 22+**, npm, Docker Compose v2. See [detailed setup](docs/SETUP.md).
 
 ```bash
 git clone https://github.com/hello1224354/nail_salon_api.git
 cd nail_salon_api
 cp .env.example .env
-# Thay DB_PASSWORD, JWT_SECRET bằng giá trị local của bạn
+# Set DB_PASSWORD and a strong JWT_SECRET in .env
 docker compose up -d
 npm ci
 npm run dev
 ```
 
-Terminal khác:
+In a second terminal:
 
 ```bash
 cd frontend
@@ -46,32 +116,28 @@ npm ci
 npm run dev
 ```
 
-- Web: `http://localhost:3001`; API: `http://localhost:3000`; health: `/health`.
-- Muốn OTP/email hoạt động cần điền đủ Gmail OAuth; xem [SETUP](docs/SETUP.md). Không commit secrets hay data khách hàng.
+Frontend: http://localhost:3001 · Backend: http://localhost:3000 · Health: http://localhost:3000/health. Email OTP requires separate Gmail OAuth configuration; never commit credentials.
 
-## Tài liệu
+## 8. Testing and documentation
 
-[Trang mục lục](docs/README.md) · [Kiến trúc](docs/ARCHITECTURE.md) · [Setup](docs/SETUP.md) · [API](docs/API.md) · [Database](docs/DATABASE.md) · [Booking](docs/BOOKING.md) · [Auth/Security](docs/AUTH-SECURITY.md) · [Frontend](docs/FRONTEND.md) · [Deployment](docs/DEPLOYMENT.md) · [Testing/Operations](docs/TESTING-OPERATIONS.md) · [Contributing](docs/CONTRIBUTING.md).
+```bash
+# Repository root
+npm run typecheck
+npx tsx --test src/tests/trusted-login-device.test.ts
+npx tsx --test src/tests/booking-notification.test.ts
+npx tsx --test src/tests/admin-appointment-filters.test.ts
+npm run build
 
-## Cấu trúc
-
-```text
-frontend/          Next App Router, components, browser auth/API
-src/app.ts         Express application + routes + middleware
-src/server.ts      DB initialization, HTTP service
-src/modules/       Business domains
-src/config/        Environment, TypeORM
-src/migrations/    Database schema/seed history
-src/tests/         Regression tests
-src/jobs/          Retention cleanup script
-deploy/vps/        Caddy, backups, VPS instructions
-docs/              Project documentation
+# Frontend
+cd frontend
+npx tsc --noEmit
+npm run build
 ```
 
-## Môi trường
+Additional CI checks include dependency audit and frontend CSP checks; check the [workflow](.github/workflows/security-hardening-ci.yml) for the source of truth.
 
-- Website: https://nail-salon-web-v2.vercel.app/
-- API health: https://api-production-e911.up.railway.app/health
-- Hướng dẫn VPS ở `deploy/vps/README.md` là **phương án khác**, không phải thông báo đã cutover.
+**Deep dives:** [API](docs/API.md) · [DB schema](docs/DATABASE.md) · [Booking rules](docs/BOOKING.md) · [Security](docs/AUTH-SECURITY.md) · [Deployment](docs/DEPLOYMENT.md) · [Operations](docs/TESTING-OPERATIONS.md).
 
-**Giới hạn:** Chưa có thanh toán tích hợp, lịch shift riêng của nhân viên, email queue/retry bền vững hoặc API khách tự hủy lịch; không suy luận các tính năng này từ UI. Repository chưa có file `LICENSE`.
+---
+
+**Scope note:** This README describes features observed in repository source and the public deployment. It does not independently establish an individual's exact contribution history, production load, measured performance, or security certification. Source code and executable tests remain authoritative.
