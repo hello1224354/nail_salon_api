@@ -4,6 +4,8 @@
 
 | Tài liệu | Nội dung |
 |---|---|
+| [PORTFOLIO.md](PORTFOLIO.md) | Recruiter-facing engineering case study and technical trade-offs |
+| [SCREENSHOTS.md](SCREENSHOTS.md) | Verified public demo links and privacy-safe screenshot/video plan |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Kiến trúc, sơ đồ luồng, ranh giới trách nhiệm |
 | [SETUP.md](SETUP.md) | Chạy local, môi trường, Gmail, migration |
 | [API.md](API.md) | Danh sách endpoint, phân quyền, request/response, lỗi |
