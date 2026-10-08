@@ -1,8 +1,8 @@
 import { createHash, randomBytes } from "crypto";
 import { AppDataSource } from "../../config/database";
-import { env } from "../../config/env";
 import { TrustedLoginDevice } from "./trusted-login-device.entity";
 import { User } from "./users.entity";
+import { matchesTrustedLoginDevice } from "./trusted-login-device.logic";
 
 const repo = AppDataSource.getRepository(TrustedLoginDevice);
 
@@ -19,14 +19,7 @@ export async function isTrustedLoginDevice(
 
     const record = await repo.findOneBy({ token_hash: hashToken(proof) });
 
-    return Boolean(
-        record &&
-        record.user_id === user.id &&
-        record.token_version === user.token_version &&
-        record.user_agent_hash === userAgentHash &&
-        record.revoked_at === null &&
-        record.expires_at.getTime() > Date.now()
-    );
+    return matchesTrustedLoginDevice(record, user, userAgentHash, Date.now());
 }
 
 /** Call only after an email OTP is verified AND an authenticated session exists. */
@@ -66,8 +59,3 @@ export async function revokeUserTrustedDevices(userId: string) {
     await repo.update({ user_id: userId, revoked_at: null }, { revoked_at: new Date() });
 }
 
-// Login trust lasts for the original authentication window; logging out does
-// not extend it, and logging in again without OTP never refreshes this expiry.
-export function trustedUntil(): Date {
-    return new Date(Date.now() + env.REFRESH_SESSION_DAYS * 24 * 60 * 60 * 1000);
-}
