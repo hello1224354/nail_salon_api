@@ -25,7 +25,17 @@ export function formatServicePrice(service: Service) {
 }
 
 export function localizeBranchName(name: string) {
-    return name.replace(/^Serpente Nail Room\s*-\s*/i, "").trim() || name;
+    const baseName = name.replace(/^Serpente Nail Room\s*-\s*/i, "").trim() || name.trim();
+    const shortName = baseName
+        .replace(/^Tiệm Nail\s*/i, "")
+        .replace(/^Chi nhánh\s*/i, "")
+        .trim();
+
+    return shortName ? `Chi nhánh ${shortName}` : "Chi nhánh";
+}
+
+export function shortBranchName(name: string) {
+    return localizeBranchName(name).replace(/^Chi nhánh\s*/i, "").trim();
 }
 
 export function localizeAddress(address: string) {
