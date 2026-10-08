@@ -16,6 +16,7 @@ export function LoginForm() {
     const router = useRouter();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [rememberMe, setRememberMe] = useState(true);
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState("");
     const [submitting, setSubmitting] = useState(false);
@@ -31,6 +32,7 @@ export function LoginForm() {
                 body: JSON.stringify({
                     email,
                     password,
+                    remember_me: rememberMe,
                 }),
             });
 
@@ -90,7 +92,16 @@ export function LoginForm() {
                     </span>
                 </label>
 
-                <div className="flex justify-end">
+                <div className="flex items-center justify-between gap-4">
+                    <label className="flex cursor-pointer items-center gap-2 text-xs text-muted">
+                        <input
+                            type="checkbox"
+                            checked={rememberMe}
+                            onChange={(event) => setRememberMe(event.target.checked)}
+                            className="accent-[#986a58]"
+                        />
+                        Ghi nhớ đăng nhập
+                    </label>
                     <Link href="/forgot-password" className="focus-ring rounded-sm text-xs font-semibold text-accent underline decoration-accent/30 underline-offset-4 hover:text-ink">
                         Quên mật khẩu?
                     </Link>
