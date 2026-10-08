@@ -11,6 +11,10 @@ export interface CreateStaffDto {
 
 export interface UpdateStaffDto {
     branch_id?: number;
+    full_name?: string;
+    phone?: string;
+    email?: string;
+    password?: string;
 }
 
 export interface GetStaffsQueryDto {
@@ -73,6 +77,25 @@ export function parseUpdateStaffDto(body: unknown): UpdateStaffDto {
     const result: UpdateStaffDto = {};
 
     if (data.branch_id !== undefined) result.branch_id = data.branch_id as number;
+    if (data.full_name !== undefined) {
+        if (typeof data.full_name !== "string" || !data.full_name.trim() || data.full_name.trim().length > 255) {
+            throw new AppError("Full_name must be between 1 and 255 characters", 400, "VALIDATION_ERROR");
+        }
+        result.full_name = data.full_name.trim();
+    }
+    if (data.phone !== undefined) result.phone = parseVietnamesePhone(data.phone);
+    if (data.email !== undefined) {
+        if (typeof data.email !== "string" || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(data.email.trim()) || data.email.length > 255) {
+            throw new AppError("Email must be valid", 400, "VALIDATION_ERROR");
+        }
+        result.email = data.email.trim().toLowerCase();
+    }
+    if (data.password !== undefined) {
+        if (typeof data.password !== "string" || data.password.length < 8 || Buffer.byteLength(data.password, "utf8") > 72) {
+            throw new AppError("Password must be 8 to 72 bytes", 400, "VALIDATION_ERROR");
+        }
+        result.password = data.password;
+    }
 
     if (Object.keys(result).length === 0) throw new AppError("At least one field must be provided", 400, "VALIDATION_ERROR");
 
