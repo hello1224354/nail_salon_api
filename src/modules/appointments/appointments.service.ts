@@ -7,7 +7,6 @@ import * as serviceService from "../services/services.service";
 import * as branchService from "../branches/branches.service";
 import { EntityManager, In, LessThan, MoreThan, Not, QueryFailedError } from "typeorm";
 import { User, UserRole } from "../users/users.entity";
-import * as userService from "../users/users.service";
 import { AppointmentService } from "./appointment-services.entity";
 import { StaffBookingSlot } from "./staff-booking-slots.entity";
 import { randomUUID } from "crypto";
@@ -245,68 +244,28 @@ export const getAvailability = async (data: GetAvailabilityQueryDto) => {
 };
 
 export const createAppointment = async (actorId: string, actorRole: UserRole, data: CreateAppointmentDto) => {
-    let ownerId: string;
-
-    if (actorRole === UserRole.CUSTOMER) {
-        if (data.user_id !== undefined || data.customer_email !== undefined) throw new AppError("Customers cannot specify another customer", 403, "FORBIDDEN");
-
-        ownerId = actorId;
-
-        const now = Date.now();
-        const startTime = data.start_time.getTime();
-
-        if (startTime < now + CUSTOMER_MIN_BOOKING_LEAD_TIME_MS) throw new AppError("Customers must book at least 3 hours in advance", 400, "VALIDATION_ERROR");
-
-        if (startTime > now + CUSTOMER_MAX_BOOKING_HORIZON_MS) throw new AppError("Customers cannot book more than 14 days in advance", 400, "VALIDATION_ERROR");
-    } else if (actorRole === UserRole.ADMIN) {
-        if (!data.user_id && !data.customer_email) {
-            throw new AppError("Customer email is required for admin booking", 400, "VALIDATION_ERROR");
-        }
-
-        const targetUser = data.customer_email
-            ? await AppDataSource.getRepository(User).findOneBy({
-                  email: data.customer_email,
-                  role: UserRole.CUSTOMER,
-              })
-            : await userService.getUser(data.user_id!);
-
-        if (!targetUser || targetUser.role !== UserRole.CUSTOMER) {
-            throw new AppError("Customer account not found", 404, "CUSTOMER_NOT_FOUND");
-        }
-
-        ownerId = targetUser.id;
-    } else {
-        throw new AppError("You do not have permission to perform this action", 403, "FORBIDDEN");
+    if (actorRole !== UserRole.CUSTOMER) {
+        throw new AppError("Only customers can create appointments", 403, "FORBIDDEN");
     }
 
-    const {
-        services,
-        branch,
-        branchId,
-        staffs,
-    } = await resolveBookingResources(data.service_ids);
-
-    let candidateStaffs = staffs;
-
-    if (actorRole === UserRole.CUSTOMER) {
-        if (data.staff_id !== undefined) throw new AppError("Customers cannot specify staff_id", 403, "FORBIDDEN");
+    if (data.user_id !== undefined || data.customer_email !== undefined || data.staff_id !== undefined) {
+        throw new AppError("Customers cannot specify another customer or staff", 403, "FORBIDDEN");
     }
 
-    if (actorRole === UserRole.ADMIN) {
-        if (data.party_size !== 1) throw new AppError("Admin-created appointments must use party_size 1", 400, "VALIDATION_ERROR");
+    const now = Date.now();
+    const startTime = data.start_time.getTime();
 
-        if (data.staff_id === undefined) throw new AppError("Staff_id is required when admin creates an appointment", 400, "VALIDATION_ERROR");
-
-        const staff = await staffService.getStaff(data.staff_id);
-
-        if (!staff) throw new AppError("Staff not found", 404, "STAFF_NOT_FOUND");
-
-        if (staff.user.role !== UserRole.STAFF) throw new AppError("User is not a staff member", 400, "INVALID_STAFF_ACCOUNT");
-
-        if (staff.branch_id !== branchId) throw new AppError("All services must belong to the same branch as the staff", 400, "BRANCH_MISMATCH");
-
-        candidateStaffs = [staff];
+    if (startTime < now + CUSTOMER_MIN_BOOKING_LEAD_TIME_MS) {
+        throw new AppError("Customers must book at least 3 hours in advance", 400, "VALIDATION_ERROR");
     }
+
+    if (startTime > now + CUSTOMER_MAX_BOOKING_HORIZON_MS) {
+        throw new AppError("Customers cannot book more than 14 days in advance", 400, "VALIDATION_ERROR");
+    }
+
+    const ownerId = actorId;
+    const { services, branch, branchId, staffs } = await resolveBookingResources(data.service_ids);
+    const candidateStaffs = staffs;
 
     let totalDurationMinutes = 0;
 
@@ -410,14 +369,6 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
         }
 
         if (reservedStaffs.length < data.party_size) {
-            if (actorRole === UserRole.ADMIN) {
-                throw new AppError(
-                    "Staff already has an appointment during this time",
-                    409,
-                    "APPOINTMENT_CONFLICT"
-                );
-            }
-
             throw new AppError(
                 "Not enough staff is available for this group size at this time",
                 409,
@@ -467,6 +418,60 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
 
         return savedAppointments[0];
     });
+};
+
+// All timestamps are stored as UTC DATETIME. A Vietnam business day starts
+// at 17:00 UTC on the previous calendar day; Vietnam does not observe DST.
+function vietnamDayWindow(now = new Date()) {
+    const today = new Intl.DateTimeFormat("en-CA", {
+        timeZone: BUSINESS_TIMEZONE,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+    }).format(now);
+    const start = new Date(`${today}T00:00:00+07:00`);
+    const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
+    return { start, end };
+}
+
+export const getAdminTodaySummary = async () => {
+    const { start, end } = vietnamDayWindow();
+
+    // Appointment counts belong to the day scheduled to start, independently
+    // of pagination or currently selected filters in the admin appointment list.
+    const counts = await appointmentRepo.createQueryBuilder("appointment")
+        .select("COUNT(*)", "total")
+        .addSelect("SUM(CASE WHEN appointment.status = :pending THEN 1 ELSE 0 END)", "pending")
+        .addSelect("SUM(CASE WHEN appointment.status = :confirmed THEN 1 ELSE 0 END)", "confirmed")
+        .addSelect("SUM(CASE WHEN appointment.status = :completed THEN 1 ELSE 0 END)", "completed")
+        .addSelect("SUM(CASE WHEN appointment.status = :cancelled THEN 1 ELSE 0 END)", "cancelled")
+        .where("appointment.start_time >= :start AND appointment.start_time < :end", { start, end })
+        .setParameters({
+            pending: AppointmentStatus.PENDING,
+            confirmed: AppointmentStatus.CONFIRMED,
+            completed: AppointmentStatus.COMPLETED,
+            cancelled: AppointmentStatus.CANCELLED,
+        })
+        .getRawOne<Record<string, string | null>>();
+
+    // Revenue is the booked service-price snapshot of appointments actually
+    // completed during this business day, not a claim that payment was received.
+    // Compute independently: a joined query would multiply appointment counts.
+    const revenue = await appointmentRepo.createQueryBuilder("appointment")
+        .innerJoin("appointment.appointment_services", "service")
+        .select("COALESCE(SUM(service.price), 0)", "revenue")
+        .where("appointment.status = :completed", { completed: AppointmentStatus.COMPLETED })
+        .andWhere("appointment.actual_completed_at >= :start AND appointment.actual_completed_at < :end", { start, end })
+        .getRawOne<{ revenue: string }>();
+
+    return {
+        total: Number(counts?.total ?? 0),
+        pending: Number(counts?.pending ?? 0),
+        confirmed: Number(counts?.confirmed ?? 0),
+        completed: Number(counts?.completed ?? 0),
+        cancelled: Number(counts?.cancelled ?? 0),
+        revenue: Number(revenue?.revenue ?? 0),
+    };
 };
 
 export const getAllAppointments = async (userId: string, role: UserRole, query: GetAppointmentsQueryDto) => {
