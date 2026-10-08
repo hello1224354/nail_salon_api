@@ -3,11 +3,15 @@ import { AppError } from "../../common/errors";
 export interface CreateBranchDto {
     name: string;
     address: string;
+    phone: string | null;
+    opening_hours: string | null;
 }
 
 export interface UpdateBranchDto {
     name?: string;
     address?: string;
+    phone?: string | null;
+    opening_hours?: string | null;
 }
 
 export interface GetBranchesQueryDto {
@@ -53,6 +57,14 @@ export function parseGetBranchesQuery(query: unknown): GetBranchesQueryDto {
     };
 }
 
+function parseOptionalContact(value: unknown, label: string): string | null {
+    if (value === undefined || value === null || value === "") return null;
+    if (typeof value !== "string" || value.trim().length > 255) {
+        throw new AppError(`${label} must be a string with at most 255 characters`, 400, "VALIDATION_ERROR");
+    }
+    return value.trim() || null;
+}
+
 export function parseCreateBranchDto(body: unknown): CreateBranchDto {
     if (body === null || typeof body !== "object" || Array.isArray(body)) throw new AppError("Request body must be an object", 400, "VALIDATION_ERROR");
 
@@ -65,6 +77,8 @@ export function parseCreateBranchDto(body: unknown): CreateBranchDto {
     return {
         name: data.name.trim(),
         address: data.address.trim(),
+        phone: parseOptionalContact(data.phone, "Phone"),
+        opening_hours: parseOptionalContact(data.opening_hours, "Opening_hours"),
     };
 }
 
@@ -81,6 +95,8 @@ export function parseUpdateBranchDto(body: unknown): UpdateBranchDto {
 
     if (data.name !== undefined) result.name = (data.name as string).trim();
     if (data.address !== undefined) result.address = (data.address as string).trim();
+    if (data.phone !== undefined) result.phone = parseOptionalContact(data.phone, "Phone");
+    if (data.opening_hours !== undefined) result.opening_hours = parseOptionalContact(data.opening_hours, "Opening_hours");
 
     if (Object.keys(result).length === 0) throw new AppError("At least one field must be provided", 400, "VALIDATION_ERROR");
 
