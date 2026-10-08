@@ -47,6 +47,7 @@ export async function issueTrustedLoginDevice(
             user_id: user.id,
             token_hash: hashToken(secret),
             token_version: user.token_version,
+            role: user.role,
             user_agent_hash: userAgentHash,
             expires_at: expiresAt,
             revoked_at: null,
