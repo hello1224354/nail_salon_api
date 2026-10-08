@@ -2,13 +2,12 @@ import { AppError } from "../../common/errors";
 
 export interface RegisterUserDto {
     full_name: string;
-    phone: string;
-    email: string | null;
+    email: string;
     password: string;
 }
 
 export interface LoginUserDto {
-    phone: string;
+    email: string;
     password: string;
 }
 
@@ -36,17 +35,28 @@ export interface VerifyLoginMfaDto {
     code: string;
 }
 
-function normalizePhone(value: string): string {
-    const phone = value.replace(/[\s.-]/g, "");
+export function parseVietnamesePhone(value: unknown, fieldName = "Phone"): string {
+    if (typeof value !== "string" || value.trim().length === 0) {
+        throw new AppError(`${fieldName} must be a non-empty string`, 400, "VALIDATION_ERROR");
+    }
 
-    if (phone.startsWith("+84")) return phone;
-    if (phone.startsWith("84")) return `+${phone}`;
-    if (phone.startsWith("0")) return `+84${phone.slice(1)}`;
+    const compact = value.replace(/[\s.-]/g, "");
+    const phone = compact.startsWith("+84")
+        ? compact
+        : compact.startsWith("84")
+          ? `+${compact}`
+          : compact.startsWith("0")
+            ? `+84${compact.slice(1)}`
+            : compact;
+
+    if (!/^\+84\d{9}$/.test(phone)) {
+        throw new AppError(`${fieldName} must be a valid Vietnamese phone number`, 400, "VALIDATION_ERROR");
+    }
 
     return phone;
 }
 
-function parseEmail(value: unknown): string {
+export function parseEmail(value: unknown): string {
     if (typeof value !== "string" || value.trim().length === 0 || value.trim().length > 255) {
         throw new AppError("Email must be between 1 and 255 characters", 400, "VALIDATION_ERROR");
     }
@@ -91,26 +101,9 @@ export function parseRegisterUserDto(body: unknown): RegisterUserDto {
         throw new AppError("Full_name must be between 1 and 255 characters", 400, "VALIDATION_ERROR");
     }
 
-    if (typeof data.phone !== "string" || data.phone.trim().length === 0) {
-        throw new AppError("Phone must be a non-empty string", 400, "VALIDATION_ERROR");
-    }
-
-    const phone = normalizePhone(data.phone);
-
-    if (!/^\+84\d{9}$/.test(phone)) {
-        throw new AppError("Phone must be a valid Vietnamese phone number", 400, "VALIDATION_ERROR");
-    }
-
-    let email: string | null = null;
-
-    if (data.email !== undefined && data.email !== null) {
-        email = parseEmail(data.email);
-    }
-
     return {
         full_name: data.full_name.trim(),
-        phone,
-        email,
+        email: parseEmail(data.email),
         password: parsePassword(data.password, "Password"),
     };
 }
@@ -122,16 +115,6 @@ export function parseLoginUserDto(body: unknown): LoginUserDto {
 
     const data = body as Record<string, unknown>;
 
-    if (typeof data.phone !== "string" || data.phone.trim().length === 0) {
-        throw new AppError("Phone must be a non-empty string", 400, "VALIDATION_ERROR");
-    }
-
-    const phone = normalizePhone(data.phone);
-
-    if (!/^\+84\d{9}$/.test(phone)) {
-        throw new AppError("Phone must be a valid Vietnamese phone number", 400, "VALIDATION_ERROR");
-    }
-
     if (typeof data.password !== "string" || data.password.length === 0) {
         throw new AppError("Password must be a non-empty string", 400, "VALIDATION_ERROR");
     }
@@ -141,7 +124,7 @@ export function parseLoginUserDto(body: unknown): LoginUserDto {
     }
 
     return {
-        phone,
+        email: parseEmail(data.email),
         password: data.password,
     };
 }
