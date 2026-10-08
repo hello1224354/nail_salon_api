@@ -15,6 +15,11 @@ export interface LoginUserDto {
 export interface ChangePasswordDto {
     current_password: string;
     new_password: string;
+    code: string;
+}
+
+export interface RegistrationVerificationRequestDto {
+    email: string;
 }
 
 export interface DeleteMeDto {
@@ -71,6 +76,14 @@ export function parseEmail(value: unknown): string {
     return email;
 }
 
+function parseOtpCode(value: unknown, fieldName = "Code") {
+    if (typeof value !== "string" || !/^\d{6}$/.test(value)) {
+        throw new AppError(`${fieldName} must be a 6-digit OTP`, 400, "VALIDATION_ERROR");
+    }
+
+    return value;
+}
+
 function parsePassword(value: unknown, fieldName: string) {
     if (typeof value !== "string") {
         throw new AppError(`${fieldName} must be a string`, 400, "VALIDATION_ERROR");
@@ -85,6 +98,26 @@ function parsePassword(value: unknown, fieldName: string) {
     }
 
     return value;
+}
+
+export function parseRegistrationVerificationRequestDto(body: unknown): RegistrationVerificationRequestDto {
+    if (body === null || typeof body !== "object" || Array.isArray(body)) {
+        throw new AppError("Request body must be an object", 400, "VALIDATION_ERROR");
+    }
+
+    const data = body as Record<string, unknown>;
+
+    return {
+        email: parseEmail(data.email),
+    };
+}
+
+export function parseRegistrationVerificationCode(body: unknown) {
+    if (body === null || typeof body !== "object" || Array.isArray(body)) {
+        throw new AppError("Request body must be an object", 400, "VALIDATION_ERROR");
+    }
+
+    return parseOtpCode((body as Record<string, unknown>).code);
 }
 
 export function parseRegisterUserDto(body: unknown): RegisterUserDto {
@@ -159,6 +192,7 @@ export function parseChangePasswordDto(body: unknown): ChangePasswordDto {
     return {
         current_password: data.current_password,
         new_password: newPassword,
+        code: parseOtpCode(data.code),
     };
 }
 
@@ -201,13 +235,9 @@ export function parseResetPasswordDto(body: unknown): ResetPasswordDto {
 
     const data = body as Record<string, unknown>;
 
-    if (typeof data.code !== "string" || !/^\d{6}$/.test(data.code)) {
-        throw new AppError("Code must be a 6-digit OTP", 400, "VALIDATION_ERROR");
-    }
-
     return {
         email: parseEmail(data.email),
-        code: data.code,
+        code: parseOtpCode(data.code),
         new_password: parsePassword(data.new_password, "New_password"),
     };
 }
@@ -226,12 +256,8 @@ export function parseVerifyLoginMfaDto(body: unknown): VerifyLoginMfaDto {
         throw new AppError("Challenge_id must be a valid UUID", 400, "VALIDATION_ERROR");
     }
 
-    if (typeof data.code !== "string" || !/^\d{6}$/.test(data.code)) {
-        throw new AppError("Code must be a 6-digit OTP", 400, "VALIDATION_ERROR");
-    }
-
     return {
         challenge_id: data.challenge_id,
-        code: data.code,
+        code: parseOtpCode(data.code),
     };
 }
