@@ -8,6 +8,7 @@ import { apiRequest, getApiErrorMessage } from "@/lib/api";
 import { logoutSession, saveSession, type AuthUser } from "@/lib/auth";
 
 type SessionLoginData = {
+    mfa_required?: false;
     access_token: string;
     user: AuthUser;
 };
