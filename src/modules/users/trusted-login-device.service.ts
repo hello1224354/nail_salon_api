@@ -1,4 +1,5 @@
 import { createHash, randomBytes } from "crypto";
+import { IsNull } from "typeorm";
 import { AppDataSource } from "../../config/database";
 import { TrustedLoginDevice } from "./trusted-login-device.entity";
 import { User } from "./users.entity";
@@ -37,7 +38,7 @@ export async function issueTrustedLoginDevice(
     await AppDataSource.transaction(async (manager) => {
         if (previousProof && /^[A-Za-z0-9_-]{43}$/.test(previousProof)) {
             await manager.getRepository(TrustedLoginDevice).update(
-                { token_hash: hashToken(previousProof), revoked_at: null },
+                { token_hash: hashToken(previousProof), revoked_at: IsNull() },
                 { revoked_at: now }
             );
         }
@@ -56,6 +57,6 @@ export async function issueTrustedLoginDevice(
 }
 
 export async function revokeUserTrustedDevices(userId: string) {
-    await repo.update({ user_id: userId, revoked_at: null }, { revoked_at: new Date() });
+    await repo.update({ user_id: userId, revoked_at: IsNull() }, { revoked_at: new Date() });
 }
 
