@@ -21,7 +21,9 @@ const sample: NewBookingEmailData = {
 
 test("admin email contains one group booking, Vietnam time and total estimate", () => {
     const { subject, body } = buildNewBookingEmail(sample);
-    assert.match(subject, /abcdef12/);
+    assert.equal(subject, "Serpente Nail Room - Có khách hàng vừa đặt lịch");
+    assert.doesNotMatch(subject, /abcdef12|3456-7890/);
+    assert.match(body, /Mã lượt đặt: abcdef12-3456-7890-abcd-1234567890ab/);
     assert.match(body, /12\/10\/2026 10:15/);
     assert.match(body, /12\/10\/2026 11:30/);
     assert.match(body, /Nguyễn Văn A/);
