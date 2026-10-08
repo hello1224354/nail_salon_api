@@ -52,6 +52,17 @@ export const refreshRateLimiter = rateLimit({
     },
 });
 
+export const accountOtpRateLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 5,
+    keyGenerator: (req) => req.user?.id ?? ipKeyGenerator(req.ip ?? ""),
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: () => {
+        throw new AppError("Too many verification code requests. Try again later", 429, "RATE_LIMIT_EXCEEDED");
+    },
+});
+
 export const sensitiveAccountActionRateLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     limit: 5,
