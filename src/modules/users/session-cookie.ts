@@ -18,15 +18,24 @@ function baseCookieAttributes() {
     return attributes;
 }
 
-export function setRefreshCookie(res: Response, refreshToken: string, expiresAt: Date) {
-    const maxAgeSeconds = Math.max(0, Math.floor((expiresAt.getTime() - Date.now()) / 1000));
+export function setRefreshCookie(
+    res: Response,
+    refreshToken: string,
+    expiresAt: Date,
+    persistent = true
+) {
     const [name, ...attributes] = baseCookieAttributes();
+    const persistenceAttributes = persistent
+        ? [
+              `Max-Age=${Math.max(0, Math.floor((expiresAt.getTime() - Date.now()) / 1000))}`,
+              `Expires=${expiresAt.toUTCString()}`,
+          ]
+        : [];
 
     res.setHeader("Set-Cookie", [
         `${name}${refreshToken}`,
         ...attributes,
-        `Max-Age=${maxAgeSeconds}`,
-        `Expires=${expiresAt.toUTCString()}`,
+        ...persistenceAttributes,
         "Priority=High",
     ].join("; "));
 }
