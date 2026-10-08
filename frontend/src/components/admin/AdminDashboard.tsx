@@ -679,12 +679,12 @@ export function AdminDashboard() {
                                         branches={data.branches}
                                         branchFilter={appointmentBranch}
                                         statusFilter={appointmentStatus}
-                                         periodFilter={appointmentPeriod}
-                                         total={data.appointmentTotal}
-                                         setPeriodFilter={(value) => {
-                                             setAppointmentPeriod(value);
-                                             setAppointmentPage(1);
-                                         }}
+                                        periodFilter={appointmentPeriod}
+                                        total={data.appointmentTotal}
+                                        setPeriodFilter={(value) => {
+                                            setAppointmentPeriod(value);
+                                            setAppointmentPage(1);
+                                        }}
                                         setBranchFilter={(value) => {
                                             setAppointmentBranch(value);
                                             setAppointmentPage(1);
@@ -1210,7 +1210,7 @@ function AppointmentsPanel({
 
             {!appointments.length ? <p className="px-5 py-12 text-center text-xs text-muted">Không có lịch hẹn nào khớp với bộ lọc đã chọn.</p> : null}
 
-            <div className="flex items-center justify-between border-t border-line px-5 py-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-5 py-4">
                 <p className="text-[10px] text-muted">{total.toLocaleString("vi-VN")} lịch hẹn · Trang {page}/{pages}</p>
                 <div className="flex gap-2">
                     <button disabled={page <= 1} onClick={() => setPage(page - 1)} className="rounded-full border border-line px-3 py-2 text-[10px] font-semibold disabled:opacity-35">← Trước</button>
