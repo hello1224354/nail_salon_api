@@ -7,6 +7,12 @@ export class RegistrationOtpRememberSession1791448800000 implements MigrationInt
         await queryRunner.query(
             "ALTER TABLE `refresh_sessions` ADD `persistent` tinyint NOT NULL DEFAULT 1"
         );
+        await queryRunner.query(
+            "UPDATE `branches` SET `name` = \'Chi nhánh Quận 8\' WHERE `id` = 1"
+        );
+        await queryRunner.query(
+            "UPDATE `salon_content` SET `tiktok_name` = REPLACE(`tiktok_name`, \'Tiệm Nail Quận 8\', \'Chi nhánh Quận 8\') WHERE `tiktok_name` LIKE \'%Tiệm Nail Quận 8%\'"
+        );
 
         await queryRunner.query(`
             CREATE TABLE `registration_email_challenges` (
