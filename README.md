@@ -84,7 +84,7 @@ The admin appointments table supports date-range filters and customer-visible 8-
 | Gmail notifications after DB commit | Email outages do not roll back valid bookings | **Best-effort delivery:** no persistent retry/outbox yet |
 | JWT + rotating refresh sessions | Short-lived access credentials and revocable sessions | Additional state and cookie/origin management |
 
-No payment gateway or per-staff shift scheduling is claimed. Unit/regression tests and builds run in CI; a full automated MySQL concurrency and browser E2E test suite is **future work**, not a completed feature. Details: [Engineering case study](docs/PORTFOLIO.md).
+No payment gateway or per-staff shift scheduling is claimed. CI runs unit/regression tests plus real-MySQL concurrency integration tests (16 parallel bookings, group atomicity, rollback and adjacent intervals). A comprehensive browser E2E suite is still **future work**. Details: [Engineering case study](docs/PORTFOLIO.md).
 
 ## 6. Demo and visuals
 
