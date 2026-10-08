@@ -1,5 +1,6 @@
 import { AppError } from "../../common/errors";
 import { AppointmentStatus } from "./appointments.entity";
+import { parseVietnamesePhone } from "../users/users.dto";
 
 export interface CreateAppointmentDto {
     user_id?: string;
@@ -7,6 +8,7 @@ export interface CreateAppointmentDto {
     service_ids: string[];
     start_time: Date;
     party_size: number;
+    customer_phone: string;
 }
 
 export interface UpdateAppointmentDto {
@@ -192,6 +194,7 @@ export function parseCreateAppointmentDto(body: unknown): CreateAppointmentDto {
         service_ids: data.service_ids as string[],
         start_time: startTime,
         party_size: parsePositiveIntegerBody(data.party_size, "Party_size", 1),
+        customer_phone: parseVietnamesePhone(data.customer_phone, "Customer_phone"),
     };
 }
 
