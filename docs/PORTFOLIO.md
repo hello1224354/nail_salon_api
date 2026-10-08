@@ -42,7 +42,7 @@ sequenceDiagram
 
 **Source:** [booking service](../src/modules/appointments/appointments.service.ts), [slot entity](../src/modules/appointments/staff-booking-slots.entity.ts), [booking docs](BOOKING.md).
 
-**Verification limit:** Source contains unique constraints and unit/regression tests; an automated real-MySQL concurrent load/integration suite has not yet been added. Avoid citing a measured race-test throughput without running one.
+**Verification:** GitHub Actions runs integration tests against an isolated MySQL 8 service with real migrations, concurrent calls to the booking service, assertions on persisted appointments/slot keys, atomic group bookings and rollback. This is a correctness regression suite, **not** a throughput benchmark; avoid claiming measured load capacity.
 
 ## Challenge 2 — Group booking and consistency
 
