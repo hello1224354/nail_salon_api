@@ -10,7 +10,6 @@ import type { AuthUser } from "@/lib/auth";
 export function RegisterForm() {
     const router = useRouter();
     const [fullName, setFullName] = useState("");
-    const [phone, setPhone] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
@@ -27,8 +26,7 @@ export function RegisterForm() {
                 method: "POST",
                 body: JSON.stringify({
                     full_name: fullName,
-                    phone,
-                    email: email.trim() || null,
+                    email: email.trim(),
                     password,
                 }),
             });
@@ -56,22 +54,8 @@ export function RegisterForm() {
                     />
                 </label>
 
-                <label className="block">
-                    <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">Số điện thoại</span>
-                    <input
-                        type="tel"
-                        value={phone}
-                        onChange={(event) => setPhone(event.target.value)}
-                        placeholder="+84 912 345 678"
-                        autoComplete="tel"
-                        inputMode="tel"
-                        required
-                        className="focus-ring mt-2.5 h-12 w-full rounded-[12px] border border-line bg-cream px-4 text-sm outline-none placeholder:text-muted/45 hover:border-accent/45"
-                    />
-                </label>
-
-                <label className="block">
-                    <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">Email (không bắt buộc)</span>
+                <label className="block sm:col-span-2">
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">Email</span>
                     <input
                         type="email"
                         value={email}
@@ -115,7 +99,7 @@ export function RegisterForm() {
 
             <button
                 type="submit"
-                disabled={submitting || !fullName.trim() || !phone.trim() || password.length < 8}
+                disabled={submitting || !fullName.trim() || !email.trim() || password.length < 8}
                 className="focus-ring mt-7 flex h-12 w-full items-center justify-center rounded-full bg-ink px-6 text-sm font-semibold text-white transition-transform enabled:hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50"
             >
                 {submitting ? "Đang tạo tài khoản…" : "Tạo tài khoản"}
