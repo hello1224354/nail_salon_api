@@ -192,7 +192,19 @@ export function CurrentOffers({ offers, instagramHandle }: CurrentOffersProps) {
                         className="focus-ring pointer-events-auto flex size-11 items-center justify-center rounded-full border border-line bg-surface/95 font-semibold text-ink shadow-[0_10px_30px_rgba(48,40,35,0.12)] backdrop-blur-sm transition hover:bg-tint"
                         onClick={() => emblaApi?.scrollPrev()}
                     >
-                        <span aria-hidden="true" className="text-[28px] leading-none">←</span>
+                        <svg
+                            aria-hidden="true"
+                            viewBox="0 0 24 24"
+                            className="size-7 shrink-0"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.8"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                        >
+                            <path d="M14.5 5 7.5 12l7 7" />
+                            <path d="M8 12h9" />
+                        </svg>
                     </button>
                     <button
                         type="button"
@@ -200,7 +212,19 @@ export function CurrentOffers({ offers, instagramHandle }: CurrentOffersProps) {
                         className="focus-ring pointer-events-auto flex size-11 items-center justify-center rounded-full border border-line bg-surface/95 font-semibold text-ink shadow-[0_10px_30px_rgba(48,40,35,0.12)] backdrop-blur-sm transition hover:bg-tint"
                         onClick={() => emblaApi?.scrollNext()}
                     >
-                        <span aria-hidden="true" className="text-[28px] leading-none">→</span>
+                        <svg
+                            aria-hidden="true"
+                            viewBox="0 0 24 24"
+                            className="size-7 shrink-0"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.8"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                        >
+                            <path d="m9.5 5 7 7-7 7" />
+                            <path d="M16 12H7" />
+                        </svg>
                     </button>
                 </div>
             ) : null}
