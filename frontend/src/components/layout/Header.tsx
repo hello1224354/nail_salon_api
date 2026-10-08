@@ -146,8 +146,7 @@ export function Header() {
                                 <div role="menu" className="motion-menu absolute right-0 top-[calc(100%+12px)] w-64 overflow-hidden rounded-2xl border border-line bg-surface p-2 shadow-[0_18px_50px_rgba(48,40,35,0.14)]">
                                     <div className="px-3 pb-3 pt-2">
                                         <p className="truncate text-sm font-semibold text-ink">{authUser.full_name}</p>
-                                        <p className="mt-1 text-xs text-muted">{authUser.phone}</p>
-                                        <p className="mt-1 truncate text-[11px] text-muted">{authUser.email || "Chưa có email"}</p>
+                                        <p className="mt-1 truncate text-xs text-muted">{authUser.email || "Chưa có email"}</p>
                                     </div>
                                     <div className="h-px bg-line" />
                                     <Link
@@ -264,8 +263,7 @@ export function Header() {
                                         <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-tint font-serif text-sm text-accent">{accountInitial}</span>
                                         <div className="min-w-0">
                                             <p className="truncate text-xs font-semibold text-ink">{authUser.full_name}</p>
-                                            <p className="mt-0.5 text-[11px] text-muted">{authUser.phone}</p>
-                                            <p className="mt-0.5 truncate text-[10px] text-muted">{authUser.email || "Chưa có email"}</p>
+                                            <p className="mt-0.5 truncate text-[11px] text-muted">{authUser.email || "Chưa có email"}</p>
                                         </div>
                                     </div>
                                     <Link

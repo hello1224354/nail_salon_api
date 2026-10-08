@@ -341,8 +341,8 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
                     "COUNT(DISTINCT COALESCE(appointment.booking_group_id, appointment.id))",
                     "count"
                 )
-                .where("appointment.customer_phone = :customerPhone", {
-                    customerPhone: owner.phone,
+                .where("appointment.user_id = :ownerId", {
+                    ownerId,
                 })
                 .andWhere("appointment.status = :pendingStatus", {
                     pendingStatus: AppointmentStatus.PENDING,
@@ -425,7 +425,7 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
                 booking_group_id: bookingGroupId,
                 party_size: data.party_size,
                 customer_full_name: owner.full_name,
-                customer_phone: owner.phone,
+                customer_phone: data.customer_phone,
                 customer_email: owner.email,
                 staff_id: staff.user_id,
                 staff_full_name: staff.user.full_name,

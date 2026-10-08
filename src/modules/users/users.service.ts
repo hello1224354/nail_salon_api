@@ -11,22 +11,26 @@ import { PasswordResetChallenge } from "./password-reset-challenge.entity";
 const userRepo = AppDataSource.getRepository(User);
 const DUMMY_PASSWORD_HASH = bcrypt.hashSync("timing-equalization-password", 12);
 
-export const createUser = async (data: RegisterUserDto, role: UserRole, manager?: EntityManager) => {
+export const createUser = async (
+    data: RegisterUserDto & { phone?: string | null },
+    role: UserRole,
+    manager?: EntityManager
+) => {
     const repo = manager ? manager.getRepository(User) : userRepo;
 
-    const existingPhone = await repo.findOneBy({ phone: data.phone });
-    if (existingPhone) throw new AppError("Phone is already registered", 409, "PHONE_ALREADY_EXISTS");
-
-    if (data.email !== null) {
-        const existingEmail = await repo.findOneBy({ email: data.email });
-        if (existingEmail) throw new AppError("Email is already registered", 409, "EMAIL_ALREADY_EXISTS");
+    if (data.phone) {
+        const existingPhone = await repo.findOneBy({ phone: data.phone });
+        if (existingPhone) throw new AppError("Phone is already registered", 409, "PHONE_ALREADY_EXISTS");
     }
+
+    const existingEmail = await repo.findOneBy({ email: data.email });
+    if (existingEmail) throw new AppError("Email is already registered", 409, "EMAIL_ALREADY_EXISTS");
 
     const passwordHash = await bcrypt.hash(data.password, 12);
 
     const newUser = repo.create({
         full_name: data.full_name,
-        phone: data.phone,
+        phone: data.phone ?? null,
         email: data.email,
         password_hash: passwordHash,
         role,
@@ -49,7 +53,7 @@ export const registerUser = async (data: RegisterUserDto) => {
             );
 
         if (
-            (error instanceof AppError && ["PHONE_ALREADY_EXISTS", "EMAIL_ALREADY_EXISTS"].includes(error.code)) ||
+            (error instanceof AppError && error.code === "EMAIL_ALREADY_EXISTS") ||
             duplicateQueryError
         ) {
             throw new AppError(
@@ -64,16 +68,16 @@ export const registerUser = async (data: RegisterUserDto) => {
 };
 
 export const loginUser = async (data: LoginUserDto) => {
-    const user = await userRepo.findOneBy({ phone: data.phone });
+    const user = await userRepo.findOneBy({ email: data.email });
 
     if (!user) {
         await bcrypt.compare(data.password, DUMMY_PASSWORD_HASH);
-        throw new AppError("Invalid phone or password", 401, "INVALID_CREDENTIALS");
+        throw new AppError("Invalid email or password", 401, "INVALID_CREDENTIALS");
     }
 
     const passwordMatches = await bcrypt.compare(data.password, user.password_hash);
 
-    if (!passwordMatches) throw new AppError("Invalid phone or password", 401, "INVALID_CREDENTIALS");
+    if (!passwordMatches) throw new AppError("Invalid email or password", 401, "INVALID_CREDENTIALS");
 
     return user;
 };

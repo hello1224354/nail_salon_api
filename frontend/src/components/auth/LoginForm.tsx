@@ -14,7 +14,7 @@ type LoginData = {
 
 export function LoginForm() {
     const router = useRouter();
-    const [phone, setPhone] = useState("");
+    const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState("");
@@ -29,7 +29,7 @@ export function LoginForm() {
             const data = await apiRequest<LoginData>("/api/users/login", {
                 method: "POST",
                 body: JSON.stringify({
-                    phone,
+                    email,
                     password,
                 }),
             });
@@ -53,15 +53,14 @@ export function LoginForm() {
         <form onSubmit={handleSubmit} className="mt-9" noValidate>
             <div className="space-y-5">
                 <label className="block">
-                    <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">Số điện thoại</span>
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">Email</span>
                     <input
-                        type="tel"
-                        name="phone"
-                        value={phone}
-                        onChange={(event) => setPhone(event.target.value)}
-                        placeholder="+84 912 345 678"
-                        autoComplete="tel"
-                        inputMode="tel"
+                        type="email"
+                        name="email"
+                        value={email}
+                        onChange={(event) => setEmail(event.target.value)}
+                        placeholder="ten@example.com"
+                        autoComplete="email"
                         required
                         className="focus-ring mt-2.5 h-12 w-full rounded-[12px] border border-line bg-cream px-4 text-sm text-ink outline-none transition-colors placeholder:text-muted/45 hover:border-accent/45"
                     />
@@ -106,7 +105,7 @@ export function LoginForm() {
 
             <button
                 type="submit"
-                disabled={submitting || phone.trim().length === 0 || password.length === 0}
+                disabled={submitting || email.trim().length === 0 || password.length === 0}
                 className="focus-ring mt-7 flex h-12 w-full items-center justify-center rounded-full bg-ink px-6 text-sm font-semibold text-white transition-transform enabled:hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50"
             >
                 {submitting ? "Đang đăng nhập…" : "Đăng nhập"}

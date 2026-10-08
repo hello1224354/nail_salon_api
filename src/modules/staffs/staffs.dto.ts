@@ -1,10 +1,10 @@
 import { AppError } from "../../common/errors";
-import { parseRegisterUserDto } from "../users/users.dto";
+import { parseRegisterUserDto, parseVietnamesePhone } from "../users/users.dto";
 
 export interface CreateStaffDto {
     full_name: string;
     phone: string;
-    email: string | null;
+    email: string;
     password: string;
     branch_id: number;
 }
@@ -47,16 +47,16 @@ export function parseCreateStaffDto(body: unknown): CreateStaffDto {
 
     const userData = parseRegisterUserDto({
         full_name: data.full_name,
-        phone: data.phone,
         email: data.email,
         password: data.password,
     });
+    const phone = parseVietnamesePhone(data.phone);
 
     if (!Number.isInteger(data.branch_id) || (data.branch_id as number) <= 0 || (data.branch_id as number) > 2_147_483_647) throw new AppError("Branch_id must be an integer between 1 and 2147483647", 400, "VALIDATION_ERROR");
 
     return {
         full_name: userData.full_name,
-        phone: userData.phone,
+        phone,
         email: userData.email,
         password: userData.password,
         branch_id: data.branch_id as number,

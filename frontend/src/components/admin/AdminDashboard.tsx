@@ -585,7 +585,7 @@ export function AdminDashboard() {
 
                     <div className="absolute bottom-0 left-0 hidden w-[248px] border-t border-white/10 p-5 lg:block">
                         <p className="truncate text-xs font-semibold">{admin?.full_name}</p>
-                        <p className="mt-1 truncate text-[10px] text-white/40">{admin?.phone}</p>
+                        <p className="mt-1 truncate text-[10px] text-white/40">{admin?.email}</p>
                         <div className="mt-4 flex flex-col gap-2">
                             <Link href="/admin/security" className="text-[11px] font-semibold text-[#d6b6a3] hover:text-white">
                                 Đổi mật khẩu →

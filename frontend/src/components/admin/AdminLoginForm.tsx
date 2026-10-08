@@ -28,7 +28,7 @@ type VerifiedLoginData = {
 
 export function AdminLoginForm() {
     const router = useRouter();
-    const [phone, setPhone] = useState("");
+    const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [challengeId, setChallengeId] = useState("");
@@ -56,7 +56,7 @@ export function AdminLoginForm() {
         try {
             const data = await apiRequest<PasswordLoginData>("/api/users/login", {
                 method: "POST",
-                body: JSON.stringify({ phone, password }),
+                body: JSON.stringify({ email, password }),
             });
 
             if (data.user.role.toLowerCase() !== "admin") {
@@ -174,15 +174,14 @@ export function AdminLoginForm() {
         <form onSubmit={handlePasswordSubmit} className="mt-8 space-y-5" noValidate>
             <label className="block">
                 <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/55">
-                    Số điện thoại
+                    Email
                 </span>
                 <input
-                    value={phone}
-                    onChange={(event) => setPhone(event.target.value)}
-                    type="tel"
-                    inputMode="tel"
-                    autoComplete="tel"
-                    placeholder="0901 234 567"
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    type="email"
+                    autoComplete="email"
+                    placeholder="admin@example.com"
                     className="mt-2.5 h-12 w-full rounded-xl border border-white/12 bg-white/[0.06] px-4 text-sm text-white outline-none transition placeholder:text-white/30 focus:border-[#c9aa96]"
                     required
                 />
@@ -220,7 +219,7 @@ export function AdminLoginForm() {
 
             <button
                 type="submit"
-                disabled={submitting || !phone.trim() || !password}
+                disabled={submitting || !email.trim() || !password}
                 className="flex h-12 w-full items-center justify-center rounded-full bg-[#f5eee8] px-5 text-sm font-semibold text-[#302823] transition enabled:hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50"
             >
                 {submitting ? "Đang kiểm tra…" : "Tiếp tục"}
