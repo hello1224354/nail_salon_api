@@ -4,7 +4,7 @@ import { useMemo, useState, type FormEvent } from "react";
 import type { AdminStaff, Appointment, Branch, Service } from "@/lib/api";
 import { formatVnd, shortBranchName } from "@/lib/studio-data";
 
-type AppointmentPayload = {
+export type AppointmentPayload = {
     customer_email?: string;
     customer_phone?: string;
     staff_id?: string;
