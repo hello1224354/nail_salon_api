@@ -1,11 +1,11 @@
 # Tài liệu kỹ thuật Serpente Nail Room
 
-Đã đối chiếu với source commit `ad110058` (09/10/2026, ICT). Nội dung mô tả **những gì code đang làm**, không tự đưa các kế hoạch chưa triển khai vào đặc tả.
+Tài liệu về kiến trúc, API, dữ liệu, bảo mật, vận hành và các quyết định thiết kế của hệ thống đặt lịch Serpente Nail Room.
 
 | Tài liệu | Nội dung |
 |---|---|
-| [PORTFOLIO.md](PORTFOLIO.md) | Recruiter-facing engineering case study and technical trade-offs |
-| [SCREENSHOTS.md](SCREENSHOTS.md) | Verified public demo links and privacy-safe screenshot/video plan |
+| [PORTFOLIO.md](PORTFOLIO.md) | Phân tích thiết kế kỹ thuật, concurrency và trade-offs |
+| [DEMO.md](DEMO.md) | Tổng quan sản phẩm, các trang demo và luồng người dùng |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Kiến trúc, sơ đồ luồng, ranh giới trách nhiệm |
 | [SETUP.md](SETUP.md) | Chạy local, môi trường, Gmail, migration |
 | [API.md](API.md) | Danh sách endpoint, phân quyền, request/response, lỗi |
