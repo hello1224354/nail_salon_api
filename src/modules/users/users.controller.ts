@@ -178,9 +178,9 @@ export const loginUser = async (req: Request, res: Response) => {
             });
         }
 
-        const session = await authSessionService.createLoginSession(user, context.fingerprint);
+        const session = await authSessionService.createLoginSession(user, context.fingerprint, credentials.remember_me);
 
-        setRefreshCookie(res, session.refreshToken, session.refreshExpiresAt);
+        setRefreshCookie(res, session.refreshToken, session.refreshExpiresAt, session.persistent);
         res.setHeader("Cache-Control", "no-store");
 
         await createAuditLog({
@@ -230,7 +230,7 @@ export const verifyLoginMfa = async (req: Request, res: Response) => {
 
         const session = await authSessionService.createLoginSession(user, context.fingerprint);
 
-        setRefreshCookie(res, session.refreshToken, session.refreshExpiresAt);
+        setRefreshCookie(res, session.refreshToken, session.refreshExpiresAt, session.persistent);
         res.setHeader("Cache-Control", "no-store");
 
         await createAuditLog({
@@ -275,7 +275,7 @@ export const refreshSession = async (req: Request, res: Response) => {
     try {
         const session = await authSessionService.refreshSession(refreshToken, context.fingerprint);
 
-        setRefreshCookie(res, session.refreshToken, session.refreshExpiresAt);
+        setRefreshCookie(res, session.refreshToken, session.refreshExpiresAt, session.persistent);
         res.setHeader("Cache-Control", "no-store");
 
         await createAuditLog({
