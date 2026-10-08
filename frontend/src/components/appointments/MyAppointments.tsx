@@ -14,7 +14,9 @@ import { clearSession, restoreSession, type AuthUser } from "@/lib/auth";
 import { formatAppointmentStatus, formatVnd, localizeBranchName } from "@/lib/studio-data";
 
 const BUSINESS_TIMEZONE = "Asia/Ho_Chi_Minh";
-const CUSTOMER_ROLE = "customer";
+function canBook(role: string): boolean {
+    return role.toLowerCase() === "customer" || role.toLowerCase() === "admin";
+}
 
 const filters = [
     { value: "all", label: "Tất cả" },
@@ -57,7 +59,7 @@ function formatAppointmentTime(value: string) {
 async function fetchAppointmentContext() {
     return await Promise.all([
         apiRequest<AuthUser>("/api/users/me"),
-        apiRequest<AppointmentList>("/api/appointments?page=1&limit=100"),
+        apiRequest<AppointmentList>("/api/appointments?scope=mine&page=1&limit=100"),
     ]);
 }
 
@@ -94,8 +96,8 @@ export function MyAppointments() {
                 const [currentUser, appointmentData] = await fetchAppointmentContext();
                 if (cancelled) return;
 
-                if (currentUser.role.toLowerCase() !== CUSTOMER_ROLE) {
-                    setError("Trang này chỉ dành cho tài khoản khách hàng.");
+                if (!canBook(currentUser.role)) {
+                    setError("Trang này dành cho tài khoản CUSTOMER hoặc ADMIN.");
                     setAppointments([]);
                     return;
                 }
@@ -137,8 +139,8 @@ export function MyAppointments() {
 
             const [currentUser, appointmentData] = await fetchAppointmentContext();
 
-            if (currentUser.role.toLowerCase() !== CUSTOMER_ROLE) {
-                setError("Trang này chỉ dành cho tài khoản khách hàng.");
+            if (!canBook(currentUser.role)) {
+                setError("Trang này dành cho tài khoản CUSTOMER hoặc ADMIN.");
                 setAppointments([]);
                 return;
             }
