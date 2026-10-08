@@ -248,7 +248,7 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
     let ownerId: string;
 
     if (actorRole === UserRole.CUSTOMER) {
-        if (data.user_id !== undefined) throw new AppError("Customers cannot specify user_id", 403, "FORBIDDEN");
+        if (data.user_id !== undefined || data.customer_email !== undefined) throw new AppError("Customers cannot specify another customer", 403, "FORBIDDEN");
 
         ownerId = actorId;
 
@@ -259,13 +259,22 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
 
         if (startTime > now + CUSTOMER_MAX_BOOKING_HORIZON_MS) throw new AppError("Customers cannot book more than 14 days in advance", 400, "VALIDATION_ERROR");
     } else if (actorRole === UserRole.ADMIN) {
-        if (data.user_id === undefined) throw new AppError("User_id is required when admin creates an appointment", 400, "VALIDATION_ERROR");
+        if (!data.user_id && !data.customer_email) {
+            throw new AppError("Customer email is required for admin booking", 400, "VALIDATION_ERROR");
+        }
 
-        const targetUser = await userService.getUser(data.user_id);
+        const targetUser = data.customer_email
+            ? await AppDataSource.getRepository(User).findOneBy({
+                  email: data.customer_email,
+                  role: UserRole.CUSTOMER,
+              })
+            : await userService.getUser(data.user_id!);
 
-        if (!targetUser) throw new AppError("User not found", 404, "USER_NOT_FOUND");
+        if (!targetUser || targetUser.role !== UserRole.CUSTOMER) {
+            throw new AppError("Customer account not found", 404, "CUSTOMER_NOT_FOUND");
+        }
 
-        ownerId = data.user_id;
+        ownerId = targetUser.id;
     } else {
         throw new AppError("You do not have permission to perform this action", 403, "FORBIDDEN");
     }
