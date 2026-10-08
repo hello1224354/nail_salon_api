@@ -20,6 +20,7 @@ import {
     formatVnd,
     localizeAddress,
     localizeBranchName,
+    shortBranchName,
     type StudioService,
 } from "@/lib/studio-data";
 
@@ -509,7 +510,7 @@ export function BookingForm() {
                                             className="mt-0.5 accent-[#986a58]"
                                         />
                                         <span>
-                                            <span className="block text-sm font-semibold">{localizeBranchName(branch.name)}</span>
+                                            <span className="block text-sm font-semibold">{shortBranchName(branch.name)}</span>
                                             <span className="mt-1 block text-[11px] leading-4 text-muted">{localizeAddress(branch.address)}</span>
                                         </span>
                                     </label>
@@ -749,7 +750,7 @@ export function BookingForm() {
                     <div className="space-y-5">
                         <div>
                             <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-accent">Chi nhánh</p>
-                            <p className="mt-1 text-sm font-semibold">{selectedBranch ? localizeBranchName(selectedBranch.name) : "Chọn chi nhánh"}</p>
+                            <p className="mt-1 text-sm font-semibold">{selectedBranch ? shortBranchName(selectedBranch.name) : "Chọn chi nhánh"}</p>
                         </div>
 
                         <div>
@@ -860,7 +861,7 @@ export function BookingForm() {
                     <div className="grid gap-4 sm:grid-cols-2">
                         <div>
                             <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-muted">Chi nhánh</p>
-                            <p className="mt-1 text-sm font-semibold">{selectedBranch ? localizeBranchName(selectedBranch.name) : "—"}</p>
+                            <p className="mt-1 text-sm font-semibold">{selectedBranch ? shortBranchName(selectedBranch.name) : "—"}</p>
                         </div>
                         <div>
                             <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-muted">Thời gian</p>
