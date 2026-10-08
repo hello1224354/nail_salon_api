@@ -42,7 +42,7 @@ sequenceDiagram
 
 **Source:** [booking service](../src/modules/appointments/appointments.service.ts), [slot entity](../src/modules/appointments/staff-booking-slots.entity.ts), [booking docs](BOOKING.md).
 
-**Verification limit:** Source contains unique constraints and unit/regression tests; an automated real-MySQL concurrent load/integration suite has not yet been added. Avoid citing a measured race-test throughput without running one.
+**Verification:** GitHub Actions runs integration tests against an isolated MySQL 8 service with real migrations, concurrent calls to the booking service, assertions on persisted appointments/slot keys, atomic group bookings and rollback. This is a correctness regression suite, **not** a throughput benchmark; avoid claiming measured load capacity.
 
 ## Challenge 2 — Group booking and consistency
 
@@ -93,11 +93,11 @@ An email to configured ADMIN recipients is triggered **after** appointment trans
 
 ### Current limitations / sensible next improvements
 
-1. Integration tests running against real MySQL under simultaneous booking contention.
-2. Browser E2E tests for OTP/login, booking and role-based admin workflows.
-3. A transactional outbox/worker for guaranteed notification retries.
-4. Error-code-specific UX instead of generic HTTP 409 messages; structured logging and production error alerts.
-5. Mobile/desktop screenshot gallery and an optional short recorded demo with sanitized test data.
+1. Browser E2E tests for OTP/login, booking and role-based admin workflows.
+2. A transactional outbox/worker for guaranteed notification retries.
+3. Error-code-specific UX instead of generic HTTP 409 messages; structured logging and production error alerts.
+4. Mobile/desktop screenshot gallery and an optional short recorded demo with sanitized test data.
+5. Dedicated stress tests with measured throughput and fault injection, separate from correctness-focused MySQL concurrency tests.
 
 **No invented benchmarks:** No claims about production traffic, throughput, response-time percentiles or perfect availability are made without measurement. Code review and unit tests do not replace a full security audit.
 

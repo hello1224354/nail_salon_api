@@ -16,6 +16,29 @@ npm run build
 npm audit --audit-level=high
 ```
 
+### MySQL 8 booking concurrency integration (database tạm)
+
+CI job `backend-mysql-integration` khởi động **MySQL 8 thật trong GitHub Actions**, apply **toàn bộ production TypeORM migrations**, sau đó chạy:
+
+```bash
+npm run test:booking:integration
+```
+
+Test chạy 4 kịch bản, bao gồm **16 khách đồng thời** đặt cùng một staff/slot; **16 booking nhóm** tranh hai nhân viên; **rollback** phần reservation đã ghi khi đặt nhóm thất bại; và hai ca nằm sát nhau không cần buffer. Assertions kiểm tra số bản ghi `appointments`, `staff_booking_slots`, mã lỗi `SLOT_UNAVAILABLE` và tính nhất quán của `booking_group_id`.
+
+Để chạy local, chỉ dùng **MySQL local + DB chuyên biệt** tên kết thúc `_integration_test` (script từ chối DB host không phải `localhost`/`127.0.0.1`). Chạy migrations trước:
+
+```bash
+# Đặt NODE_ENV=development, DB_SYNCHRONIZE=false, DB_HOST=127.0.0.1,
+# DB_NAME=nail_salon_integration_test, DB_USER/DB_PASSWORD và JWT_SECRET qua env local
+npm run build
+npm run migration:run
+# Bật explicit opt-in RUN_BOOKING_INTEGRATION_TESTS=1
+npm run test:booking:integration
+```
+
+Các test này không tạo/đọc bookings production. Tuy nhiên chúng là **integration tests**, không phải test qua HTTP/JWT hoặc stress benchmark p95. Đừng tuyên bố load-test throughput khi chưa đo.
+
 ### Frontend, từ `frontend`
 
 ```bash

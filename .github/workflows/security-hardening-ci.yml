@@ -29,6 +29,47 @@ jobs:
       - run: npm run build
       - run: npm audit --audit-level=high
 
+  backend-mysql-integration:
+    name: Booking concurrency (MySQL 8)
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: nail_salon_integration_test
+          MYSQL_ROOT_PASSWORD: ci-integration-only-password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -pci-integration-only-password"
+          --health-interval=5s
+          --health-timeout=3s
+          --health-retries=25
+    env:
+      RUN_BOOKING_INTEGRATION_TESTS: "1"
+      NODE_ENV: development
+      DB_HOST: 127.0.0.1
+      DB_PORT: "3306"
+      DB_USER: root
+      DB_PASSWORD: ci-integration-only-password
+      DB_NAME: nail_salon_integration_test
+      DB_SYNCHRONIZE: "false"
+      DB_LOGGING: "false"
+      JWT_SECRET: ci-local-integration-test-key-never-used-in-production
+      CORS_ORIGIN: http://localhost:3001
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Apply production TypeORM migrations to ephemeral MySQL
+        run: npm run migration:run
+      - name: Run booking concurrency integration tests
+        run: npm run test:booking:integration
+
   frontend:
     runs-on: ubuntu-latest
     defaults:
