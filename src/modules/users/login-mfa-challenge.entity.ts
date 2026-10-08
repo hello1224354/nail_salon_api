@@ -21,6 +21,12 @@ export class LoginMfaChallenge {
     @Column({ type: "datetime", precision: 3, nullable: true })
     consumed_at: Date | null;
 
+    @Column({ type: "boolean", default: true })
+    persistent: boolean;
+
+    @Column({ type: "int", default: 0 })
+    token_version: number;
+
     @CreateDateColumn()
     created_at: Date;
 }
