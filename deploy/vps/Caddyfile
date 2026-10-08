@@ -1,0 +1,11 @@
+{
+  email {$ACME_EMAIL}
+}
+
+{$SITE_ADDRESS} {
+  encode zstd gzip
+
+  # API requests use Next.js existing internal rewrite /api/* -> http://api:3000.
+  # No direct internet-facing MySQL or Express port.
+  reverse_proxy frontend:3001
+}
