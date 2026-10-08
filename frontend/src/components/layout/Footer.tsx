@@ -4,30 +4,29 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { apiRequest, type Branch, type BranchList, type SalonContent } from "@/lib/api";
-import { getInstagramUrl, getMapsUrl, localizeBranchName } from "@/lib/studio-data";
+import { apiRequest, type SalonContent } from "@/lib/api";
+import { getInstagramUrl, getMapsSearchUrl, localizeBranchName } from "@/lib/studio-data";
+import { useBranch } from "@/components/branch/BranchProvider";
 
 export function Footer() {
     const pathname = usePathname();
     const [content, setContent] = useState<SalonContent | null>(null);
-    const [branch, setBranch] = useState<Branch | null>(null);
+    const { branches, selectedBranchId } = useBranch();
 
     useEffect(() => {
+        if (selectedBranchId === null) return;
+
         let cancelled = false;
 
         async function loadFooterData() {
             try {
-                const [salonContent, branchList] = await Promise.all([
-                    apiRequest<SalonContent>("/api/site-content"),
-                    apiRequest<BranchList>("/api/branches?page=1&limit=1"),
-                ]);
+                const salonContent = await apiRequest<SalonContent>(
+                    `/api/site-content?branch_id=${selectedBranchId}`
+                );
 
-                if (cancelled) return;
-
-                setContent(salonContent);
-                setBranch(branchList.branches[0] ?? null);
+                if (!cancelled) setContent(salonContent);
             } catch {
-                // Footer vẫn hiển thị được các liên kết chính nếu API tạm thời không phản hồi.
+                // Footer vẫn hiển thị thông tin chi nhánh từ BranchProvider nếu site content tạm thời lỗi.
             }
         }
 
@@ -36,14 +35,11 @@ export function Footer() {
         return () => {
             cancelled = true;
         };
-    }, []);
+    }, [selectedBranchId]);
 
     if (pathname.startsWith("/admin")) return null;
 
     const instagramUrl = getInstagramUrl(content?.instagram_handle);
-    const mapsUrl = getMapsUrl(content?.google_maps_url, content?.google_maps_location);
-    const phone = branch?.phone || content?.hotline;
-    const phoneHref = phone ? `tel:${phone.replace(/[^+\d]/g, "")}` : null;
 
     return (
         <footer className="bg-studio-dark text-white">
@@ -61,7 +57,7 @@ export function Footer() {
                             <span className="font-serif text-2xl">{content?.display_name || "Serpente Nail Room"}</span>
                         </div>
                         <p className="mt-4 max-w-sm text-sm leading-6 text-[#cdbfb3]">
-                            Tiệm nail tại Quận 8. Xem bảng giá, chọn giờ còn trống và đặt lịch trực tiếp trên website.
+                            Mỗi bộ móng được chăm chút để hợp với bạn, không chỉ hợp xu hướng.
                         </p>
 
                         <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-xs">
@@ -89,26 +85,51 @@ export function Footer() {
 
                     <div>
                         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#bba18e]">
-                            {branch ? localizeBranchName(branch.name) : "Liên hệ"}
+                            Liên hệ
                         </p>
-                        <div className="mt-4 space-y-2.5 text-sm leading-6 text-white/90">
-                            {branch?.address ? (
-                                mapsUrl ? (
-                                    <a href={mapsUrl} target="_blank" rel="noreferrer" className="block hover:text-[#d8c2b5]">
-                                        {branch.address}
-                                    </a>
-                                ) : (
-                                    <p>{branch.address}</p>
-                                )
-                            ) : null}
-                            {branch?.opening_hours ? <p>Mở cửa: {branch.opening_hours}</p> : null}
-                            {phoneHref && phone ? (
-                                <a className="block w-fit hover:text-[#d8c2b5]" href={phoneHref}>
-                                    {phone}
-                                </a>
-                            ) : null}
+                        <div className="mt-4 space-y-5">
+                            {branches.map((branch) => {
+                                const branchMapsUrl = getMapsSearchUrl(branch.address);
+                                const phoneHref = branch.phone
+                                    ? `tel:${branch.phone.replace(/[^+\d]/g, "")}`
+                                    : null;
+
+                                return (
+                                    <div key={branch.id} className="border-b border-white/10 pb-5 last:border-b-0 last:pb-0">
+                                        <p className="font-serif text-xl text-white">
+                                            {localizeBranchName(branch.name)}
+                                        </p>
+                                        <div className="mt-2 space-y-1.5 text-sm leading-6 text-white/90">
+                                            {branch.address ? (
+                                                branchMapsUrl ? (
+                                                    <a
+                                                        href={branchMapsUrl}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        className="block hover:text-[#d8c2b5]"
+                                                    >
+                                                        {branch.address}
+                                                    </a>
+                                                ) : (
+                                                    <p>{branch.address}</p>
+                                                )
+                                            ) : null}
+                                            {branch.phone && phoneHref ? (
+                                                <a className="block w-fit hover:text-[#d8c2b5]" href={phoneHref}>
+                                                    {branch.phone}
+                                                </a>
+                                            ) : null}
+                                            {branch.opening_hours ? <p>Mở cửa: {branch.opening_hours}</p> : null}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+
                             {content?.contact_email ? (
-                                <a className="block w-fit hover:text-[#d8c2b5]" href={`mailto:${content.contact_email}`}>
+                                <a
+                                    className="block w-fit text-sm text-white/90 hover:text-[#d8c2b5]"
+                                    href={`mailto:${content.contact_email}`}
+                                >
                                     {content.contact_email}
                                 </a>
                             ) : null}
