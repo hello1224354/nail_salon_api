@@ -18,6 +18,7 @@ import {
     type ServiceList,
 } from "@/lib/api";
 import { getAuthUser, logoutSession, restoreSession, type AuthUser } from "@/lib/auth";
+import { AdminAppointmentForm, type AppointmentPayload } from "./AdminAppointmentForm";
 import { formatAppointmentStatus, formatServicePrice, formatVnd, localizeBranchName, shortBranchName } from "@/lib/studio-data";
 
 type TabKey = "overview" | "appointments" | "services" | "staff" | "branches" | "offers";
@@ -180,9 +181,11 @@ export function AdminDashboard() {
     const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState("");
     const [toast, setToast] = useState("");
-    const [modal, setModal] = useState<null | "branch" | "service" | "staff" | "offer">(null);
+    const [modal, setModal] = useState<null | "branch" | "service" | "staff" | "offer" | "appointment">(null);
     const [editingBranch, setEditingBranch] = useState<Branch | null>(null);
     const [editingService, setEditingService] = useState<Service | null>(null);
+    const [editingStaff, setEditingStaff] = useState<AdminStaff | null>(null);
+    const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
     const [editingOffer, setEditingOffer] = useState<Offer | null>(null);
     const [appointmentStatus, setAppointmentStatus] = useState("");
     const [appointmentBranch, setAppointmentBranch] = useState("");
@@ -340,6 +343,26 @@ export function AdminDashboard() {
         }
     }
 
+    async function saveAppointment(payload: AppointmentPayload) {
+        setSubmitting(true);
+        try {
+            await apiRequest<Appointment>(
+                editingAppointment ? `/api/appointments/${editingAppointment.id}` : "/api/appointments",
+                {
+                    method: editingAppointment ? "PUT" : "POST",
+                    body: JSON.stringify(payload),
+                }
+            );
+            setModal(null);
+            setEditingAppointment(null);
+            await refresh(editingAppointment ? "Đã cập nhật lịch hẹn." : "Đã tạo lịch hẹn.");
+        } catch (saveError) {
+            setToast(getApiErrorMessage(saveError, "Chưa lưu được lịch hẹn. Kiểm tra tài khoản khách và tình trạng trống của nhân viên."));
+        } finally {
+            setSubmitting(false);
+        }
+    }
+
     async function deleteAppointment(appointment: Appointment) {
         if (!window.confirm(`Xóa vĩnh viễn lịch hẹn #${appointment.id.slice(0, 8).toUpperCase()}? Dữ liệu này sẽ không thể khôi phục.`)) return;
 
@@ -360,6 +383,8 @@ export function AdminDashboard() {
         const payload = {
             name: String(form.get("name") || "").trim(),
             address: String(form.get("address") || "").trim(),
+            phone: String(form.get("phone") || "").trim() || null,
+            opening_hours: String(form.get("opening_hours") || "").trim() || null,
         };
 
         setSubmitting(true);
@@ -398,10 +423,15 @@ export function AdminDashboard() {
     async function saveService(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
         const form = new FormData(event.currentTarget);
+        const duration = String(form.get("duration_minutes") || "").trim();
         const base = {
             name: String(form.get("name") || "").trim(),
             price: Number(form.get("price")),
-            duration_minutes: Number(form.get("duration_minutes")),
+            duration_minutes: duration ? Number(duration) : null,
+            booking_enabled: form.get("booking_enabled") === "on",
+            category: String(form.get("category") || "").trim() || null,
+            subcategory: String(form.get("subcategory") || "").trim() || null,
+            description: String(form.get("description") || "").trim() || null,
         };
         const payload = editingService
             ? base
@@ -443,39 +473,26 @@ export function AdminDashboard() {
     async function saveStaff(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
         const form = new FormData(event.currentTarget);
+        const password = String(form.get("password") || "");
         const payload = {
             full_name: String(form.get("full_name") || "").trim(),
             phone: String(form.get("phone") || "").trim(),
-            email: String(form.get("email") || "").trim() || null,
-            password: String(form.get("password") || ""),
+            email: String(form.get("email") || "").trim(),
             branch_id: Number(form.get("branch_id")),
+            ...(editingStaff ? (password ? { password } : {}) : { password }),
         };
 
         setSubmitting(true);
         try {
             await apiRequest<AdminStaff>(
-                "/api/staffs",
-                { method: "POST", body: JSON.stringify(payload) }
+                editingStaff ? `/api/staffs/${editingStaff.id}` : "/api/staffs",
+                { method: editingStaff ? "PUT" : "POST", body: JSON.stringify(payload) }
             );
             setModal(null);
-            await refresh("Đã thêm nhân viên.");
+            setEditingStaff(null);
+            await refresh(editingStaff ? "Đã cập nhật nhân viên." : "Đã thêm nhân viên.");
         } catch (saveError) {
             setToast(getApiErrorMessage(saveError, "Chưa thêm được nhân viên."));
-        } finally {
-            setSubmitting(false);
-        }
-    }
-
-    async function updateStaff(staff: AdminStaff, payload: { branch_id: number }) {
-        setSubmitting(true);
-        try {
-            await apiRequest<AdminStaff>(
-                `/api/staffs/${staff.id}`,
-                { method: "PUT", body: JSON.stringify(payload) }
-            );
-            await refresh("Đã cập nhật nhân viên.");
-        } catch (staffError) {
-            setToast(getApiErrorMessage(staffError, "Chưa cập nhật được nhân viên."));
         } finally {
             setSubmitting(false);
         }
