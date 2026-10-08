@@ -36,7 +36,7 @@ export const createService = async (data: CreateServiceDto) => {
         display_name: data.name,
         price_min: data.price,
         price_max: data.price,
-        booking_enabled: true,
+        booking_enabled: data.booking_enabled,
     });
     return await serviceRepo.save(newService);
 };
@@ -64,8 +64,8 @@ export const updateService = async (id: string, data: UpdateServiceDto) => {
         service.price_max = data.price;
     }
 
-    if (data.duration_minutes !== undefined) {
-        service.booking_enabled = true;
+    if (service.booking_enabled && service.duration_minutes === null) {
+        throw new AppError("Bookable service requires a duration", 400, "VALIDATION_ERROR");
     }
 
     return await serviceRepo.save(service);
