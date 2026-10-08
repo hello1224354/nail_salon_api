@@ -57,7 +57,7 @@ export function Footer() {
                             <span className="font-serif text-2xl">{content?.display_name || "Serpente Nail Room"}</span>
                         </div>
                         <p className="mt-4 max-w-sm text-sm leading-6 text-[#cdbfb3]">
-                            Mỗi bộ móng được chăm chút để hợp với bạn, không chỉ hợp xu hướng.
+                            Chọn mẫu bạn thích, Serpente chăm chút từng chi tiết để bộ móng lên tay thật vừa ý.
                         </p>
 
                         <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-xs">
