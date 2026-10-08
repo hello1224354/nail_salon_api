@@ -192,7 +192,10 @@ export function AdminDashboard() {
     const [editingOffer, setEditingOffer] = useState<Offer | null>(null);
     const [appointmentStatus, setAppointmentStatus] = useState("");
     const [appointmentBranch, setAppointmentBranch] = useState("");
-    const [appointmentPeriod, setAppointmentPeriod] = useState<"all" | "history" | "upcoming">("all");
+    const [appointmentFromDate, setAppointmentFromDate] = useState("");
+    const [appointmentToDate, setAppointmentToDate] = useState("");
+    const [appointmentCodeInput, setAppointmentCodeInput] = useState("");
+    const [appointmentCode, setAppointmentCode] = useState("");
     const [appointmentPage, setAppointmentPage] = useState(1);
     const [appointmentPages, setAppointmentPages] = useState(1);
     const [submitting, setSubmitting] = useState(false);
@@ -263,9 +266,17 @@ export function AdminDashboard() {
 
             if (appointmentStatus) params.set("status", appointmentStatus);
             if (appointmentBranch) params.set("branch_id", appointmentBranch);
-            // Filter scheduled appointments using the existing paginated API.
-            if (appointmentPeriod === "history") params.set("to", new Date().toISOString());
-            if (appointmentPeriod === "upcoming") params.set("from", new Date().toISOString());
+            // Date inputs are local Vietnam calendar dates, inclusive of both endpoints.
+            if (appointmentFromDate) {
+                params.set("from", new Date(`${appointmentFromDate}T00:00:00+07:00`).toISOString());
+            }
+            if (appointmentToDate) {
+                const endExclusive = new Date(
+                    new Date(`${appointmentToDate}T00:00:00+07:00`).getTime() + 24 * 60 * 60 * 1000
+                );
+                params.set("to", endExclusive.toISOString());
+            }
+            if (appointmentCode) params.set("booking_code", appointmentCode);
 
             const result = await apiRequest<AppointmentList>(
                 `/api/appointments?${params.toString()}`
@@ -278,7 +289,7 @@ export function AdminDashboard() {
             }));
             setAppointmentPages(Math.max(result.total_pages, 1));
         },
-        [appointmentBranch, appointmentPage, appointmentPeriod, appointmentStatus]
+        [appointmentBranch, appointmentCode, appointmentFromDate, appointmentPage, appointmentStatus, appointmentToDate]
     );
 
     const loadTodayStats = useCallback(async () => {
@@ -679,10 +690,32 @@ export function AdminDashboard() {
                                         branches={data.branches}
                                         branchFilter={appointmentBranch}
                                         statusFilter={appointmentStatus}
-                                        periodFilter={appointmentPeriod}
+                                        fromDate={appointmentFromDate}
+                                        toDate={appointmentToDate}
+                                        codeInput={appointmentCodeInput}
                                         total={data.appointmentTotal}
-                                        setPeriodFilter={(value) => {
-                                            setAppointmentPeriod(value);
+                                        setFromDate={(value) => {
+                                            setAppointmentFromDate(value);
+                                            if (value && appointmentToDate && value > appointmentToDate) setAppointmentToDate("");
+                                            setAppointmentPage(1);
+                                        }}
+                                        setToDate={(value) => {
+                                            setAppointmentToDate(value);
+                                            if (value && appointmentFromDate && value < appointmentFromDate) setAppointmentFromDate("");
+                                            setAppointmentPage(1);
+                                        }}
+                                        setCodeInput={setAppointmentCodeInput}
+                                        onCodeSearch={() => {
+                                            setAppointmentCode(appointmentCodeInput);
+                                            setAppointmentPage(1);
+                                        }}
+                                        onResetFilters={() => {
+                                            setAppointmentFromDate("");
+                                            setAppointmentToDate("");
+                                            setAppointmentCodeInput("");
+                                            setAppointmentCode("");
+                                            setAppointmentBranch("");
+                                            setAppointmentStatus("");
                                             setAppointmentPage(1);
                                         }}
                                         setBranchFilter={(value) => {
@@ -1062,9 +1095,15 @@ function AppointmentsPanel({
     branches,
     branchFilter,
     statusFilter,
-    periodFilter,
+    fromDate,
+    toDate,
+    codeInput,
     total,
-    setPeriodFilter,
+    setFromDate,
+    setToDate,
+    setCodeInput,
+    onCodeSearch,
+    onResetFilters,
     setBranchFilter,
     setStatusFilter,
     page,
@@ -1079,9 +1118,15 @@ function AppointmentsPanel({
     branches: Branch[];
     branchFilter: string;
     statusFilter: string;
-    periodFilter: "all" | "history" | "upcoming";
+    fromDate: string;
+    toDate: string;
+    codeInput: string;
     total: number;
-    setPeriodFilter: (value: "all" | "history" | "upcoming") => void;
+    setFromDate: (value: string) => void;
+    setToDate: (value: string) => void;
+    setCodeInput: (value: string) => void;
+    onCodeSearch: () => void;
+    onResetFilters: () => void;
     setBranchFilter: (value: string) => void;
     setStatusFilter: (value: string) => void;
     page: number;
@@ -1101,16 +1146,6 @@ function AppointmentsPanel({
                     <p className="mt-2 text-xs text-muted">Tra cứu lịch hẹn từ trước đến nay, bao gồm lịch đã hoàn thành và đã hủy.</p>
                 </div>
                 <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                    <select
-                        aria-label="Lọc lịch hẹn theo thời gian"
-                        value={periodFilter}
-                        onChange={(event) => setPeriodFilter(event.target.value as "all" | "history" | "upcoming")}
-                        className="h-10 rounded-xl border border-line bg-cream px-3 text-xs outline-none"
-                    >
-                        <option value="all">Toàn bộ thời gian</option>
-                        <option value="history">Từ trước đến hiện tại</option>
-                        <option value="upcoming">Sắp tới</option>
-                    </select>
                     <select value={branchFilter} onChange={(event) => setBranchFilter(event.target.value)} className="h-10 rounded-xl border border-line bg-cream px-3 text-xs outline-none">
                         <option value="">Tất cả chi nhánh</option>
                         {branches.map((branch) => <option key={branch.id} value={branch.id}>{shortBranchName(branch.name)}</option>)}
@@ -1119,6 +1154,61 @@ function AppointmentsPanel({
                         <option value="">Tất cả trạng thái</option>
                         {statusOrder.map((status) => <option key={status} value={status}>{formatAppointmentStatus(status)}</option>)}
                     </select>
+                </div>
+                <div className="grid gap-3 border-t border-line pt-4 sm:grid-cols-2 xl:grid-cols-[1fr_1fr_1.5fr_auto] xl:items-end">
+                    <label className="block">
+                        <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">Từ ngày</span>
+                        <input
+                            aria-label="Từ ngày"
+                            type="date"
+                            value={fromDate}
+                            max={toDate || undefined}
+                            onChange={(event) => setFromDate(event.target.value)}
+                            className="h-10 w-full rounded-xl border border-line bg-cream px-3 text-xs text-ink outline-none focus:border-accent"
+                        />
+                    </label>
+                    <label className="block">
+                        <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">Đến ngày</span>
+                        <input
+                            aria-label="Đến ngày"
+                            type="date"
+                            value={toDate}
+                            min={fromDate || undefined}
+                            onChange={(event) => setToDate(event.target.value)}
+                            className="h-10 w-full rounded-xl border border-line bg-cream px-3 text-xs text-ink outline-none focus:border-accent"
+                        />
+                    </label>
+                    <form
+                        onSubmit={(event) => {
+                            event.preventDefault();
+                            onCodeSearch();
+                        }}
+                        className="min-w-0"
+                        role="search"
+                    >
+                        <label htmlFor="admin-booking-code" className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">Mã lịch hẹn</label>
+                        <div className="flex gap-2">
+                            <input
+                                id="admin-booking-code"
+                                type="search"
+                                inputMode="text"
+                                autoComplete="off"
+                                maxLength={8}
+                                value={codeInput}
+                                onChange={(event) => setCodeInput(event.target.value.replace(/[^0-9a-f]/gi, "").slice(0, 8).toUpperCase())}
+                                placeholder="VD: 9DCB7830"
+                                className="h-10 min-w-0 flex-1 rounded-xl border border-line bg-cream px-3 font-mono text-xs uppercase tracking-wider text-ink outline-none focus:border-accent"
+                            />
+                            <button type="submit" className="h-10 shrink-0 rounded-xl bg-ink px-4 text-xs font-semibold text-white transition hover:bg-accent">Tìm</button>
+                        </div>
+                    </form>
+                    <button
+                        type="button"
+                        onClick={onResetFilters}
+                        className="h-10 rounded-xl border border-line px-4 text-xs font-semibold text-muted transition hover:border-accent hover:text-ink"
+                    >
+                        Xóa bộ lọc
+                    </button>
                 </div>
             </div>
 
@@ -1151,6 +1241,9 @@ function AppointmentsPanel({
                                     <td className="px-5 py-4 whitespace-nowrap">
                                         <p className="font-semibold">{formatDateTime(appointment.start_time)}</p>
                                         <p className="mt-1 text-[10px] text-muted">đến {formatDateTime(appointment.end_time).split(" ").slice(-1)[0]}</p>
+                                        <p className="mt-1 font-mono text-[10px] font-semibold tracking-[0.05em] text-accent">
+                                            #{(appointment.booking_group_id ?? appointment.id).slice(0, 8).toUpperCase()}
+                                        </p>
                                     </td>
                                     <td className="px-5 py-4">
                                         <p className="font-medium">{appointment.customer?.full_name || "—"}</p>
