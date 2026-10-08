@@ -54,7 +54,7 @@ export function AdminAppointmentForm({
         appointment ? vietnamDateTime(appointment.start_time) : ""
     );
     const [customerEmail, setCustomerEmail] = useState("");
-    const [customerPhone, setCustomerPhone] = useState("");
+    const [customerPhone, setCustomerPhone] = useState(appointment?.customer?.phone ?? "");
     const [formError, setFormError] = useState("");
 
     const branchStaff = useMemo(
@@ -96,6 +96,9 @@ export function AdminAppointmentForm({
         if (appointment) {
             const payload: AppointmentPayload = {};
             const oldIds = appointment.appointment_services?.map((service) => service.service_id) ?? [];
+            if (customerPhone.trim() !== (appointment.customer?.phone ?? "")) {
+                payload.customer_phone = customerPhone.trim();
+            }
             if (staffId !== appointment.staff_id) payload.staff_id = staffId;
             if (serviceIds.length !== oldIds.length || serviceIds.some((id) => !oldIds.includes(id))) {
                 payload.service_ids = serviceIds;
@@ -160,6 +163,14 @@ export function AdminAppointmentForm({
                             placeholder="0901 234 567" />
                     </label>
                 </div>
+            ) : null}
+
+            {appointment ? (
+                <label className="block">
+                    <span className={captionClass}>SĐT liên hệ cho lịch hẹn (không sửa tài khoản khách)</span>
+                    <input className={inputClass} type="tel" required value={customerPhone}
+                        onChange={(event) => setCustomerPhone(event.target.value)} />
+                </label>
             ) : null}
 
             <div className="grid gap-4 sm:grid-cols-2">
