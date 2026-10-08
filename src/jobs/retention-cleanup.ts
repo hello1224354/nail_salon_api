@@ -57,6 +57,12 @@ async function main() {
                 OR revoked_at < DATE_SUB(UTC_TIMESTAMP(), INTERVAL ${SESSION_RETENTION_DAYS} DAY)`
         );
 
+        const [trustedDevicesResult] = await connection.execute<ResultSetHeader>(
+            `DELETE FROM trusted_login_devices
+             WHERE expires_at < DATE_SUB(UTC_TIMESTAMP(), INTERVAL ${SESSION_RETENTION_DAYS} DAY)
+                OR revoked_at < DATE_SUB(UTC_TIMESTAMP(), INTERVAL ${SESSION_RETENTION_DAYS} DAY)`
+        );
+
         await connection.commit();
 
         console.log("Retention cleanup completed", {
@@ -64,6 +70,7 @@ async function main() {
             password_reset_challenges: passwordResetResult.affectedRows,
             login_mfa_challenges: mfaResult.affectedRows,
             refresh_sessions: sessionResult.affectedRows,
+            trusted_login_devices: trustedDevicesResult.affectedRows,
         });
     } catch (error) {
         await connection.rollback();
