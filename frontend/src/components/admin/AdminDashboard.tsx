@@ -862,13 +862,17 @@ export function AdminDashboard() {
             ) : null}
 
             {modal === "staff" ? (
-                <Modal title="Thêm nhân viên" description="Tài khoản nhân viên được tạo đồng thời với hồ sơ nhân sự." onClose={() => setModal(null)}>
+                <Modal
+                    title={editingStaff ? "Sửa nhân viên" : "Thêm nhân viên"}
+                    description="Chỉ chỉnh sửa tài khoản STAFF. Đổi email hoặc mật khẩu sẽ đăng xuất các phiên nhân viên hiện tại."
+                    onClose={() => { setModal(null); setEditingStaff(null); }}
+                >
                     <form onSubmit={saveStaff} className="grid gap-5 md:grid-cols-2">
                         <Field label="Họ tên">
-                            <input name="full_name" className={inputClass} required />
+                            <input name="full_name" defaultValue={editingStaff?.full_name ?? ""} className={inputClass} required maxLength={255} />
                         </Field>
                         <Field label="Chi nhánh">
-                            <select name="branch_id" className={selectClass} required defaultValue="">
+                            <select name="branch_id" className={selectClass} required defaultValue={editingStaff?.branch_id ?? ""}>
                                 <option value="" disabled>Chọn chi nhánh</option>
                                 {data.branches.map((branch) => (
                                     <option key={branch.id} value={branch.id}>{shortBranchName(branch.name)}</option>
@@ -876,18 +880,18 @@ export function AdminDashboard() {
                             </select>
                         </Field>
                         <Field label="Số điện thoại">
-                            <input name="phone" type="tel" className={inputClass} required />
+                            <input name="phone" type="tel" defaultValue={editingStaff?.phone ?? ""} className={inputClass} required />
                         </Field>
-                        <Field label="Email">
-                            <input name="email" type="email" className={inputClass} />
+                        <Field label="Email đăng nhập">
+                            <input name="email" type="email" defaultValue={editingStaff?.email ?? ""} className={inputClass} required />
                         </Field>
-                        <Field label="Mật khẩu khởi tạo" span>
-                            <input name="password" type="password" minLength={8} className={inputClass} required />
+                        <Field label={editingStaff ? "Mật khẩu mới (bỏ trống nếu giữ nguyên)" : "Mật khẩu khởi tạo"} span>
+                            <input name="password" type="password" autoComplete="new-password" minLength={8} className={inputClass} required={!editingStaff} />
                         </Field>
                         <div className="flex justify-end gap-3 md:col-span-2">
-                            <button type="button" onClick={() => setModal(null)} className="rounded-full border border-line px-5 py-2.5 text-xs font-semibold">Hủy</button>
+                            <button type="button" onClick={() => { setModal(null); setEditingStaff(null); }} className="rounded-full border border-line px-5 py-2.5 text-xs font-semibold">Hủy</button>
                             <button disabled={submitting} className="rounded-full bg-ink px-5 py-2.5 text-xs font-semibold text-white disabled:opacity-50">
-                                {submitting ? "Đang tạo…" : "Tạo nhân viên"}
+                                {submitting ? "Đang lưu…" : editingStaff ? "Lưu nhân viên" : "Tạo nhân viên"}
                             </button>
                         </div>
                     </form>
