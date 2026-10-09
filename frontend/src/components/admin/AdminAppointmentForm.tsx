@@ -120,15 +120,10 @@ export function AdminAppointmentForm({
             <div className="rounded-xl border border-line bg-white p-4 text-xs leading-5 text-muted">
                 Khách: <strong className="text-ink">{appointment.customer?.full_name ?? "—"}</strong>
                 {" · "}{appointment.customer?.email ?? "Không có email"}
-                {appointment.party_size > 1 ? (
-                    <p className="mt-2 text-[#8a5147]">
-                        Lịch nhóm: thao tác chỉnh sửa áp dụng riêng cho suất hẹn này.
-                    </p>
-                ) : null}
             </div>
 
             <label className="block">
-                <span className={captionClass}>SĐT liên hệ cho lịch hẹn (không sửa tài khoản khách)</span>
+                <span className={captionClass}>SĐT liên hệ</span>
                 <input className={inputClass} type="tel" required value={customerPhone}
                     onChange={(event) => setCustomerPhone(event.target.value)} />
             </label>
