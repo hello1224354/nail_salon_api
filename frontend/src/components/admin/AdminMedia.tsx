@@ -18,6 +18,33 @@ type MediaList = {
     total_pages: number;
 };
 
+async function optimizePhoto(file: File): Promise<File> {
+    let bitmap: ImageBitmap | null = null;
+    try {
+        bitmap = await createImageBitmap(file);
+        const scale = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height));
+        const width = Math.max(1, Math.round(bitmap.width * scale));
+        const height = Math.max(1, Math.round(bitmap.height * scale));
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const context = canvas.getContext("2d");
+        if (!context) return file;
+        context.drawImage(bitmap, 0, 0, width, height);
+        const compressed = await new Promise<Blob | null>((resolve) =>
+            canvas.toBlob(resolve, "image/webp", 0.82)
+        );
+        if (!compressed || compressed.type !== "image/webp" || compressed.size >= file.size) return file;
+        const filename = file.name.replace(/\\.[^.]+$/, "") + ".webp";
+        return new File([compressed], filename, { type: "image/webp" });
+    } catch {
+        // Unsupported decoders or canvas failures must not silently lose the selected file.
+        return file;
+    } finally {
+        bitmap?.close();
+    }
+}
+
 export function MediaChooser({
     value,
     onChange,
@@ -48,20 +75,21 @@ export function MediaChooser({
             setError("Chỉ hỗ trợ ảnh JPEG, PNG hoặc WebP.");
             return;
         }
-        if (!file.size || file.size > 5 * 1024 * 1024) {
-            setError("Ảnh phải có dung lượng tối đa 5 MB.");
-            return;
-        }
         setBusy(true);
         setError("");
         try {
+            const optimized = await optimizePhoto(file);
+            if (!optimized.size || optimized.size > 5 * 1024 * 1024) {
+                setError("Ảnh vẫn vượt quá 5 MB sau khi tối ưu. Hãy chọn ảnh nhỏ hơn.");
+                return;
+            }
             const result = await apiRequest<MediaFile>("/api/media", {
                 method: "POST",
                 headers: {
-                    "Content-Type": file.type,
-                    "X-File-Name": encodeURIComponent(file.name),
+                    "Content-Type": optimized.type,
+                    "X-File-Name": encodeURIComponent(optimized.name),
                 },
-                body: file,
+                body: optimized,
             });
             onChange(result.url);
             setPage(1);
@@ -106,7 +134,7 @@ export function MediaChooser({
                         }}
                     />
                 </label>
-                <span className="text-[11px] text-muted">JPEG, PNG, WebP · tối đa 5 MB</span>
+                <span className="text-[11px] text-muted">JPEG, PNG, WebP · tự tối ưu ảnh · tối đa 5 MB</span>
             </div>
 
             {value ? (
