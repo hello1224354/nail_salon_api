@@ -28,12 +28,14 @@ Thời lượng ca = tổng `duration_minutes` của các service (một chuỗi
 | Buffer | **Không có**; chỉ xét `[start_time, end_time)` |
 | Active statuses chiếm slot | `pending`, `confirmed`, `in_progress` |
 
+Giờ làm nhân viên được quản lý tại Admin → **Nhân viên** với `work_start_time` và `work_end_time` (mặc định 09:00–20:30 cho các tài khoản cũ). Part-time có thể được đặt 13:00–20:00. Availability, backend tự gán nhân viên và việc Admin đổi giờ lịch đều kiểm tra **toàn bộ thời lượng dịch vụ** nằm trong ca làm. Đổi ca sẽ bị từ chối nếu làm lịch hẹn tương lai hiện có nằm ngoài ca mới.
+
 `branches.opening_hours` là trường phục vụ hiển thị. Việc xác định giờ được đặt hiện sử dụng quy tắc cố định trong booking service, không dùng giá trị của trường này. Kết quả availability là trạng thái tại thời điểm GET, **không phải một reservation đã được giữ**.
 
 ## 3. Atomic reservation & group booking
 
 - Transaction `AppDataSource.transaction` khóa record owner (`pessimistic_write`) để đếm booking pending và hạn chế race của cùng user.
-- Vòng lặp candidate staff: loại staff có lịch overlap; thử insert các `StaffBookingSlot` ứng với mọi mốc 15 phút từ start đến trước end.
+- Vòng lặp candidate staff: loại nhân viên ngoài giờ làm hoặc có lịch overlap; thử insert các `StaffBookingSlot` ứng với mọi mốc 15 phút từ start đến trước end.
 - DB `staff_booking_slots` có primary key `(staff_id, slot_start)`; insert trùng nhận `ER_DUP_ENTRY` và thử staff khác.
 - Thiếu số nhân viên cần thiết → rollback transaction và trả `409 SLOT_UNAVAILABLE`.
 - Khi đủ nhân viên: tạo một `bookingGroupId` UUID, insert **một appointment cho mỗi staff** với group ID chung và snapshots.
