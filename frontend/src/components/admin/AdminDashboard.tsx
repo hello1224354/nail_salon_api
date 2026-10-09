@@ -1262,7 +1262,13 @@ function AppointmentsPanel({
                                             {formatVnd(appointment.appointment_services?.reduce((sum, service) => sum + service.price, 0) || 0)} VND
                                         </p>
                                     </td>
-                                    <td className="px-5 py-4">{appointment.staff?.full_name || appointment.staff_id.slice(0, 8)}</td>
+                                    <td className="px-5 py-4">
+                                        <p>{appointment.assigned_staff?.map(person => person.full_name).join(", ")
+                                            || appointment.staff?.full_name || appointment.staff_id.slice(0, 8)}</p>
+                                        {appointment.party_size > 1 ? (
+                                            <p className="mt-1 text-[10px] text-muted">{appointment.party_size} người · 1 lịch hẹn</p>
+                                        ) : null}
+                                    </td>
                                     <td className="px-5 py-4">{appointment.branch?.name ? shortBranchName(appointment.branch.name) : `#${appointment.branch_id}`}</td>
                                     <td className="px-5 py-4">
                                         <span className={`inline-flex rounded-full border px-2.5 py-1 text-[9px] font-semibold ${badgeClass(appointment.status)}`}>
