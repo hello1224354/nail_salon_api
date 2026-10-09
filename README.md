@@ -76,7 +76,7 @@ The admin appointments table supports date-range filters and customer-visible 8-
 | Decision | Rationale | Trade-off |
 |---|---|---|
 | Unique staff/15-minute slot key | Atomic conflict detection independent of frontend timing | Extra reservation rows; updates must release/reacquire slots |
-| Automatic staff assignment | Simple customer UX and central scheduling rules | Availability depends on current staff and active bookings |
+| Automatic staff assignment | Simple customer UX and central scheduling rules | Availability depends on staff working hours and active bookings |
 | One row per person in group booking | Staff-specific assignments with shared group ID | Group views must aggregate or identify `booking_group_id` |
 | Snapshot service price/name at booking | Historical bookings remain meaningful after catalog edits | Intentional duplication |
 | Gmail notifications after DB commit | Email outages do not roll back valid bookings | **Best-effort delivery:** no persistent retry/outbox yet |
