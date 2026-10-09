@@ -70,6 +70,8 @@ jobs:
         run: npm run migration:run
       - name: Run booking concurrency integration tests
         run: npm run test:booking:integration
+      - name: Verify MySQL media BLOB lifecycle
+        run: npx tsx --test src/tests/media-storage.integration.test.ts
 
   frontend:
     runs-on: ubuntu-latest
