@@ -1,8 +1,8 @@
 # CONTRIBUTING — Quy trình phát triển và bảo trì
 
-Repository dùng TypeScript ở cả backend/frontend, MySQL migrations và GitHub Actions. Mục tiêu: thay đổi có căn cứ, kiểm thử, review và verify production.
+Repository sử dụng TypeScript cho backend và frontend, MySQL migrations và GitHub Actions. Quy trình đóng góp tập trung vào tính nhất quán dữ liệu, kiểm thử, code review và xác thực bản triển khai.
 
-## 1. Luồng công việc đề xuất
+## Workflow
 
 1. Cập nhật `main`, tạo nhánh ngắn có mục tiêu rõ (`feat/`, `fix/`, `docs/`).
 2. Đọc [ARCHITECTURE](ARCHITECTURE.md), [API](API.md) và tài liệu domain liên quan.
@@ -15,7 +15,7 @@ Repository dùng TypeScript ở cả backend/frontend, MySQL migrations và GitH
 9. Merge; kiểm tra deployment Vercel/Railway theo **SHA mới** và test môi trường live an toàn.
 10. Ghi lại kết quả test, giới hạn chưa test, và cập nhật docs cùng PR.
 
-## 2. Code organization
+## Cấu trúc mã nguồn
 
 - Route, middleware, role: `src/modules/<domain>/<domain>.routes.ts`.
 - Parse/validate: DTO, không dùng raw body làm domain state.
@@ -27,7 +27,7 @@ Repository dùng TypeScript ở cả backend/frontend, MySQL migrations và GitH
 
 Không bypass authorization chỉ vì UI ẩn control; backend phải enforce. Với booking, giữ constraint `(staff_id, slot_start)` và không chuyển staff selection về client.
 
-## 3. Acceptance checklist
+## Checklist trước khi merge
 
 - [ ] Source và migrations đúng với nghiệp vụ.
 - [ ] Code không chứa secrets, email/mật khẩu/OTP/dump thật.
@@ -40,7 +40,7 @@ Không bypass authorization chỉ vì UI ẩn control; backend phải enforce. V
 - [ ] CI PR PASS, không còn merge conflicts.
 - [ ] Production deployment SHA + health/E2E checks đã xác nhận trước khi báo hoàn thành.
 
-## 4. Documentation policy
+## Chính sách tài liệu
 
 - Mọi thông số thời gian (09:00–20:30, 3 giờ, 14 ngày...), quyền truy cập, status transition phải chỉ nguồn file tương ứng.
 - Nếu tính năng không có trong source, ghi là *chưa triển khai* hoặc *đề xuất*, không mô tả như đã có.
@@ -49,7 +49,7 @@ Không bypass authorization chỉ vì UI ẩn control; backend phải enforce. V
 - Tài liệu dưới `docs/` bằng tiếng Việt, giữ tên class/endpoint/field đúng source.
 - Khi source đổi, cập nhật dấu mốc commit/documentation scope để tránh docs stale.
 
-## 5. Release records
+## Thông tin bản phát hành
 
 Ghi ngắn gọn: PR URL, merge SHA, CI result, Vercel deployment state/SHA, Railway state/SHA, healthcheck, E2E đã thực hiện, lỗi/giới hạn chưa kiểm chứng. Đặc biệt **email fire-and-forget**: phải kiểm tra inbox/logs khi test gửi, CI không đủ chứng minh delivery.
 
