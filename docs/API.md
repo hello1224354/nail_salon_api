@@ -4,7 +4,7 @@ API được khai báo trong `src/app.ts` và các module `.routes.ts`, `.dto.ts
 
 ## Image upload and image management
 
-The admin media library stores image data directly in the Railway MySQL database as MEDIUMBLOB. `POST /api/media` accepts raw JPEG/PNG/WebP bytes (up to 5 MiB) with the appropriate `Content-Type` header and requires ADMIN JWT. `GET /api/media` lists image metadata, `DELETE /api/media/:id` removes an unreferenced image, and public `GET /api/media/:id/file` serves the image via a signed R2 request. Admin-only `GET/POST/PUT/DELETE /api/site-content/admin/trends` manages Hot Trend images by using media URLs returned from the library. See [MEDIA-STORAGE](MEDIA-STORAGE.md).
+The admin media library stores image data directly in the Railway MySQL database as MEDIUMBLOB. `POST /api/media` accepts raw JPEG/PNG/WebP bytes (up to 5 MiB) with the appropriate `Content-Type` header and requires ADMIN JWT. `GET /api/media` lists image metadata, `DELETE /api/media/:id` removes an unreferenced image, and public `GET /api/media/:id/file` serves the stored image bytes. Admin-only `GET/POST/PUT/DELETE /api/site-content/admin/trends` manages Hot Trend images by using media URLs returned from the library. See [MEDIA-STORAGE](MEDIA-STORAGE.md).
 
 ## Transport
 
