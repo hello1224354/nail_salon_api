@@ -749,7 +749,7 @@ export const deleteAppointment = async (id: string) => {
         const appointmentServiceRepo = manager.getRepository(AppointmentService);
 
         const appointment = await transactionAppointmentRepo.findOne({
-            where: { id },
+            where: { id, merged_into_id: IsNull() },
             relations: { appointment_services: true },
             lock: { mode: "pessimistic_write" },
         });
