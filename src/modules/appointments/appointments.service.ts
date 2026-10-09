@@ -19,6 +19,7 @@ const appointmentRepo = AppDataSource.getRepository(Appointment);
 
 const CUSTOMER_MIN_BOOKING_LEAD_TIME_MS = 3 * 60 * 60 * 1000;
 const CUSTOMER_MAX_BOOKING_HORIZON_MS = 14 * 24 * 60 * 60 * 1000;
+const BUSINESS_TIMEZONE = "Asia/Ho_Chi_Minh";
 const BUSINESS_OPEN_MINUTE = 9 * 60;
 const BUSINESS_CLOSE_MINUTE = 20 * 60 + 30;
 const CUSTOMER_MAX_PENDING_APPOINTMENTS = 3;
