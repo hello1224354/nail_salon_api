@@ -90,8 +90,4 @@ export const env = {
     GMAIL_REFRESH_TOKEN: asOptionalString("GMAIL_REFRESH_TOKEN"),
     GMAIL_FROM_EMAIL: asOptionalString("GMAIL_FROM_EMAIL"),
     GOOGLE_MAPS_URL: asOptionalString("GOOGLE_MAPS_URL"),
-    R2_ACCOUNT_ID: asOptionalString("R2_ACCOUNT_ID"),
-    R2_ACCESS_KEY_ID: asOptionalString("R2_ACCESS_KEY_ID"),
-    R2_SECRET_ACCESS_KEY: asOptionalString("R2_SECRET_ACCESS_KEY"),
-    R2_BUCKET: asOptionalString("R2_BUCKET"),
 };
