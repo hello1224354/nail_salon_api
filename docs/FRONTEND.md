@@ -45,7 +45,7 @@ UI có thể render giờ dựa trên ISO UTC bằng timezone Việt Nam; **khô
 
 ## Lịch cá nhân
 
-`components/appointments/MyAppointments.tsx` tải user + GET `/api/appointments?scope=mine&page=1&limit=100`, filter theo trạng thái. Đây là giới hạn fetch UI hiện tại: không mặc định đồng nghĩa đang phân trang toàn bộ hơn 100 lịch trên trang cá nhân. Backend hỗ trợ page/limit chung; nên mở rộng UI nếu khách có nhiều lịch.
+`components/appointments/MyAppointments.tsx` tải user + GET `/api/appointments?scope=mine&page=1&limit=100`, filter theo trạng thái. Trang lịch cá nhân hiện chỉ tải tối đa 100 lịch trong một request. Backend hỗ trợ phân trang, nhưng UI chưa cung cấp khả năng duyệt các trang tiếp theo khi số lịch vượt giới hạn này.
 
 ## AdminDashboard
 
@@ -63,7 +63,7 @@ UI có thể render giờ dựa trên ISO UTC bằng timezone Việt Nam; **khô
 - Hiển thị mã 8 ký tự ngay dưới giờ hẹn và tổng số records khớp.
 - Lọc/tìm kiếm dùng API query server-side, không chỉ lọc 20 rows đã tải.
 
-Các nút trạng thái chỉ phản ánh transitions hợp lệ; backend mới là nơi enforce policy thời gian (`confirmed` không thể `in_progress` trước start). Lỗi 409 hiện client mapping chung có thể làm mất chi tiết mã lỗi nếu không thêm key tương ứng vào `errorMessagesByCode`.
+UI phản ánh các chuyển trạng thái được hỗ trợ; **backend thực thi** các điều kiện thời gian và phân quyền. Ví dụ, lịch `confirmed` không thể thành `in_progress` trước giờ hẹn. Một số lỗi HTTP 409 vẫn dùng thông báo chung ở frontend thay vì thông điệp theo `error.code`.
 
 ## API client / state
 
@@ -72,11 +72,8 @@ Các nút trạng thái chỉ phản ánh transitions hợp lệ; backend mới 
 - `src/lib/studio-data.ts` và `public-data.ts`: formatter/display helpers; không thay thế nguồn dữ liệu DB cho booking.
 - Client browser gọi `/api/...`; server-side calls có base URL. Cấu hình `NEXT_PUBLIC_API_BASE_URL` để Next rewrite tới backend origin.
 
-## Quy trình thêm page/chức năng
+## Các điểm mở rộng
 
-1. Thêm endpoint/DTO/service ở backend nếu cần và xác định role.
-2. Khai báo typed model trong `frontend/src/lib/api.ts`.
-3. Thêm UI/component, loading/empty/error states, accessibility labels, keyboard/modal behavior.
-4. Kiểm tra desktop và mobile, đặc biệt bảng rộng và modal/scroll; không chỉ test screenshot tĩnh.
-5. Chạy `npx tsc --noEmit`, `npm run build`, CSP/audit scripts, E2E với account kiểm thử.
-6. Cập nhật API/UX docs trong cùng PR.
+Frontend dùng các kiểu dữ liệu API tập trung trong `frontend/src/lib/api.ts`, state xác thực trong `frontend/src/lib/auth.ts` và các React components trong `frontend/src/components`. Các luồng cần truy cập backend phải đi qua typed API client và chịu kiểm tra phân quyền tại server.
+
+Quy trình review, kiểm thử giao diện và cập nhật tài liệu khi bổ sung tính năng mới được mô tả trong [CONTRIBUTING](CONTRIBUTING.md).
