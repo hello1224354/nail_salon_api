@@ -154,6 +154,7 @@ export function AdminAppointmentForm({
                             <option key={person.id} value={person.id}>{person.full_name}</option>
                         ))}
                     </select>
+                    <p className="mt-1 text-[10px] text-muted">Không chọn: tự gán đủ nhân viên cho {appointment.party_size} người. Nếu chọn, nhân viên này được ưu tiên trong nhóm.</p>
                 </label>
                 <label className="sm:col-span-2">
                     <span className={captionClass}>Ngày giờ hẹn (giờ Việt Nam)</span>
