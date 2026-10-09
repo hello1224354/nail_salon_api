@@ -289,7 +289,9 @@ export function MyAppointments() {
                                         </p>
                                         <p className="mt-2 text-xs text-muted">{appointment.branch?.name ? localizeBranchName(appointment.branch.name) : `Chi nhánh #${appointment.branch_id}`}</p>
                                         <p className="mt-1 text-xs text-muted">
-                                            Nhân viên: {appointment.staff?.full_name || "Đang cập nhật"}
+                                            Nhân viên: {appointment.assigned_staff?.length
+                                                ? appointment.assigned_staff.map(person => person.full_name).join(", ")
+                                                : (appointment.staff?.full_name || "Đang cập nhật")}
                                         </p>
                                     </div>
 

@@ -1,6 +1,6 @@
 import { AppDataSource } from "../../config/database";
 import bcrypt from "bcryptjs";
-import { In, IsNull, MoreThan } from "typeorm";
+import { IsNull } from "typeorm";
 import { getVietnamMinuteOfDay } from "../appointments/booking-time";
 import { RefreshSession } from "../users/refresh-session.entity";
 import { Staff } from "./staffs.entity";
@@ -97,13 +97,13 @@ export const updateStaff = async (userId: string, data: UpdateStaffDto) => {
             const workEnd = data.work_end_time ?? staff.work_end_time;
             assertValidWorkingHours(workStart, workEnd);
             // A schedule change must not silently place an existing appointment outside the shift.
-            const futureAppointments = await manager.getRepository(Appointment).find({
-                where: {
-                    staff_id: userId,
-                    status: In([AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED]),
-                    end_time: MoreThan(new Date()),
-                },
-            });
+            const futureAppointments = await manager.getRepository(Appointment)
+                .createQueryBuilder("appointment")
+                .innerJoin("appointment.staff_assignments", "assigned", "assigned.staff_id = :userId", { userId })
+                .where("appointment.merged_into_id IS NULL")
+                .andWhere("appointment.status IN (:...statuses)", { statuses: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED] })
+                .andWhere("appointment.end_time > :now", { now: new Date() })
+                .getMany();
             for (const appointment of futureAppointments) {
                 const start = getVietnamMinuteOfDay(appointment.start_time);
                 const end = getVietnamMinuteOfDay(appointment.end_time);

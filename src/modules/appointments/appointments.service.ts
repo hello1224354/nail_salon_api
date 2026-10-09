@@ -5,10 +5,11 @@ import { CreateAppointmentDto, GetAppointmentsQueryDto, GetAvailabilityQueryDto,
 import * as staffService from "../staffs/staffs.service";
 import * as serviceService from "../services/services.service";
 import * as branchService from "../branches/branches.service";
-import { EntityManager, In, LessThan, MoreThan, Not, QueryFailedError } from "typeorm";
+import { Between, EntityManager, In, IsNull, LessThan, MoreThan, QueryFailedError } from "typeorm";
 import { User, UserRole } from "../users/users.entity";
 import { AppointmentService } from "./appointment-services.entity";
 import { StaffBookingSlot } from "./staff-booking-slots.entity";
+import { AppointmentStaffAssignment } from "./appointment-staff-assignment.entity";
 import { randomUUID } from "crypto";
 import { notifyAdminsOfNewBooking } from "./booking-notification.service";
 import { Staff } from "../staffs/staffs.entity";
@@ -175,16 +176,15 @@ export const getAvailability = async (data: GetAvailabilityQueryDto) => {
 
     const staffIds = staffs.map((staff) => staff.user_id);
 
-    const appointments = await appointmentRepo.findBy({
-        staff_id: In(staffIds),
-        status: In([
-            AppointmentStatus.PENDING,
-            AppointmentStatus.CONFIRMED,
-            AppointmentStatus.IN_PROGRESS,
-        ]),
-        start_time: LessThan(businessCloseTime),
-        end_time: MoreThan(businessOpenTime),
+    // Reservation slots, not appointment rows, represent occupied employee capacity.
+    // One appointment may occupy the same interval for several employees.
+    const reservedSlots = await AppDataSource.getRepository(StaffBookingSlot).find({
+        where: {
+            staff_id: In(staffIds),
+            slot_start: Between(businessOpenTime, new Date(businessCloseTime.getTime() - 1)),
+        },
     });
+    const occupied = new Set(reservedSlots.map(slot => slot.staff_id + ":" + slot.slot_start.getTime()));
 
     const slots: Date[] = [];
 
@@ -204,13 +204,8 @@ export const getAvailability = async (data: GetAvailabilityQueryDto) => {
 
         for (const staff of staffs) {
             if (!isWithinStaffWorkingHours(staff, getBusinessMinuteOfDay(startTime), getBusinessMinuteOfDay(endTime))) continue;
-            const hasOverlap = appointments.some((appointment) => {
-                return (
-                    appointment.staff_id === staff.user_id &&
-                    appointment.start_time.getTime() < endTime.getTime() &&
-                    appointment.end_time.getTime() > startTime.getTime()
-                );
-            });
+            const hasOverlap = getRequiredSlotStarts(startTime, endTime)
+                .some(slot => occupied.has(staff.user_id + ":" + slot.getTime()));
 
             if (!hasOverlap) {
                 availableStaffCount += 1;
@@ -336,19 +331,8 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
                 lock: { mode: "pessimistic_read" },
             });
             if (!liveSchedule || !isWithinStaffWorkingHours(liveSchedule, businessStartMinute, businessEndMinute)) continue;
-            const overlapAppointment = await transactionAppointmentRepo.findOneBy({
-                staff_id: staff.user_id,
-                status: In([
-                    AppointmentStatus.PENDING,
-                    AppointmentStatus.CONFIRMED,
-                    AppointmentStatus.IN_PROGRESS,
-                ]),
-                start_time: LessThan(endTime),
-                end_time: MoreThan(data.start_time),
-            });
-
-            if (overlapAppointment) continue;
-
+            // The unique (staff_id, slot_start) key checks the real inventory
+            // across all appointments, including legacy reservations.
             const reserved = await tryReserveStaffSlots(
                 manager,
                 staff.user_id,
@@ -373,48 +357,42 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
         }
 
         const bookingGroupId = randomUUID();
-        const savedAppointments: Appointment[] = [];
-
-        for (const staff of reservedStaffs) {
-            const newAppointment = transactionAppointmentRepo.create({
-                user_id: ownerId,
-                booking_group_id: bookingGroupId,
-                party_size: data.party_size,
-                customer_full_name: owner.full_name,
-                customer_phone: data.customer_phone,
-                customer_email: owner.email,
-                staff_id: staff.user_id,
-                staff_full_name: staff.user.full_name,
-                branch_id: branchId,
-                branch_name: branch.name,
-                branch_address: branch.address,
-                start_time: data.start_time,
-                end_time: endTime,
-                status: AppointmentStatus.PENDING,
-            });
-
-            const savedAppointment = await transactionAppointmentRepo.save(newAppointment);
-
-            const appointmentServices = services.map((service) => {
-                return appointmentServiceRepo.create({
-                    appointment_id: savedAppointment.id,
-                    service_id: service.id,
-                    service_name: service.name,
-                    price: service.price,
-                    duration_minutes: service.duration_minutes!,
-                });
-            });
-
-            savedAppointment.appointment_services = await appointmentServiceRepo.save(
-                appointmentServices
-            );
-
-            savedAppointments.push(savedAppointment);
-        }
-
+        const primary = reservedStaffs[0];
+        // Exactly one appointment per customer submission, regardless of party_size.
+        const appointment = await transactionAppointmentRepo.save(transactionAppointmentRepo.create({
+            user_id: ownerId,
+            booking_group_id: bookingGroupId,
+            party_size: data.party_size,
+            customer_full_name: owner.full_name,
+            customer_phone: data.customer_phone,
+            customer_email: owner.email,
+            staff_id: primary.user_id,
+            staff_full_name: primary.user.full_name,
+            branch_id: branchId,
+            branch_name: branch.name,
+            branch_address: branch.address,
+            start_time: data.start_time,
+            end_time: endTime,
+            status: AppointmentStatus.PENDING,
+        }));
+        const assignments = reservedStaffs.map(staff => ({
+            appointment_id: appointment.id,
+            staff_id: staff.user_id,
+            staff_full_name: staff.user.full_name,
+        }));
+        appointment.staff_assignments = await manager.getRepository(AppointmentStaffAssignment).save(assignments);
+        appointment.appointment_services = await appointmentServiceRepo.save(services.map(service =>
+            appointmentServiceRepo.create({
+                appointment_id: appointment.id,
+                service_id: service.id,
+                service_name: service.name,
+                price: service.price,
+                duration_minutes: service.duration_minutes!,
+            })
+        ));
         return {
-            appointment: savedAppointments[0],
-            assignedStaffNames: reservedStaffs.map((staff) => staff.user.full_name),
+            appointment,
+            assignedStaffNames: reservedStaffs.map(staff => staff.user.full_name),
         };
     });
 
@@ -474,6 +452,7 @@ export const getAdminTodaySummary = async () => {
         .addSelect("SUM(CASE WHEN appointment.status = :completed THEN 1 ELSE 0 END)", "completed")
         .addSelect("SUM(CASE WHEN appointment.status = :cancelled THEN 1 ELSE 0 END)", "cancelled")
         .where("appointment.start_time >= :start AND appointment.start_time < :end", { start, end })
+        .andWhere("appointment.merged_into_id IS NULL")
         .setParameters({
             pending: AppointmentStatus.PENDING,
             confirmed: AppointmentStatus.CONFIRMED,
@@ -487,8 +466,9 @@ export const getAdminTodaySummary = async () => {
     // Compute independently: a joined query would multiply appointment counts.
     const revenue = await appointmentRepo.createQueryBuilder("appointment")
         .innerJoin("appointment.appointment_services", "service")
-        .select("COALESCE(SUM(service.price), 0)", "revenue")
+        .select("COALESCE(SUM(service.price * appointment.party_size), 0)", "revenue")
         .where("appointment.status = :completed", { completed: AppointmentStatus.COMPLETED })
+        .andWhere("appointment.merged_into_id IS NULL")
         .andWhere("appointment.actual_completed_at >= :start AND appointment.actual_completed_at < :end", { start, end })
         .getRawOne<{ revenue: string }>();
 
@@ -504,7 +484,9 @@ export const getAdminTodaySummary = async () => {
 
 export const getAllAppointments = async (userId: string, role: UserRole, query: GetAppointmentsQueryDto) => {
     const queryBuilder = appointmentRepo.createQueryBuilder("appointment")
-        .leftJoinAndSelect("appointment.appointment_services", "appointment_services");
+        .leftJoinAndSelect("appointment.appointment_services", "appointment_services")
+        .leftJoinAndSelect("appointment.staff_assignments", "staff_assignments")
+        .where("appointment.merged_into_id IS NULL");
 
     if (role === UserRole.CUSTOMER || (role === UserRole.ADMIN && query.scope === "mine")) {
         queryBuilder.andWhere("appointment.user_id = :user_id", {
@@ -517,15 +499,11 @@ export const getAllAppointments = async (userId: string, role: UserRole, query: 
 
         if (!staff) throw new AppError("Staff profile not found", 404, "STAFF_NOT_FOUND");
 
-        queryBuilder.andWhere("appointment.staff_id = :actor_staff_id", {
-            actor_staff_id: staff.user_id,
-        });
+        queryBuilder.andWhere("EXISTS (SELECT 1 FROM appointment_staff_assignments asa WHERE asa.appointment_id = appointment.id AND asa.staff_id = :actor_staff_id)", { actor_staff_id: staff.user_id });
     }
 
     if (query.staff_id !== undefined) {
-        queryBuilder.andWhere("appointment.staff_id = :filter_staff_id", {
-            filter_staff_id: query.staff_id,
-        });
+        queryBuilder.andWhere("EXISTS (SELECT 1 FROM appointment_staff_assignments asf WHERE asf.appointment_id = appointment.id AND asf.staff_id = :filter_staff_id)", { filter_staff_id: query.staff_id });
     }
 
     if (query.branch_id !== undefined) {
@@ -583,362 +561,185 @@ export const getAllAppointments = async (userId: string, role: UserRole, query: 
 };
 
 export const getAppointment = async (id: string, userId: string, role: UserRole) => {
-    if (role === UserRole.CUSTOMER) {
-        return await appointmentRepo.findOne({
-            where: {
-                id,
-                user_id: userId,
-            },
-            relations: {
-                appointment_services: true,
-            },
-        });
-    }
-
-    if (role === UserRole.STAFF) {
-        return await appointmentRepo.findOne({
-            where: {
-                id,
-                staff_id: userId,
-            },
-            relations: {
-                appointment_services: true,
-            },
-        });
-    }
-
-    return await appointmentRepo.findOne({
-        where: {
-            id,
-        },
-        relations: {
-            appointment_services: true,
-        },
+    const appointment = await appointmentRepo.findOne({
+        where: { id, merged_into_id: IsNull() },
+        relations: { appointment_services: true, staff_assignments: true },
     });
+    if (!appointment) return null;
+    if (role === UserRole.CUSTOMER && appointment.user_id !== userId) return null;
+    if (role === UserRole.STAFF && !appointment.staff_assignments.some(s => s.staff_id === userId)) return null;
+    return appointment;
 };
 
 export const updateAppointment = async (id: string, userId: string, role: UserRole, data: UpdateAppointmentDto) => {
-    return await AppDataSource.transaction(async (manager) => {
-        const transactionAppointmentRepo = manager.getRepository(Appointment);
-        const appointmentServiceRepo = manager.getRepository(AppointmentService);
-
-        const appointment = await transactionAppointmentRepo.findOne({
-            where:
-                role === UserRole.CUSTOMER
-                    ? {
-                        id,
-                        user_id: userId,
-                    }
-                    : role === UserRole.STAFF
-                        ? {
-                            id,
-                            staff_id: userId,
-                        }
-                        : {
-                            id,
-                        },
-            relations: {
-                appointment_services: true,
-            },
-            lock: {
-                mode: "pessimistic_write",
-            }
+    return AppDataSource.transaction(async (manager) => {
+        const appointments = manager.getRepository(Appointment);
+        const appointmentServicesRepo = manager.getRepository(AppointmentService);
+        const assignmentRepo = manager.getRepository(AppointmentStaffAssignment);
+        const appointment = await appointments.findOne({
+            where: role === UserRole.CUSTOMER
+                ? { id, user_id: userId, merged_into_id: IsNull() }
+                : { id, merged_into_id: IsNull() },
+            relations: { appointment_services: true, staff_assignments: true },
+            lock: { mode: "pessimistic_write" },
         });
-
         if (!appointment) return null;
-
         if (role === UserRole.CUSTOMER) throw new AppError("Customers cannot update appointments", 403, "FORBIDDEN");
-        if (role === UserRole.STAFF && data.customer_phone !== undefined) {
-            throw new AppError("Staff cannot change customer contact information", 403, "FORBIDDEN");
-        }
-        if (role === UserRole.ADMIN && data.customer_phone !== undefined &&
-            [AppointmentStatus.COMPLETED, AppointmentStatus.CANCELLED].includes(appointment.status)) {
-            throw new AppError("Closed appointment contact information cannot be modified", 409, "APPOINTMENT_NOT_EDITABLE");
-        }
-
         if (role === UserRole.STAFF) {
-            if (data.staff_id !== undefined) throw new AppError("Staff cannot change appointment staff", 403, "FORBIDDEN");
-
-            if (data.service_ids !== undefined) throw new AppError("Staff cannot change appointment services", 403, "FORBIDDEN");
-
-            if (data.start_time !== undefined) throw new AppError("Staff cannot change appointment start time", 403, "FORBIDDEN");
-
-            if (data.status !== undefined && data.status !== AppointmentStatus.IN_PROGRESS && data.status !== AppointmentStatus.COMPLETED) throw new AppError("Staff can only start or complete assigned appointments", 403, "FORBIDDEN");
+            if (!appointment.staff_assignments.some(assigned => assigned.staff_id === userId)) {
+                throw new AppError("Staff cannot update an unassigned appointment", 403, "FORBIDDEN");
+            }
+            if (data.staff_id !== undefined || data.branch_id !== undefined ||
+                data.service_ids !== undefined || data.start_time !== undefined ||
+                data.customer_phone !== undefined) {
+                throw new AppError("Staff can only update assigned appointment status", 403, "FORBIDDEN");
+            }
+            if (data.status !== AppointmentStatus.IN_PROGRESS && data.status !== AppointmentStatus.COMPLETED) {
+                throw new AppError("Staff can only start or complete an assigned appointment", 403, "FORBIDDEN");
+            }
         }
 
-        if (
-            data.status === AppointmentStatus.CANCELLED &&
-            (data.staff_id !== undefined || data.service_ids !== undefined || data.start_time !== undefined)
-        ) {
-            throw new AppError(
-                "Cancelling an appointment cannot be combined with staff, service, or start time changes",
-                400,
-                "INVALID_CANCEL_REQUEST"
-            );
+        const scheduleChanged = data.branch_id !== undefined || data.staff_id !== undefined ||
+            data.service_ids !== undefined || data.start_time !== undefined;
+        if (scheduleChanged && ![AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED].includes(appointment.status)) {
+            throw new AppError("In-progress, completed, or cancelled appointments cannot be modified", 409, "APPOINTMENT_NOT_EDITABLE");
         }
-
-        if ((appointment.status === AppointmentStatus.IN_PROGRESS || appointment.status === AppointmentStatus.COMPLETED || appointment.status === AppointmentStatus.CANCELLED) && (data.staff_id !== undefined || data.service_ids !== undefined || data.start_time !== undefined)) throw new AppError("In-progress, completed, or cancelled appointment cannot be modified", 409, "APPOINTMENT_NOT_EDITABLE");
-
         if (data.customer_phone !== undefined) {
+            if ([AppointmentStatus.COMPLETED, AppointmentStatus.CANCELLED].includes(appointment.status)) {
+                throw new AppError("Closed appointment contact information cannot be modified", 409, "APPOINTMENT_NOT_EDITABLE");
+            }
             appointment.customer_phone = data.customer_phone;
         }
 
-        let targetStaffId = appointment.staff_id;
-        let targetStaffFullName = appointment.staff_full_name;
-        let branchId = appointment.branch_id;
-        let branchName = appointment.branch_name;
-        let branchAddress = appointment.branch_address;
-        let appointmentServices = appointment.appointment_services;
-        let startTime = appointment.start_time;
-        let endTime = appointment.end_time;
-        const hasScheduleChanges = data.staff_id !== undefined || data.service_ids !== undefined || data.start_time !== undefined;
-        let status = appointment.status;
-        let actualStartedAt = appointment.actual_started_at;
-        let actualCompletedAt = appointment.actual_completed_at;
-
-        let liveStaff = hasScheduleChanges
-            ? await staffService.getStaff(data.staff_id ?? appointment.staff_id)
-            : null;
-
-        if (hasScheduleChanges && !liveStaff) {
-            throw new AppError("Staff not found", 404, "STAFF_NOT_FOUND");
-        }
-
-        if (liveStaff && liveStaff.user.role !== UserRole.STAFF) {
-            throw new AppError("User is not a staff member", 400, "INVALID_STAFF_ACCOUNT");
-        }
-
-        if (data.staff_id !== undefined && liveStaff) {
-            targetStaffId = liveStaff.user_id;
-            targetStaffFullName = liveStaff.user.full_name;
-
-            const liveBranch = await branchService.getBranch(liveStaff.branch_id);
-            if (!liveBranch) throw new AppError("Branch not found", 404, "BRANCH_NOT_FOUND");
-
-            branchId = liveBranch.id;
-            branchName = liveBranch.name;
-            branchAddress = liveBranch.address;
-        }
-
-        if (data.staff_id !== undefined && data.service_ids === undefined && branchId !== appointment.branch_id) {
-            throw new AppError("Existing services do not belong to the new staff branch", 400, "BRANCH_MISMATCH");
-        }
-
-        if (data.service_ids !== undefined) {
-            if (!liveStaff) {
-                liveStaff = await staffService.getStaff(targetStaffId);
+        if (data.status !== undefined) {
+            const allowed: Record<AppointmentStatus, AppointmentStatus[]> = {
+                [AppointmentStatus.PENDING]: [AppointmentStatus.CONFIRMED, AppointmentStatus.CANCELLED],
+                [AppointmentStatus.CONFIRMED]: [AppointmentStatus.IN_PROGRESS, AppointmentStatus.CANCELLED],
+                [AppointmentStatus.IN_PROGRESS]: [AppointmentStatus.COMPLETED, AppointmentStatus.CANCELLED],
+                [AppointmentStatus.COMPLETED]: [],
+                [AppointmentStatus.CANCELLED]: [],
+            };
+            if (!allowed[appointment.status].includes(data.status)) {
+                throw new AppError("Invalid appointment status transition", 409, "INVALID_STATUS_TRANSITION");
             }
-
-            if (!liveStaff) throw new AppError("Staff not found", 404, "STAFF_NOT_FOUND");
-
-            const liveStaffBranchId = liveStaff.branch_id;
-            const servicesChecker = await serviceService.getServicesByIds(data.service_ids);
-
-            if (servicesChecker.length < data.service_ids.length) throw new AppError("One or more services were not found", 404, "SERVICE_NOT_FOUND");
-
-            if (servicesChecker.some((service) => !service.booking_enabled || service.duration_minutes === null)) {
-                throw new AppError(
-                    "One or more services are not available for online booking yet",
-                    409,
-                    "SERVICE_NOT_BOOKABLE"
-                );
+            if (data.status === AppointmentStatus.CONFIRMED) {
+                const branch = await branchService.getBranch(appointment.branch_id);
+                if (!branch || appointment.staff_assignments.length !== appointment.party_size) {
+                    throw new AppError("Booking has invalid branch or staff capacity", 409, "SLOT_UNAVAILABLE");
+                }
             }
+            if (data.status === AppointmentStatus.IN_PROGRESS || data.status === AppointmentStatus.COMPLETED) {
+                if (Date.now() < appointment.start_time.getTime()) {
+                    throw new AppError("Appointment cannot start or complete before its scheduled time", 409, "APPOINTMENT_NOT_STARTED_YET");
+                }
+                if (data.status === AppointmentStatus.IN_PROGRESS) appointment.actual_started_at = new Date();
+                if (data.status === AppointmentStatus.COMPLETED) appointment.actual_completed_at = new Date();
+            }
+            if (data.status === AppointmentStatus.COMPLETED || data.status === AppointmentStatus.CANCELLED) {
+                const slots = getRequiredSlotStarts(appointment.start_time, appointment.end_time);
+                for (const assignment of appointment.staff_assignments) {
+                    await releaseStaffSlots(manager, assignment.staff_id, slots);
+                }
+            }
+            appointment.status = data.status;
+        }
 
-            if (!servicesChecker.every((service) => service.branch_id === liveStaffBranchId)) throw new AppError("All services must belong to the same branch as the staff", 400, "BRANCH_MISMATCH");
-
-            const liveBranch = await branchService.getBranch(liveStaffBranchId);
-            if (!liveBranch) throw new AppError("Branch not found", 404, "BRANCH_NOT_FOUND");
-
-            branchId = liveBranch.id;
-            branchName = liveBranch.name;
-            branchAddress = liveBranch.address;
-
-            appointmentServices = servicesChecker.map((service) => {
-                return {
+        if (scheduleChanged) {
+            const targetBranchId = data.branch_id ?? appointment.branch_id;
+            const branch = await branchService.getBranch(targetBranchId);
+            if (!branch) throw new AppError("Branch not found", 404, "BRANCH_NOT_FOUND");
+            if (targetBranchId !== appointment.branch_id && data.service_ids === undefined) {
+                throw new AppError("Select services from the new branch", 400, "BRANCH_MISMATCH");
+            }
+            let chosenServices = appointment.appointment_services;
+            if (data.service_ids !== undefined) {
+                const current = await serviceService.getServicesByIds(data.service_ids);
+                if (current.length !== data.service_ids.length) {
+                    throw new AppError("One or more services were not found", 404, "SERVICE_NOT_FOUND");
+                }
+                if (current.some(service => service.branch_id !== targetBranchId)) {
+                    throw new AppError("Services must belong to the selected branch", 400, "BRANCH_MISMATCH");
+                }
+                if (current.some(service => !service.booking_enabled || service.duration_minutes === null)) {
+                    throw new AppError("Service is not available for booking", 409, "SERVICE_NOT_BOOKABLE");
+                }
+                chosenServices = current.map(service => ({
                     appointment_id: appointment.id,
                     service_id: service.id,
                     service_name: service.name,
                     price: service.price,
                     duration_minutes: service.duration_minutes!,
-                } as AppointmentService;
-            });
-        }
-
-        if (data.status !== undefined) {
-            if (status === AppointmentStatus.COMPLETED || status === AppointmentStatus.CANCELLED) throw new AppError("Invalid appointment status transition", 409, "INVALID_STATUS_TRANSITION");
-
-            if (status === AppointmentStatus.PENDING) {
-                if (data.status !== AppointmentStatus.CONFIRMED && data.status !== AppointmentStatus.CANCELLED) throw new AppError("Invalid appointment status transition", 409, "INVALID_STATUS_TRANSITION");
+                } as AppointmentService));
             }
-
-            if (status === AppointmentStatus.CONFIRMED) {
-                if (data.status !== AppointmentStatus.IN_PROGRESS && data.status !== AppointmentStatus.CANCELLED) throw new AppError("Invalid appointment status transition", 409, "INVALID_STATUS_TRANSITION");
+            const startTime = data.start_time ?? appointment.start_time;
+            assertFifteenMinuteAligned(startTime);
+            if (startTime.getTime() <= Date.now()) {
+                throw new AppError("Appointment start time must be in the future", 400, "VALIDATION_ERROR");
             }
-
-            if (status === AppointmentStatus.IN_PROGRESS) {
-                if (data.status !== AppointmentStatus.COMPLETED && data.status !== AppointmentStatus.CANCELLED) throw new AppError("Invalid appointment status transition", 409, "INVALID_STATUS_TRANSITION");
+            const minutes = chosenServices.reduce((sum, service) => sum + service.duration_minutes, 0);
+            const endTime = new Date(startTime.getTime() + minutes * 60_000);
+            const startMinute = getBusinessMinuteOfDay(startTime);
+            const endMinute = getBusinessMinuteOfDay(endTime);
+            if (startMinute < BUSINESS_OPEN_MINUTE || endMinute > BUSINESS_CLOSE_MINUTE ||
+                endTime.getTime() <= startTime.getTime()) {
+                throw new AppError("Appointment is outside business hours", 409, "OUTSIDE_BUSINESS_HOURS");
             }
-
-            if (status === AppointmentStatus.PENDING && data.status === AppointmentStatus.CONFIRMED) {
-                const staffChecker = await staffService.getStaff(targetStaffId);
-
-                if (!staffChecker) throw new AppError("Staff not found", 404, "STAFF_NOT_FOUND");
-
-                if (staffChecker.user.role !== UserRole.STAFF) throw new AppError("User is not a staff member", 409, "INVALID_STAFF_ACCOUNT");
-
-                const liveBranch = await branchService.getBranch(branchId);
-
-                if (!liveBranch) throw new AppError("Branch not found", 404, "BRANCH_NOT_FOUND");
+            const staffCandidates = await staffService.getAllStaffs({ branch_id: targetBranchId });
+            if (data.staff_id !== undefined && !staffCandidates.some(staff => staff.user_id === data.staff_id)) {
+                throw new AppError("Selected staff is not in this branch", 400, "BRANCH_MISMATCH");
             }
-
-            if (status === AppointmentStatus.CONFIRMED && data.status === AppointmentStatus.IN_PROGRESS) {
-                const now = new Date();
-
-                if (now.getTime() < appointment.start_time.getTime()) {
-                    throw new AppError(
-                        "Appointment cannot start before its scheduled time",
-                        409,
-                        "APPOINTMENT_NOT_STARTED_YET"
-                    );
-                }
-
-                actualStartedAt = now;
+            const sortedCandidates = data.staff_id === undefined
+                ? staffCandidates
+                : [...staffCandidates].sort((a, b) => Number(b.user_id === data.staff_id) - Number(a.user_id === data.staff_id));
+            const oldSlots = getRequiredSlotStarts(appointment.start_time, appointment.end_time);
+            for (const assignment of appointment.staff_assignments) {
+                await releaseStaffSlots(manager, assignment.staff_id, oldSlots);
             }
-
-            if (status === AppointmentStatus.IN_PROGRESS && data.status === AppointmentStatus.COMPLETED) {
-                const now = new Date();
-
-                if (now.getTime() < appointment.start_time.getTime()) {
-                    throw new AppError(
-                        "Appointment cannot complete before its scheduled time",
-                        409,
-                        "APPOINTMENT_NOT_STARTED_YET"
-                    );
-                }
-
-                actualCompletedAt = now;
+            const newSlots = getRequiredSlotStarts(startTime, endTime);
+            const assigned: typeof staffCandidates = [];
+            for (const candidate of sortedCandidates) {
+                // Keep ADMIN shift edits and booking allocations serializable.
+                const locked = await manager.getRepository(Staff).findOne({
+                    where: { user_id: candidate.user_id },
+                    lock: { mode: "pessimistic_read" },
+                });
+                if (!locked || !isWithinStaffWorkingHours(locked, startMinute, endMinute)) continue;
+                if (!await tryReserveStaffSlots(manager, candidate.user_id, newSlots)) continue;
+                assigned.push(candidate);
+                if (assigned.length === appointment.party_size) break;
             }
-
-            status = data.status;
-        }
-
-        if (data.start_time !== undefined) {
-            assertFifteenMinuteAligned(data.start_time);
-            startTime = data.start_time;
-        }
-
-        if (data.service_ids !== undefined || data.start_time !== undefined) {
-            let totalDurationMinutes = 0;
-
-            appointmentServices.forEach((appointmentService) => {
-                totalDurationMinutes += appointmentService.duration_minutes;
-            });
-
-            endTime = new Date(startTime.getTime() + totalDurationMinutes * 60 * 1000);
-        }
-
-        if (status === AppointmentStatus.PENDING || status === AppointmentStatus.CONFIRMED) {
-            const overlapAppointment = await transactionAppointmentRepo.findOneBy({
-                id: Not(appointment.id),
-                staff_id: targetStaffId,
-                status: In([
-                    AppointmentStatus.PENDING,
-                    AppointmentStatus.CONFIRMED,
-                    AppointmentStatus.IN_PROGRESS,
-                ]),
-                start_time: LessThan(endTime),
-                end_time: MoreThan(startTime),
-            });
-
-            if (overlapAppointment) throw new AppError("Staff already has an appointment during this time", 409, "APPOINTMENT_CONFLICT");
-        }
-
-        const oldSlotStarts = getRequiredSlotStarts(
-            appointment.start_time,
-            appointment.end_time
-        );
-
-        const newSlotStarts = getRequiredSlotStarts(
-            startTime,
-            endTime
-        );
-
-        if (hasScheduleChanges) {
-            const assignedStaff = await manager.getRepository(Staff).findOne({
-                where: { user_id: targetStaffId },
-                lock: { mode: "pessimistic_read" },
-            });
-            if (!assignedStaff || !isWithinStaffWorkingHours(assignedStaff, getBusinessMinuteOfDay(startTime), getBusinessMinuteOfDay(endTime))) {
-                throw new AppError("Appointment is outside employee working hours", 409, "STAFF_OUTSIDE_WORK_HOURS");
+            // An explicitly selected employee must be part of the assignment.
+            if (assigned.length !== appointment.party_size ||
+                (data.staff_id !== undefined && !assigned.some(s => s.user_id === data.staff_id))) {
+                throw new AppError("Not enough available staff for the appointment", 409, "SLOT_UNAVAILABLE");
             }
-            await releaseStaffSlots(
-                manager,
-                appointment.staff_id,
-                oldSlotStarts
-            );
-
-            const reserved = await tryReserveStaffSlots(
-                manager,
-                targetStaffId,
-                newSlotStarts
-            );
-
-            if (!reserved) {
-                throw new AppError(
-                    "Staff already has an appointment during this time",
-                    409,
-                    "APPOINTMENT_CONFLICT"
+            await assignmentRepo.delete({ appointment_id: appointment.id });
+            appointment.staff_assignments = await assignmentRepo.save(assigned.map(staff => ({
+                appointment_id: appointment.id,
+                staff_id: staff.user_id,
+                staff_full_name: staff.user.full_name,
+            })));
+            appointment.staff_id = assigned[0].user_id;
+            appointment.staff_full_name = assigned[0].user.full_name;
+            appointment.branch_id = branch.id;
+            appointment.branch_name = branch.name;
+            appointment.branch_address = branch.address;
+            appointment.start_time = startTime;
+            appointment.end_time = endTime;
+            if (data.service_ids !== undefined) {
+                await appointmentServicesRepo.delete({ appointment_id: appointment.id });
+                appointment.appointment_services = await appointmentServicesRepo.save(
+                    chosenServices.map(s => appointmentServicesRepo.create({
+                        appointment_id: appointment.id,
+                        service_id: s.service_id,
+                        service_name: s.service_name,
+                        price: s.price,
+                        duration_minutes: s.duration_minutes,
+                    }))
                 );
             }
         }
-
-        const becameTerminal =
-            appointment.status !== AppointmentStatus.COMPLETED &&
-            appointment.status !== AppointmentStatus.CANCELLED &&
-            (status === AppointmentStatus.COMPLETED || status === AppointmentStatus.CANCELLED);
-
-        if (becameTerminal) {
-            await releaseStaffSlots(
-                manager,
-                appointment.staff_id,
-                oldSlotStarts
-            );
-        }
-
-        appointment.staff_id = targetStaffId;
-        appointment.staff_full_name = targetStaffFullName;
-        appointment.branch_id = branchId;
-        appointment.branch_name = branchName;
-        appointment.branch_address = branchAddress;
-        appointment.start_time = startTime;
-        appointment.end_time = endTime;
-        appointment.status = status;
-        appointment.actual_started_at = actualStartedAt;
-        appointment.actual_completed_at = actualCompletedAt;
-
-        const savedAppointment = await transactionAppointmentRepo.save(appointment);
-
-        if (data.service_ids !== undefined) {
-            await appointmentServiceRepo.delete({
-                appointment_id: appointment.id,
-            });
-
-            const newAppointmentServices = appointmentServices.map((appointmentService) => {
-                return appointmentServiceRepo.create({
-                    appointment_id: appointment.id,
-                    service_id: appointmentService.service_id,
-                    service_name: appointmentService.service_name,
-                    price: appointmentService.price,
-                    duration_minutes: appointmentService.duration_minutes,
-                });
-            });
-
-            savedAppointment.appointment_services = await appointmentServiceRepo.save(newAppointmentServices);
-        } else {
-            savedAppointment.appointment_services = appointmentServices;
-        }
-
-        return savedAppointment;
+        return appointments.save(appointment);
     });
 };
 
@@ -948,18 +749,21 @@ export const deleteAppointment = async (id: string) => {
         const appointmentServiceRepo = manager.getRepository(AppointmentService);
 
         const appointment = await transactionAppointmentRepo.findOne({
-            where: { id },
+            where: { id, merged_into_id: IsNull() },
             relations: { appointment_services: true },
             lock: { mode: "pessimistic_write" },
         });
 
         if (!appointment) return null;
 
-        await releaseStaffSlots(
-            manager,
-            appointment.staff_id,
-            getRequiredSlotStarts(appointment.start_time, appointment.end_time)
-        );
+        // A single group booking owns reservations for every assigned employee.
+        const assignments = await manager.getRepository(AppointmentStaffAssignment).findBy({
+            appointment_id: appointment.id,
+        });
+        for (const assignment of assignments) {
+            await releaseStaffSlots(manager, assignment.staff_id,
+                getRequiredSlotStarts(appointment.start_time, appointment.end_time));
+        }
 
         await appointmentServiceRepo.delete({
             appointment_id: appointment.id,

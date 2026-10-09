@@ -13,6 +13,7 @@ export interface CreateAppointmentDto {
 }
 
 export interface UpdateAppointmentDto {
+    branch_id?: number;
     staff_id?: string;
     service_ids?: string[];
     start_time?: Date;
@@ -223,11 +224,13 @@ export function parseUpdateAppointmentDto(body: unknown): UpdateAppointmentDto {
 
     const data = body as Record<string, unknown>;
 
-    const hasDetailChanges = data.staff_id !== undefined || data.service_ids !== undefined || data.start_time !== undefined || data.customer_phone !== undefined;
+    const hasDetailChanges = data.branch_id !== undefined || data.staff_id !== undefined || data.service_ids !== undefined || data.start_time !== undefined || data.customer_phone !== undefined;
 
     if (data.status !== undefined && hasDetailChanges) throw new AppError("Status cannot be updated together with appointment details", 400, "VALIDATION_ERROR");
 
     if (!hasDetailChanges && data.status === undefined) throw new AppError("At least one field must be provided", 400, "VALIDATION_ERROR");
+
+    if (data.branch_id !== undefined) parsePositiveIntegerBody(data.branch_id, "Branch_id", 1);
 
     if (data.staff_id !== undefined && (typeof data.staff_id !== "string" || !isUuid(data.staff_id))) throw new AppError("Staff_id must be a valid UUID", 400, "VALIDATION_ERROR");
 
@@ -250,6 +253,7 @@ export function parseUpdateAppointmentDto(body: unknown): UpdateAppointmentDto {
     if (status !== undefined && !(status in AppointmentStatus)) throw new AppError("Status must be pending, confirmed, in_progress, completed, or cancelled", 400, "VALIDATION_ERROR");
 
     return {
+        branch_id: data.branch_id === undefined ? undefined : parsePositiveIntegerBody(data.branch_id, "Branch_id", 1),
         staff_id: data.staff_id as string | undefined,
         service_ids: data.service_ids as string[] | undefined,
         start_time: startTime,
