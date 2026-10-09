@@ -56,7 +56,7 @@ Sơ đồ biểu đạt mối liên hệ **logic**; không phải mọi liên h�
 
 ## Snapshot và delete
 
-Lịch giữ `customer_full_name/phone/email`, `staff_full_name`, `branch_name/address` và snapshot service. Khi sửa/xóa user, staff, service hoặc branch, cần giữ semantics lịch sử theo migration và service. Admin `DELETE /api/appointments/:id` xóa thực một appointment và giải phóng slot; khác với chuyển trạng thái `cancelled` (vẫn giữ bản ghi lịch sử). Đừng nhầm đây là chức năng soft-delete.
+Lịch giữ `customer_full_name/phone/email`, `staff_full_name`, `branch_name/address` và snapshot service. Khi sửa/xóa user, staff, service hoặc branch, cần giữ semantics lịch sử theo migration và service. Admin `DELETE /api/appointments/:id` xóa thực một appointment và giải phóng slot. Trong khi đó, chuyển trạng thái sang `cancelled` giữ bản ghi lịch để phục vụ tra cứu lịch sử; hai thao tác có ngữ nghĩa dữ liệu khác nhau.
 
 ## Migrations hiện có
 
@@ -96,6 +96,6 @@ Script `src/jobs/retention-cleanup.ts` dọn:
 - `login_mfa_challenges` và `password_reset_challenges` quá 7 ngày; script **không** dọn `registration_email_challenges` hay `password_change_challenges`.
 - `refresh_sessions`, `trusted_login_devices` hết hạn hoặc đã revoke quá 30 ngày.
 
-VPS Compose có service `retention` chạy vòng lặp 24 giờ. **Không suy ra Railway đã có scheduler này** chỉ vì source có script. Dữ liệu booking/khách hàng không bị script retention này tự động xóa.
+VPS Compose có service `retention` chạy theo chu kỳ 24 giờ. Cấu hình scheduler tương ứng trên Railway không nằm trong repository; cần kiểm tra cấu hình runtime nếu sử dụng môi trường này. Script retention không xóa dữ liệu booking/khách hàng.
 
 Xem [BOOKING](BOOKING.md) để hiểu slot reservations và [DEPLOYMENT](DEPLOYMENT.md) để migrate/backup an toàn.
