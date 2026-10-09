@@ -148,7 +148,7 @@ export function AdminAppointmentForm({
                 <label>
                     <span className={captionClass}>Nhân viên thực hiện</span>
                     <select className={inputClass} value={staffId}
-                        onChange={(event) => setStaffId(event.target.value)} required>
+                        onChange={(event) => setStaffId(event.target.value)}>
                         <option value="">Tự động gán nhân viên phù hợp</option>
                         {branchStaff.map((person) => (
                             <option key={person.id} value={person.id}>{person.full_name}</option>
