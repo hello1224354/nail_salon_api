@@ -1,6 +1,6 @@
 # API — HTTP contract, RBAC và ví dụ
 
-Source chính: `src/app.ts`, các file `.routes.ts`, `.dto.ts`, `.controller.ts` trong `src/modules`. Base API: `/api`. API chỉ trả JSON; lỗi tuân schema `{ "error": { "code": "...", "message": "..." } }`.
+API được khai báo trong `src/app.ts` và các module `.routes.ts`, `.dto.ts`, `.controller.ts` tại `src/modules/`. Các endpoint nghiệp vụ dùng tiền tố `/api`. Phản hồi lỗi JSON có dạng `{ "error": { "code": "...", "message": "..." } }`.
 
 ## Transport
 
@@ -162,4 +162,4 @@ Chi tiết chính xác về auth và cookie xem [AUTH-SECURITY](AUTH-SECURITY.md
 | `UNTRUSTED_ORIGIN` | Origin không khớp cấu hình |
 | `VALIDATION_ERROR` | Tham số/body không hợp lệ |
 
-Dùng `error.code` để hiển thị thông báo chính xác; thông báo chung HTTP 409 không đủ để chẩn đoán nguyên nhân.
+Mã `error.code` phân biệt các nguyên nhân có cùng HTTP status, ví dụ 409 có thể đại diện cho trùng slot hoặc chuyển trạng thái lịch quá sớm. UI có thể ánh xạ mã lỗi thành thông báo theo ngữ cảnh.
