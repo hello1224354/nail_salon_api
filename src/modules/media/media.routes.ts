@@ -30,8 +30,8 @@ router.post("/", ...admin, mediaUploadRateLimiter, raw({ type: () => true, limit
     return res.status(201).json({ success: { message: "Image uploaded", data } });
 });
 
-// Public read enables existing Next.js Image components to use same-origin /api/media URLs.
-// Object keys and R2 credentials never leave the backend.
+// Public read allows website images to use same-origin /api/media URLs.
+// Binary data is fetched from MySQL without exposing private database credentials.
 router.get("/:id/file", publicReadRateLimiter, async (req, res) => {
     const id = parseUuidParam(req.params.id, "Media id");
     const { file, bytes } = await media.readMedia(id);
