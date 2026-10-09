@@ -16,7 +16,6 @@ type MediaList = {
     files: MediaFile[];
     total: number;
     total_pages: number;
-    configured: boolean;
 };
 
 export function MediaChooser({
@@ -99,7 +98,7 @@ export function MediaChooser({
                         type="file"
                         accept="image/jpeg,image/png,image/webp"
                         className="sr-only"
-                        disabled={busy || list?.configured === false}
+                        disabled={busy}
                         onChange={(event) => {
                             const file = event.currentTarget.files?.[0];
                             if (file) void uploadFile(file);
@@ -109,12 +108,6 @@ export function MediaChooser({
                 </label>
                 <span className="text-[11px] text-muted">JPEG, PNG, WebP · tối đa 5 MB</span>
             </div>
-
-            {list && !list.configured ? (
-                <p role="status" className="rounded-lg bg-[#fff5e6] px-3 py-2 text-xs text-[#855329]">
-                    Kho ảnh chưa được cấu hình. Cần thiết lập Cloudflare R2 trên backend để tải ảnh lên.
-                </p>
-            ) : null}
 
             {value ? (
                 <div className="flex items-center gap-3 rounded-xl border border-accent/30 bg-cream p-2">
@@ -216,7 +209,7 @@ export function TrendsPanel() {
     async function save(event: FormEvent) {
         event.preventDefault();
         if (!image.startsWith("/api/media/")) {
-            setError("Chọn ảnh đã tải lên R2 trong thư viện.");
+            setError("Chọn ảnh đã tải lên trong thư viện.");
             return;
         }
         setBusy(true);
@@ -253,7 +246,7 @@ export function TrendsPanel() {
         <section className="space-y-5">
             <div className="rounded-2xl border border-line bg-white p-5">
                 <h2 className="font-serif text-2xl">Bộ sưu tập Hot Trend</h2>
-                <p className="mt-1 text-xs text-muted">Sắp xếp, thêm và thay thế ảnh hiển thị trên trang chủ. Ảnh cũ vẫn hiển thị cho đến khi thay bằng ảnh R2.</p>
+                <p className="mt-1 text-xs text-muted">Sắp xếp, thêm và thay thế ảnh hiển thị trên trang chủ. Ảnh cũ vẫn hiển thị cho đến khi được thay bằng ảnh đã tải lên.</p>
                 <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                     {trends.map((trend) => (
                         <article key={trend.id} className="rounded-xl border border-line p-2">
@@ -301,7 +294,7 @@ export function MediaPanel() {
         <section className="rounded-2xl border border-line bg-white p-5">
             <h2 className="font-serif text-2xl">Thư viện hình ảnh</h2>
             <p className="my-3 text-xs text-muted">
-                File ảnh được lưu trong Cloudflare R2. Xóa ảnh đang được dùng trong Ưu đãi hoặc Hot Trend sẽ bị chặn.
+                File ảnh được lưu trực tiếp trong MySQL trên Railway. Ảnh đang dùng trong Ưu đãi hoặc Hot Trend không thể xóa.
             </p>
             <MediaChooser allowDelete value={selected} onChange={setSelected} />
         </section>
