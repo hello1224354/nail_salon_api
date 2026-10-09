@@ -3,6 +3,7 @@ import { AppError } from "../../common/errors";
 import { AppDataSource } from "../../config/database";
 import { CreateOfferDto, GetOffersQueryDto, UpdateOfferDto } from "./offers.dto";
 import { Offer } from "./offer.entity";
+import { MediaFile } from "../media/media-file.entity";
 
 const offerRepo = AppDataSource.getRepository(Offer);
 
@@ -76,7 +77,16 @@ export const getOffer = async (id: string) => {
     return await offerRepo.findOneBy({ id });
 };
 
+async function ensureStoredImage(image: string) {
+    if (!image.startsWith("/api/media/")) return; // Keep existing static/legacy offers.
+    const match = /^\/api\/media\/([0-9a-f-]{36})\/file$/.exec(image);
+    if (!match || !await AppDataSource.getRepository(MediaFile).exist({ where: { id: match[1] } })) {
+        throw new AppError("Uploaded image not found", 400, "MEDIA_NOT_FOUND");
+    }
+}
+
 export const createOffer = async (data: CreateOfferDto) => {
+    await ensureStoredImage(data.image);
     return await offerRepo.save(offerRepo.create(data));
 };
 
@@ -92,6 +102,7 @@ export const updateOffer = async (id: string, data: UpdateOfferDto) => {
         throw new AppError("End_date must be on or after start_date", 400, "VALIDATION_ERROR");
     }
 
+    if (data.image) await ensureStoredImage(data.image);
     offerRepo.merge(offer, data);
 
     return await offerRepo.save(offer);
