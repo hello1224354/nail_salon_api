@@ -24,6 +24,7 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npx tsx --test src/tests/trusted-login-device.test.ts
+      - run: npx tsx --test src/tests/trusted-origins.test.ts
       - run: npx tsx --test src/tests/booking-notification.test.ts
       - run: npx tsx --test src/tests/admin-appointment-filters.test.ts
       - run: npx tsx --test src/tests/media-validation.test.ts
