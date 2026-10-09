@@ -18,6 +18,7 @@ import { PasswordChangeChallenge } from "../modules/users/password-change-challe
 import { SalonContent } from "../modules/site-content/salon-content.entity";
 import { InstagramTrendItem } from "../modules/site-content/instagram-trend-item.entity";
 import { CustomerReview } from "../modules/site-content/customer-review.entity";
+import { MediaFile } from "../modules/media/media-file.entity";
 
 export const AppDataSource = new DataSource({
     type: "mysql",
@@ -47,6 +48,7 @@ export const AppDataSource = new DataSource({
         SalonContent,
         InstagramTrendItem,
         CustomerReview,
+        MediaFile,
     ],
     migrations: [__dirname + "/../migrations/**/*{.js,.ts}"],
     timezone: "Z",
