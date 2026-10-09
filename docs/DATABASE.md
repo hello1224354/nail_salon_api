@@ -31,7 +31,7 @@ Sơ đồ biểu đạt mối liên hệ **logic**; không phải mọi liên h�
 | `appointments` | `id`, `user_id`, `booking_group_id`, `party_size`, customer/staff/branch snapshots, `start_time`, `end_time`, actual times, `status` | Mỗi bản ghi dành cho một staff |
 | `appointment_services` | PK (`appointment_id`, `service_id`), `service_name`, `price`, `duration_minutes` | Giá/dịch vụ tại thời điểm đặt |
 | `staff_booking_slots` | **PK ghép** (`staff_id`, `slot_start`) | Chống đặt trùng ở độ phân giải 15 phút |
-| `media_files` | `id` UUID, unique `object_key`, `original_name`, `mime_type`, `byte_size`, `created_by`, `created_at` | Metadata ảnh riêng tư lưu trên Cloudflare R2 |
+| `media_files` | `id` UUID, `original_name`, `mime_type`, `byte_size`, `created_by`, `created_at`, `image_data` MEDIUMBLOB | Ảnh lưu trực tiếp trong MySQL; danh sách chỉ đọc metadata |
 | `offers` | `id`, `name`, `details`, `start_date`, `end_date`, `image`, `sort_order` | Khuyến mãi |
 | `salon_content` | `id` int, tên/links/contacts/branding flags | Dữ liệu công khai của salon |
 | `instagram_trend_items` | `salon_content_id`, `image_src`, `instagram_url`, `sort_order` | Trending images |
