@@ -8,6 +8,7 @@ Tài liệu về kiến trúc, API, dữ liệu, bảo mật, vận hành và c�
 | [DEMO.md](DEMO.md) | Tổng quan sản phẩm, các trang demo và luồng người dùng |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Kiến trúc, sơ đồ luồng, ranh giới trách nhiệm |
 | [SETUP.md](SETUP.md) | Chạy local, môi trường, Gmail, migration |
+| [MEDIA-STORAGE.md](MEDIA-STORAGE.md) | Cloudflare R2 private object storage, admin image upload/management and rollout |
 | [API.md](API.md) | Danh sách endpoint, phân quyền, request/response, lỗi |
 | [DATABASE.md](DATABASE.md) | Entities, quan hệ, index, migration, dữ liệu snapshot |
 | [BOOKING.md](BOOKING.md) | Availability, slot 15 phút, nhóm, trạng thái, notification |
