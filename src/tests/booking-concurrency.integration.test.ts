@@ -319,6 +319,19 @@ test("ADMIN edit with no chosen staff automatically reassigns the entire group a
     assert.ok(visibleToCustomer);
     assert.equal(visibleToCustomer!.staff_assignments.length, 2);
     assert.equal(visibleToCustomer!.start_time.getTime(), nextStart.getTime());
+    const customerList = await getAllAppointments(fixture.customers[0].id, UserRole.CUSTOMER, {
+        page: 1, limit: 10,
+    });
+    assert.equal(customerList.total, 1, "Group counts as one customer appointment");
+    assert.equal(customerList.appointments.length, 1);
+    assert.equal(customerList.appointments[0].staff_assignments.length, 2);
+    const adminList = await getAllAppointments(fixture.customers[0].id, UserRole.ADMIN, {
+        page: 1, limit: 10, branch_id: fixture.branch.id,
+    });
+    assert.equal(adminList.total, 1, "Group counts as one admin appointment");
+    const otherStaff = (await assignments.findBy({ appointment_id: booking.id }))[1].staff_id;
+    const staffList = await getAllAppointments(otherStaff, UserRole.STAFF, { page: 1, limit: 10 });
+    assert.equal(staffList.total, 1, "Any employee assigned to group can see same appointment");
 
     const cancelled = await updateAppointment(booking.id, fixture.customers[0].id, UserRole.ADMIN, {
         status: AppointmentStatus.CANCELLED,
