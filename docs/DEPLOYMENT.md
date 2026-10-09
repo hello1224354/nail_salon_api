@@ -46,6 +46,7 @@ Backend `src/server.ts` gọi `AppDataSource.showMigrations()` ở production v�
 - `JWT_SECRET` dài/ngẫu nhiên; không tái sử dụng giữa staging/production.
 - `CORS_ORIGIN` chính xác website production; Origin check yêu cầu khớp cho refresh/logout.
 - `GMAIL_*` đủ bốn biến, Gmail OAuth sender còn hiệu lực.
+- R2 private bucket và bucket-scoped token: `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` (API Railway). Upload media sẽ không hoạt động trước khi cấu hình. Hướng dẫn: [MEDIA-STORAGE](MEDIA-STORAGE.md).
 - `NEXT_PUBLIC_API_BASE_URL` cấu hình tại Vercel trước build.
 - Cookie production dùng `Secure`, cần HTTPS. Không test login thực qua HTTP.
 
