@@ -31,9 +31,6 @@ export default function AdminLoginPage() {
                         <br />
                         Serpente.
                     </h1>
-                    <p className="mt-5 max-w-md text-sm leading-6 text-white/55">
-                        Theo dõi lịch hẹn và cập nhật dữ liệu vận hành của tiệm tại một nơi.
-                    </p>
 
                     <AdminLoginForm />
 
@@ -47,9 +44,6 @@ export default function AdminLoginPage() {
                     <div className="absolute inset-x-10 bottom-10 rounded-[22px] border border-white/35 bg-[#2e2925]/80 p-7 backdrop-blur-md">
                         <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#d9bca9]">
                             Serpente Nail Room
-                        </p>
-                        <p className="mt-3 max-w-lg font-serif text-3xl leading-tight">
-                            Theo dõi lịch trong ngày và cập nhật thông tin của tiệm khi cần.
                         </p>
                     </div>
                 </div>
