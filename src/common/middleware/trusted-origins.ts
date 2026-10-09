@@ -12,7 +12,7 @@ export function trustedOrigins(primary: string, additional = ""): string[] {
             throw new Error("Invalid trusted origin configuration");
         }
         if (!["https:", "http:"].includes(url.protocol) || url.origin !== origin ||
-            url.username || url.password || url.pathname !== "/" ||
+            url.hostname.includes("*") || url.username || url.password || url.pathname !== "/" ||
             url.search || url.hash) {
             throw new Error("Trusted origins must be exact HTTP(S) origins without paths");
         }
