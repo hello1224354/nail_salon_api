@@ -17,7 +17,7 @@ Tài liệu về kiến trúc, API, dữ liệu, bảo mật, vận hành và c�
 | [TESTING-OPERATIONS.md](TESTING-OPERATIONS.md) | CI, E2E test cases, troubleshooting, vận hành |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Quy trình thay đổi source/docs/PR |
 
-## Gợi ý đọc
+## Điều hướng theo vai trò
 
 - **Developer mới:** SETUP → ARCHITECTURE → API.
 - **Backend booking:** BOOKING → DATABASE → API.
@@ -34,6 +34,6 @@ Tài liệu về kiến trúc, API, dữ liệu, bảo mật, vận hành và c�
 - **Snapshot:** lưu tên/giá/duration, khách, nhân viên, chi nhánh trên lịch để dữ liệu lịch sử không đổi khi danh mục đổi.
 - **Active booking statuses:** `pending`, `confirmed`, `in_progress`.
 
-## Quy ước cập nhật
+## Versioning
 
-Nếu tài liệu và code mâu thuẫn, ưu tiên kiểm tra code/migration, sau đó **sửa tài liệu cùng PR**. Không đưa database dumps, secrets, OTP hay thông tin cá nhân thật vào documentation.
+Tài liệu được duy trì cùng source code. Hợp đồng API, migration và logic nghiệp vụ trong repository là căn cứ khi triển khai hoặc thay đổi hệ thống. Các thay đổi chức năng cần cập nhật tài liệu liên quan trong cùng pull request.
