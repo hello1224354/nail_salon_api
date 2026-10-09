@@ -18,6 +18,12 @@ export class Staff {
     @JoinColumn({ name: "branch_id" })
     branch: Branch;
 
+    @Column({ type: "varchar", length: 5, default: "09:00" })
+    work_start_time: string;
+
+    @Column({ type: "varchar", length: 5, default: "20:30" })
+    work_end_time: string;
+
     @CreateDateColumn()
     created_at: Date;
 
