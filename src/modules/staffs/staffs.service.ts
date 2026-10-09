@@ -1,6 +1,7 @@
 import { AppDataSource } from "../../config/database";
 import bcrypt from "bcryptjs";
-import { IsNull } from "typeorm";
+import { In, IsNull, MoreThan } from "typeorm";
+import { getVietnamMinuteOfDay } from "../appointments/booking-time";
 import { RefreshSession } from "../users/refresh-session.entity";
 import { Staff } from "./staffs.entity";
 import { CreateStaffDto, GetStaffsQueryDto, UpdateStaffDto } from "./staffs.dto";
@@ -9,6 +10,8 @@ import { User, UserRole } from "../users/users.entity";
 import { AppError } from "../../common/errors";
 import * as branchService from "../branches/branches.service";
 import { Branch } from "../branches/branches.entity";
+import { Appointment, AppointmentStatus } from "../appointments/appointments.entity";
+import { isWithinStaffWorkingHours, assertValidWorkingHours } from "./staff-working-hours";
 
 const staffRepo = AppDataSource.getRepository(Staff);
 
@@ -66,6 +69,8 @@ export const createStaff = async (data: CreateStaffDto) => {
         const newStaff = repo.create({
             user_id: user.id,
             branch_id: data.branch_id,
+            work_start_time: data.work_start_time,
+            work_end_time: data.work_end_time,
         });
 
         return await repo.save(newStaff);
@@ -85,6 +90,29 @@ export const updateStaff = async (userId: string, data: UpdateStaffDto) => {
             const branch = await manager.getRepository(Branch).findOneBy({ id: data.branch_id });
             if (!branch) throw new AppError("Branch not found", 404, "BRANCH_NOT_FOUND");
             staff.branch_id = data.branch_id;
+        }
+
+        if (data.work_start_time !== undefined || data.work_end_time !== undefined) {
+            const workStart = data.work_start_time ?? staff.work_start_time;
+            const workEnd = data.work_end_time ?? staff.work_end_time;
+            assertValidWorkingHours(workStart, workEnd);
+            // A schedule change must not silently place an existing appointment outside the shift.
+            const futureAppointments = await manager.getRepository(Appointment).find({
+                where: {
+                    staff_id: userId,
+                    status: In([AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED]),
+                    end_time: MoreThan(new Date()),
+                },
+            });
+            for (const appointment of futureAppointments) {
+                const start = getVietnamMinuteOfDay(appointment.start_time);
+                const end = getVietnamMinuteOfDay(appointment.end_time);
+                if (!isWithinStaffWorkingHours({ work_start_time: workStart, work_end_time: workEnd }, start, end)) {
+                    throw new AppError("Existing upcoming appointments fall outside the proposed working hours", 409, "STAFF_SCHEDULE_CONFLICT");
+                }
+            }
+            staff.work_start_time = workStart;
+            staff.work_end_time = workEnd;
         }
 
         const emailChanged = data.email !== undefined && data.email !== user.email;
