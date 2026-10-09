@@ -11,19 +11,20 @@ Source đối chiếu: `.github/workflows/security-hardening-ci.yml`, `Dockerfil
 | API health | Express | https://api-production-e911.up.railway.app/health |
 | Database | MySQL qua biến môi trường backend | Không expose credentials công khai |
 
-Môi trường này được xác nhận bởi lịch sử deploy của dự án; source code **không chứa giá trị secrets sản xuất**, và tài liệu này không coi URL health là bằng chứng E2E booking/email đã qua kiểm thử.
+Frontend và backend được triển khai riêng trên Vercel và Railway. Healthcheck xác nhận tiến trình API hoạt động; các luồng đặt lịch, OTP và email cần kiểm thử chức năng độc lập.
 
 Frontend Next rewrite `/api/:path*` sang `NEXT_PUBLIC_API_BASE_URL`. Trên Vercel, cấu hình environment cần trỏ đến API Railway thực tế **theo cơ chế dự án đang dùng**, và phải được kiểm tra ở dashboard khi clone project mới.
 
 ## GitHub CI
 
-Workflow `.github/workflows/security-hardening-ci.yml` trigger: PR vào `main`, push `main`, manual dispatch. Ba jobs:
+Workflow [Security Hardening CI](../.github/workflows/security-hardening-ci.yml) chạy khi mở PR vào `main`, push lên `main` hoặc kích hoạt thủ công. Pipeline gồm **4 jobs**:
 
-- **backend:** `npm ci`, typecheck, test trusted device, booking notification, admin filters, build, npm audit high.
-- **frontend:** `npm ci`, `npx tsc --noEmit`, Next build, CSP check, audit script; `NEXT_PUBLIC_API_BASE_URL=http://api:3000` trên CI.
-- **vps-config:** render production Compose (env mẫu) và `bash -n` backup script.
+- **backend:** cài dependencies, typecheck, unit/regression tests (trusted device, booking notification, admin filters), build và audit dependencies.
+- **backend-mysql-integration:** chạy **MySQL 8 tạm thời** trong GitHub Actions, apply TypeORM migrations và kiểm thử booking concurrency: 16 yêu cầu đồng thời, tính nguyên tử booking nhóm, rollback và giờ đặt liền kề.
+- **frontend:** cài dependencies, TypeScript typecheck, Next.js build, CSP check và dependency audit; sử dụng API URL cấu hình riêng trong CI.
+- **vps-config:** xác thực Docker Compose production bằng env mẫu và cú pháp backup script.
 
-CI PASS chứng minh các check tĩnh/build/test trên GitHub, **không tự chứng minh production đang chạy cùng SHA**, hay OTP/email/booking thực tế hoạt động.
+CI PASS xác nhận kết quả build và các bài kiểm thử của commit. Trạng thái triển khai cần được xác thực riêng qua deployment SHA, healthcheck và kiểm thử các luồng chức năng liên quan.
 
 ## Quy trình deploy an toàn
 
