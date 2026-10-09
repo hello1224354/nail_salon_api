@@ -80,7 +80,7 @@ export const getOffer = async (id: string) => {
 async function ensureStoredImage(image: string) {
     if (!image.startsWith("/api/media/")) return; // Keep existing static/legacy offers.
     const match = /^\/api\/media\/([0-9a-f-]{36})\/file$/.exec(image);
-    if (!match || !await AppDataSource.getRepository(MediaFile).exist({ where: { id: match[1] } })) {
+    if (!match || !await AppDataSource.getRepository(MediaFile).exists({ where: { id: match[1] } })) {
         throw new AppError("Uploaded image not found", 400, "MEDIA_NOT_FOUND");
     }
 }
