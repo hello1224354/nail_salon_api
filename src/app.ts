@@ -13,7 +13,6 @@ import mediaRoutes from "./modules/media/media.routes";
 import siteContentAdminRoutes from "./modules/site-content/site-content-admin.routes";
 import { errorHandler } from "./common/error-handler";
 import { auditMutation } from "./common/middleware/audit.middleware";
-import { trustedOrigins } from "./common/middleware/trusted-origins";
 
 export const app = express();
 
@@ -38,7 +37,7 @@ app.use((req, res, next) => {
 });
 
 app.use(cors({
-    origin: trustedOrigins(env.CORS_ORIGIN, env.CORS_EXTRA_ORIGINS),
+    origin: env.CORS_ORIGIN,
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Accept", "Authorization", "Content-Type", "X-Request-Id"],

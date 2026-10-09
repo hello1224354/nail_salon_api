@@ -274,6 +274,7 @@ export function TrendsPanel() {
         <section className="space-y-5">
             <div className="rounded-2xl border border-line bg-white p-5">
                 <h2 className="font-serif text-2xl">Bộ sưu tập Hot Trend</h2>
+                <p className="mt-1 text-xs text-muted">Sắp xếp, thêm và thay thế ảnh hiển thị trên trang chủ. Ảnh cũ vẫn hiển thị cho đến khi được thay bằng ảnh đã tải lên.</p>
                 <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                     {trends.map((trend) => (
                         <article key={trend.id} className="rounded-xl border border-line p-2">
@@ -320,6 +321,9 @@ export function MediaPanel() {
     return (
         <section className="rounded-2xl border border-line bg-white p-5">
             <h2 className="font-serif text-2xl">Thư viện hình ảnh</h2>
+            <p className="my-3 text-xs text-muted">
+                File ảnh được lưu trực tiếp trong MySQL trên Railway. Ảnh đang dùng trong Ưu đãi hoặc Hot Trend không thể xóa.
+            </p>
             <MediaChooser allowDelete value={selected} onChange={setSelected} />
         </section>
     );
