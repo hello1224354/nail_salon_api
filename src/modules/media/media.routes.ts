@@ -21,7 +21,7 @@ router.get("/", ...admin, async (req, res) => {
     return res.json({ success: { message: "Get media successfully", data } });
 });
 
-router.post("/", ...admin, raw({ type: () => true, limit: "5mb" }), async (req, res) => {
+router.post("/", ...admin, mediaUploadRateLimiter, raw({ type: () => true, limit: "5mb" }), async (req, res) => {
     if (!Buffer.isBuffer(req.body)) {
         throw new AppError("Binary image body is required", 400, "INVALID_MEDIA_TYPE");
     }
