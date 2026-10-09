@@ -28,7 +28,7 @@ Thời lượng ca = tổng `duration_minutes` của các service (một chuỗi
 | Buffer | **Không có**; chỉ xét `[start_time, end_time)` |
 | Active statuses chiếm slot | `pending`, `confirmed`, `in_progress` |
 
-`branches.opening_hours` là trường hiển thị, **không tự quyết định giờ booking**; cần thay logic trong service nếu muốn vận hành giờ riêng cho từng branch. Availability chỉ là snapshot tại thời điểm GET, không phải reservation.
+`branches.opening_hours` là trường phục vụ hiển thị. Việc xác định giờ được đặt hiện sử dụng quy tắc cố định trong booking service, không dùng giá trị của trường này. Kết quả availability là trạng thái tại thời điểm GET, **không phải một reservation đã được giữ**.
 
 ## 3. Atomic reservation & group booking
 
@@ -103,7 +103,7 @@ Job CI `backend-mysql-integration` chạy các migrations trên database riêng 
 - Không được gửi `staff_id` từ public form.
 - Max 3 pending booking groups.
 - Không được chuyển `confirmed → in_progress` trước start.
-- Terminal/cancel release slots, nhưng không được vô ý xóa lịch sử.
+- Khi chuyển sang trạng thái kết thúc hoặc hủy, hệ thống giải phóng slot nhưng vẫn giữ appointment để tra cứu lịch sử.
 - Mã frontend phải khớp mã search admin.
 
-Xem [API](API.md) và [DATABASE](DATABASE.md).
+Chi tiết request/response được mô tả tại [API](API.md); cấu trúc reservation tại [DATABASE](DATABASE.md).
