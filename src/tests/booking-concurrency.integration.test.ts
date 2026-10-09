@@ -14,7 +14,8 @@ import { randomUUID } from "node:crypto";
 import { AppDataSource } from "../config/database";
 import { AppError } from "../common/errors";
 import { Appointment, AppointmentStatus } from "../modules/appointments/appointments.entity";
-import { createAppointment, getAvailability } from "../modules/appointments/appointments.service";
+import { createAppointment, getAvailability, getAppointment, getAllAppointments, updateAppointment } from "../modules/appointments/appointments.service";
+import { AppointmentStaffAssignment } from "../modules/appointments/appointment-staff-assignment.entity";
 import { StaffBookingSlot } from "../modules/appointments/staff-booking-slots.entity";
 import { Branch } from "../modules/branches/branches.entity";
 import { Service } from "../modules/services/service.entity";
@@ -195,11 +196,15 @@ test("concurrent group bookings commit either both staff assignments or none", a
     assert.equal(accepted.length, 1, "Only one two-person group may reserve both staff");
 
     const appointments = await appointmentsFor(fixture, startTime);
-    assert.equal(appointments.length, 2, "Whole group must commit, not zero/one partial row");
-    assert.equal(new Set(appointments.map((a) => a.staff_id)).size, 2);
-    assert.equal(new Set(appointments.map((a) => a.booking_group_id)).size, 1);
-    assert.equal(appointments[0].booking_group_id, accepted[0].value.booking_group_id);
-    assert.ok(appointments.every((a) => a.party_size === 2 && a.status === AppointmentStatus.PENDING));
+    assert.equal(appointments.length, 1, "One group is exactly one appointment");
+    assert.equal(appointments[0].id, accepted[0].value.id);
+    assert.equal(appointments[0].party_size, 2);
+    assert.equal(appointments[0].status, AppointmentStatus.PENDING);
+    const assignments = await AppDataSource.getRepository(AppointmentStaffAssignment).findBy({
+        appointment_id: appointments[0].id,
+    });
+    assert.equal(assignments.length, 2, "One appointment has two assigned employees");
+    assert.equal(new Set(assignments.map(a => a.staff_id)).size, 2);
     const reservations = await slotsFor(fixture);
     assert.equal(reservations.length, 4, "Two staff each hold two 15-minute slots");
     console.log(`PASS: 1 group of 2 committed, ${PARTICIPANTS - 1} rejected, 4 unique slots`);
@@ -278,11 +283,81 @@ test("part-time 13:00–20:00 shifts change availability and reject out-of-shift
         fixture.customers[0].id, UserRole.CUSTOMER, bookingAt(fixture.service, at13, 2),
     );
     assert.ok(booked.booking_group_id);
-    assert.equal((await appointmentsFor(fixture, at13)).length, 2);
+    assert.equal((await appointmentsFor(fixture, at13)).length, 1);
 
     await assert.rejects(
         () => updateStaff(booked.staff_id, { work_start_time: "14:00", work_end_time: "20:00" }),
         (error: unknown) => error instanceof AppError && error.code === "STAFF_SCHEDULE_CONFLICT",
         "Editing staff hours must not invalidate existing future bookings",
     );
+});
+
+test("ADMIN edit with no chosen staff automatically reassigns the entire group and its slots", async () => {
+    const fixture = await seedFixture("group-admin-auto", 3, 1);
+    const firstStart = startInVietnamAt(13);
+    const nextStart = new Date(firstStart.getTime() + 60 * 60_000);
+    const booking = await createAppointment(fixture.customers[0].id, UserRole.CUSTOMER,
+        bookingAt(fixture.service, firstStart, 2));
+    const assignments = AppDataSource.getRepository(AppointmentStaffAssignment);
+    assert.equal(await assignments.countBy({ appointment_id: booking.id }), 2);
+    assert.equal((await appointmentsFor(fixture, firstStart)).length, 1);
+
+    const edited = await updateAppointment(booking.id, fixture.customers[0].id, UserRole.ADMIN, {
+        start_time: nextStart,
+    });
+    assert.ok(edited);
+    assert.equal(edited!.id, booking.id);
+    assert.equal(edited!.party_size, 2);
+    assert.equal(await assignments.countBy({ appointment_id: booking.id }), 2);
+    assert.equal((await appointmentsFor(fixture, firstStart)).length, 0);
+    assert.equal((await appointmentsFor(fixture, nextStart)).length, 1);
+    const slots = await slotsFor(fixture);
+    assert.equal(slots.length, 4);
+    assert.ok(slots.every(slot => slot.slot_start.getTime() >= nextStart.getTime()));
+
+    const visibleToCustomer = await getAppointment(booking.id, fixture.customers[0].id, UserRole.CUSTOMER);
+    assert.ok(visibleToCustomer);
+    assert.equal(visibleToCustomer!.staff_assignments.length, 2);
+    assert.equal(visibleToCustomer!.start_time.getTime(), nextStart.getTime());
+
+    const cancelled = await updateAppointment(booking.id, fixture.customers[0].id, UserRole.ADMIN, {
+        status: AppointmentStatus.CANCELLED,
+    });
+    assert.equal(cancelled!.status, AppointmentStatus.CANCELLED);
+    assert.equal((await slotsFor(fixture)).length, 0, "Cancel frees all staff slots in the group");
+    assert.equal(await assignments.countBy({ appointment_id: booking.id }), 2,
+        "History retains every employee assignment");
+});
+
+test("ADMIN explicitly selected staff is included, while conflicting reassignment rolls back", async () => {
+    const fixture = await seedFixture("group-admin-staff", 3, 2);
+    const start = startInVietnamAt(14);
+    const booking = await createAppointment(fixture.customers[0].id, UserRole.CUSTOMER,
+        bookingAt(fixture.service, start, 2));
+    const assignments = AppDataSource.getRepository(AppointmentStaffAssignment);
+    const originallyAssigned = await assignments.findBy({ appointment_id: booking.id });
+    const alternative = fixture.staffUsers.find(user => !originallyAssigned.some(a => a.staff_id === user.id));
+    assert.ok(alternative);
+    const updated = await updateAppointment(booking.id, fixture.customers[0].id, UserRole.ADMIN, {
+        staff_id: alternative!.id,
+    });
+    assert.ok(updated);
+    const updatedAssignments = await assignments.findBy({ appointment_id: booking.id });
+    assert.equal(updatedAssignments.length, 2);
+    assert.ok(updatedAssignments.some(a => a.staff_id === alternative!.id));
+    assert.equal((await appointmentsFor(fixture, start)).length, 1);
+
+    const blocking = await createAppointment(fixture.customers[1].id, UserRole.CUSTOMER,
+        bookingAt(fixture.service, new Date(start.getTime() + DURATION_MINUTES * 60_000), 1));
+    const before = await assignments.findBy({ appointment_id: booking.id });
+    await assert.rejects(
+        () => updateAppointment(booking.id, fixture.customers[0].id, UserRole.ADMIN, {
+            start_time: blocking.start_time,
+            staff_id: blocking.staff_id,
+        }),
+        (err: unknown) => err instanceof AppError && err.code === "SLOT_UNAVAILABLE",
+    );
+    const after = await assignments.findBy({ appointment_id: booking.id });
+    assert.deepEqual(after.map(a => a.staff_id).sort(), before.map(a => a.staff_id).sort());
+    assert.equal((await slotsFor(fixture)).length, 6, "Failed update did not lose reservations");
 });
