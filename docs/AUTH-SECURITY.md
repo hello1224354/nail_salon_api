@@ -22,7 +22,7 @@ Mỗi route protected dùng `authenticate` + `requireRole`; service còn enforce
 - Login trên **trusted browser** đúng user + token_version + role + User-Agent hash + hạn dùng → bypass OTP, vẫn cần password.
 - STAFF không nằm trong nhánh OTP đó theo code `loginUser`.
 
-Không hard-code OTP, không dùng email production để test tự động, không đưa OTP vào logs.
+Mã OTP được sinh và xác minh ở backend, không hard-code trong ứng dụng. Các bài test tự động sử dụng dữ liệu kiểm thử thay vì thông tin tài khoản production.
 
 ## Access JWT & refresh
 
@@ -71,4 +71,4 @@ Gửi mail qua Gmail OAuth2: `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_RE
 | API 403 | Role server-side, không sửa bằng UI bypass |
 | Gmail 503 | OAuth config/quyền gửi, log server |
 
-Không đăng công khai login credentials, token, cookie, Gmail client secret, JWT secret hay log chứa PII.
+Các giá trị credentials, token, cookie, Gmail OAuth secrets, JWT secret và log chứa dữ liệu cá nhân được phân loại là thông tin nhạy cảm, không lưu trong repository.
