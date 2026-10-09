@@ -31,6 +31,7 @@ Sơ đồ biểu đạt mối liên hệ **logic**; không phải mọi liên h�
 | `appointments` | `id`, `user_id`, `booking_group_id`, `party_size`, customer/staff/branch snapshots, `start_time`, `end_time`, actual times, `status` | Mỗi bản ghi dành cho một staff |
 | `appointment_services` | PK (`appointment_id`, `service_id`), `service_name`, `price`, `duration_minutes` | Giá/dịch vụ tại thời điểm đặt |
 | `staff_booking_slots` | **PK ghép** (`staff_id`, `slot_start`) | Chống đặt trùng ở độ phân giải 15 phút |
+| `media_files` | `id` UUID, unique `object_key`, `original_name`, `mime_type`, `byte_size`, `created_by`, `created_at` | Metadata ảnh riêng tư lưu trên Cloudflare R2 |
 | `offers` | `id`, `name`, `details`, `start_date`, `end_date`, `image`, `sort_order` | Khuyến mãi |
 | `salon_content` | `id` int, tên/links/contacts/branding flags | Dữ liệu công khai của salon |
 | `instagram_trend_items` | `salon_content_id`, `image_src`, `instagram_url`, `sort_order` | Trending images |
@@ -76,6 +77,7 @@ Theo thứ tự filename trong `src/migrations`:
 12. `1791445200000-EmailAuthenticationBookingPhone.ts`
 13. `1791448800000-RegistrationOtpRememberSession.ts`
 14. `1791449000000-TrustedLoginDeviceOtp.ts`
+15. `1791452400000-AddMediaFiles.ts`
 
 Tên file mô tả phạm vi, không thay thế việc đọc nội dung migration khi rollback/cutover.
 
