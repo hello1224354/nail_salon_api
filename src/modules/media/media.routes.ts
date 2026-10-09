@@ -2,7 +2,7 @@ import { Router, raw } from "express";
 import { AppError } from "../../common/errors";
 import { authenticate } from "../../common/middleware/auth.middleware";
 import { requireRole } from "../../common/middleware/role.middleware";
-import { publicReadRateLimiter } from "../../common/middleware/rate-limit.middleware";
+import { mediaUploadRateLimiter, publicReadRateLimiter } from "../../common/middleware/rate-limit.middleware";
 import { UserRole } from "../users/users.entity";
 import { parseUuidParam } from "../../common/validators";
 import * as media from "./media.service";
