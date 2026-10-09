@@ -242,6 +242,7 @@ export type Appointment = {
     booking_group_id?: string | null;
     party_size: number;
     staff_id: string;
+    assigned_staff?: Array<{ id: string; full_name: string }>;
     branch_id: number;
     start_time: string;
     end_time: string;
