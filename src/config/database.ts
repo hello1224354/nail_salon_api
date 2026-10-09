@@ -7,6 +7,7 @@ import { env } from "./env";
 import { AppointmentService } from "../modules/appointments/appointment-services.entity";
 import { Branch } from "../modules/branches/branches.entity";
 import { StaffBookingSlot } from "../modules/appointments/staff-booking-slots.entity";
+import { AppointmentStaffAssignment } from "../modules/appointments/appointment-staff-assignment.entity";
 import { AuditLog } from "../modules/audit/audit-log.entity";
 import { Offer } from "../modules/offers/offer.entity";
 import { RefreshSession } from "../modules/users/refresh-session.entity";
@@ -37,6 +38,7 @@ export const AppDataSource = new DataSource({
         User,
         Branch,
         StaffBookingSlot,
+        AppointmentStaffAssignment,
         AuditLog,
         Offer,
         RefreshSession,
