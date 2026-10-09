@@ -647,7 +647,7 @@ export function BookingForm() {
                 <div className="mx-5 h-px bg-line sm:mx-7 lg:mx-8" />
 
                 <section className="p-5 sm:p-7 lg:p-8">
-                    <SectionHeading number="05" title="Giờ còn trống" helper={`Chỉ hiện những giờ còn đủ nhân viên cho ${partySize} người.`} />
+                    <SectionHeading number="05" title="Giờ còn trống" />
                     <div className="mt-6 sm:pl-[60px]">
                         {selectedServiceIds.length === 0 ? (
                             <div className="rounded-[14px] border border-line bg-cream px-4 py-5 text-xs leading-5 text-muted">
@@ -709,7 +709,6 @@ export function BookingForm() {
                     <SectionHeading
                         number="06"
                         title="Thông tin liên hệ"
-                        helper="Số điện thoại chỉ dùng cho lịch hẹn này và không được lưu vào tài khoản."
                     />
                     <div className="mt-6 grid gap-4 sm:grid-cols-2 sm:pl-[60px]">
                         <div className="rounded-[12px] border border-line bg-cream px-4 py-3">
