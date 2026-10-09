@@ -6,9 +6,6 @@ export class MediaFile {
     @PrimaryColumn({ type: "varchar", length: 36 })
     id: string;
 
-    @Column({ type: "varchar", length: 180, unique: true })
-    object_key: string;
-
     @Column({ type: "varchar", length: 255 })
     original_name: string;
 
@@ -23,4 +20,8 @@ export class MediaFile {
 
     @CreateDateColumn({ type: "datetime", precision: 6 })
     created_at: Date;
+
+    // Avoid fetching image bytes for paginated admin metadata lists.
+    @Column({ type: "mediumblob", select: false })
+    image_data: Buffer;
 }
