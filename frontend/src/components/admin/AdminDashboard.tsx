@@ -135,10 +135,12 @@ const selectClass = inputClass;
 
 function Modal({
     title,
+    description,
     onClose,
     children,
 }: {
     title: string;
+    description?: string;
     onClose: () => void;
     children: React.ReactNode;
 }) {
@@ -158,6 +160,7 @@ function Modal({
                     <div>
                         <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-accent">Quản trị</p>
                         <h2 className="mt-2 font-serif text-3xl tracking-[-0.025em]">{title}</h2>
+                        {description ? <p className="mt-2 text-xs leading-5 text-muted">{description}</p> : null}
                     </div>
                     <button
                         type="button"
@@ -343,6 +346,7 @@ export function AdminDashboard() {
         router.refresh();
     }
 
+    const branchCount = data.branches.length;
     const serviceCount = data.services.length;
     const staffCount = data.staff.length;
 
@@ -679,6 +683,7 @@ export function AdminDashboard() {
                                     <Overview
                                         data={data}
                                         todayStats={data.todayStats}
+                                        branchCount={branchCount}
                                         serviceCount={serviceCount}
                                         staffCount={staffCount}
                                         setTab={setTab}
@@ -809,6 +814,7 @@ export function AdminDashboard() {
             {modal === "appointment" && editingAppointment ? (
                 <Modal
                     title="Sửa lịch hẹn"
+                    description="Cập nhật thông tin của lịch hẹn hiện có."
                     onClose={() => { setModal(null); setEditingAppointment(null); }}
                 >
                     <AdminAppointmentForm
@@ -917,6 +923,7 @@ export function AdminDashboard() {
             {modal === "staff" ? (
                 <Modal
                     title={editingStaff ? "Sửa nhân viên" : "Thêm nhân viên"}
+                    description="Chỉ chỉnh sửa tài khoản STAFF. Đổi email hoặc mật khẩu sẽ đăng xuất các phiên nhân viên hiện tại."
                     onClose={() => { setModal(null); setEditingStaff(null); }}
                 >
                     <form onSubmit={saveStaff} className="grid gap-5 md:grid-cols-2">
@@ -943,6 +950,7 @@ export function AdminDashboard() {
                         <Field label="Kết thúc làm việc">
                             <input name="work_end_time" type="time" min="09:15" max="20:30" step={900} defaultValue={editingStaff?.work_end_time ?? "20:30"} className={inputClass} required />
                         </Field>
+                        <p className="md:col-span-2 text-xs text-muted">Giờ làm hằng ngày, theo giờ Việt Nam. Nhân viên part-time: 13:00–20:00. Thay đổi ca không được xung đột lịch đã đặt.</p>
                         <Field label={editingStaff ? "Mật khẩu mới (bỏ trống nếu giữ nguyên)" : "Mật khẩu khởi tạo"} span>
                             <input name="password" type="password" autoComplete="new-password" minLength={8} className={inputClass} required={!editingStaff} />
                         </Field>
@@ -959,6 +967,7 @@ export function AdminDashboard() {
             {modal === "offer" ? (
                 <Modal
                     title={editingOffer ? "Sửa ưu đãi" : "Thêm ưu đãi"}
+                    description="Ưu đãi sẽ hiện trên website trong đúng khoảng ngày bạn đã đặt."
                     onClose={() => {
                         setModal(null);
                         setEditingOffer(null);
@@ -1007,21 +1016,23 @@ export function AdminDashboard() {
 function Overview({
     data,
     todayStats,
+    branchCount,
     serviceCount,
     staffCount,
     setTab,
 }: {
     data: LoadState;
     todayStats: AdminTodaySummary;
+    branchCount: number;
     serviceCount: number;
     staffCount: number;
     setTab: (tab: TabKey) => void;
 }) {
     const cards = [
-        { label: "Lịch đang tải", value: data.appointmentTotal },
-        { label: "Chờ xác nhận hôm nay", value: todayStats.pending },
-        { label: "Nhân viên", value: staffCount },
-        { label: "Dịch vụ", value: serviceCount },
+        { label: "Lịch đang tải", value: data.appointmentTotal, note: "Tất cả lịch hẹn trong hệ thống" },
+        { label: "Chờ xác nhận hôm nay", value: todayStats.pending, note: `${todayStats.total} lịch trong ngày` },
+        { label: "Nhân viên", value: staffCount, note: "Nhân viên đang có trong hệ thống" },
+        { label: "Dịch vụ", value: serviceCount, note: `${branchCount} chi nhánh` },
     ];
 
     const upcoming = data.appointments
@@ -1035,6 +1046,7 @@ function Overview({
                     <article key={card.label} className="rounded-[20px] border border-line bg-white p-5 shadow-[0_8px_30px_rgba(48,40,35,0.035)]">
                         <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">{card.label}</p>
                         <p className="mt-4 font-serif text-4xl tracking-[-0.035em]">{card.value}</p>
+                        <p className="mt-2 text-[11px] text-muted">{card.note}</p>
                     </article>
                 ))}
             </div>
@@ -1150,6 +1162,7 @@ function AppointmentsPanel({
                 <div>
                     <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-accent">Quản lý lịch hẹn</p>
                     <h2 className="mt-1 font-serif text-3xl">Lịch hẹn</h2>
+                    <p className="mt-2 text-xs text-muted">Tra cứu lịch hẹn từ trước đến nay, bao gồm lịch đã hoàn thành và đã hủy.</p>
                 </div>
                 <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                     <select value={branchFilter} onChange={(event) => setBranchFilter(event.target.value)} className="h-10 rounded-xl border border-line bg-cream px-3 text-xs outline-none">

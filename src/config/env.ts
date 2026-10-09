@@ -67,7 +67,6 @@ export const env = {
     CORS_ORIGIN: isProduction
         ? asRequiredString("CORS_ORIGIN")
         : process.env.CORS_ORIGIN ?? "http://localhost:3001",
-    CORS_EXTRA_ORIGINS: asOptionalString("CORS_EXTRA_ORIGINS") ?? "",
     DB_HOST: isProduction
         ? asRequiredString("DB_HOST")
         : process.env.DB_HOST ?? "localhost",
