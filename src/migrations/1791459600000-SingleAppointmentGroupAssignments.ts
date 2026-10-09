@@ -25,10 +25,36 @@ export class SingleAppointmentGroupAssignments1791459600000 implements Migration
                 OR COUNT(DISTINCT end_time) > 1
                 OR COUNT(DISTINCT status) > 1
                 OR COUNT(DISTINCT party_size) > 1
+                OR COUNT(*) <> MAX(party_size)
+                OR COUNT(DISTINCT staff_id) <> COUNT(*)
+                OR COUNT(DISTINCT customer_full_name) > 1
+                OR COUNT(DISTINCT customer_phone) > 1
+                OR COUNT(DISTINCT COALESCE(customer_email, '')) > 1
             LIMIT 1
         `) as Array<{ booking_group_id: string }>;
         if (inconsistent.length > 0) {
             throw new Error("Legacy booking group has inconsistent members; reconcile before migrating");
+        }
+
+        // Prevent dropping one member's independently edited service/price
+        // snapshot when consolidating an old group.
+        const differingServices = await queryRunner.query(`
+            SELECT a.booking_group_id
+            FROM appointments a
+            LEFT JOIN (
+                SELECT appointment_id,
+                    SHA2(GROUP_CONCAT(CONCAT_WS(':', service_id, service_name, price, duration_minutes)
+                        ORDER BY service_id SEPARATOR '|'), 256) AS fingerprint
+                FROM appointment_services
+                GROUP BY appointment_id
+            ) snapshots ON snapshots.appointment_id = a.id
+            WHERE a.booking_group_id IS NOT NULL
+            GROUP BY a.booking_group_id
+            HAVING COUNT(DISTINCT COALESCE(snapshots.fingerprint, '')) > 1
+            LIMIT 1
+        `) as Array<{ booking_group_id: string }>;
+        if (differingServices.length > 0) {
+            throw new Error("Legacy booking group has inconsistent services; reconcile before migrating");
         }
 
         await queryRunner.query(`ALTER TABLE \`appointments\` ADD \`merged_into_id\` varchar(36) NULL`);
