@@ -22,7 +22,7 @@ docker compose up -d
 docker compose ps
 ```
 
-Chỉ dùng `DB_SYNCHRONIZE=true` trong **local development**, không bao giờ dùng ở production. Database có sẵn dữ liệu/migration nên **backup trước khi thay đổi phương thức tạo schema**. Với local DB hoàn toàn mới, dev TypeORM có thể tự đồng bộ schema; để xác nhận migration pipeline tương tự production, đặt `DB_SYNCHRONIZE=false`, build rồi chạy migrations trước API.
+`DB_SYNCHRONIZE=true` được hỗ trợ trong môi trường local để tạo schema phục vụ phát triển; production luôn sử dụng `false`. Với cơ sở dữ liệu cần tái hiện schema production, cấu hình `DB_SYNCHRONIZE=false` và chạy migrations sau bước build, trước khi khởi động API. Bất kỳ thay đổi schema trên cơ sở dữ liệu đã có dữ liệu đều yêu cầu backup trước.
 
 ## 2. Backend
 
@@ -62,7 +62,7 @@ npm run build
 npm run start
 ```
 
-Lưu ý: `npm run start` của Next không đặt port 3001 như script dev; cần cấu hình `PORT=3001` khi chạy production riêng.
+Lệnh `npm run start` của Next không được cấu hình sẵn để sử dụng port 3001 như script dev. Có thể đặt `PORT=3001` khi khởi động bản build Next.js riêng.
 
 ## 4. Biến môi trường backend
 
