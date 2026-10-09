@@ -13,7 +13,7 @@ flowchart LR
     GitHub -.-> Express
 ```
 
-Frontend triển khai trên **Vercel**, backend trên **Railway**. Browser gọi cùng origin `/api/...`; `frontend/next.config.ts` rewrite đến origin `NEXT_PUBLIC_API_BASE_URL`. Backend expose `GET /health` và các namespace `/api/{users,appointments,services,staffs,branches,offers,site-content}`.
+Frontend triển khai trên **Vercel**, backend trên **Railway**. Trình duyệt gọi endpoint cùng origin `/api/...`; Next.js rewrite request sang origin cấu hình bởi `NEXT_PUBLIC_API_BASE_URL`. Express cung cấp `GET /health` cùng các namespace `/api/{users,appointments,services,staffs,branches,offers,site-content}`.
 
 ## Phân tầng & đường dẫn source
 
@@ -81,6 +81,6 @@ flowchart TD
 - `start_time`/`end_time` được lưu và truyền theo UTC, quy tắc nghiệp vụ và hiển thị dùng `Asia/Ho_Chi_Minh`.
 - Thống kê `/api/appointments/admin/today-summary` tính theo ngày Việt Nam riêng, không phụ thuộc pagination/filter admin.
 
-## Ranh giới hiện hữu
+## Phạm vi hệ thống hiện tại
 
 Không thấy trong source: thanh toán online, quản lý ca làm việc nhân viên theo lịch riêng, hàng đợi email retry bền vững, realtime websocket, hoặc endpoint khách hàng tự hủy lịch. Chi tiết xem [BOOKING](BOOKING.md), [AUTH](AUTH-SECURITY.md), [DATABASE](DATABASE.md).

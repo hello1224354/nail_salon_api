@@ -1,6 +1,6 @@
 # TESTING-OPERATIONS — Kiểm thử & vận hành
 
-Đối tượng: người phát triển và admin vận hành. Phân biệt **CI unit/build** với **manual E2E ở môi trường thật**; không báo “đã test thực tế” khi chỉ chạy CI.
+Tài liệu này mô tả các bước kiểm thử trước phát hành, bộ kiểm thử tích hợp chạy tự động và công tác theo dõi sau triển khai. CI kiểm tra mã nguồn và các kịch bản đã tự động hóa; kiểm thử end-to-end trên website là phạm vi xác nhận riêng.
 
 ## Test commands
 
@@ -37,7 +37,7 @@ npm run migration:run
 npm run test:booking:integration
 ```
 
-Các test này không tạo/đọc bookings production. Tuy nhiên chúng là **integration tests**, không phải test qua HTTP/JWT hoặc stress benchmark p95. Đừng tuyên bố load-test throughput khi chưa đo.
+Bộ test sử dụng database MySQL độc lập, không truy cập booking production. Phạm vi là **tính đúng đắn của booking service và transaction**; không bao gồm HTTP/JWT end-to-end hoặc đo throughput, latency p95 và khả năng chịu tải.
 
 ### Frontend, từ `frontend`
 
@@ -115,12 +115,12 @@ Mô tả job CI thực tế ở `.github/workflows/security-hardening-ci.yml`. `
 - `src/jobs/retention-cleanup.ts` script dọn audit/security data đã hết hạn theo 90/7/30 ngày. VPS Compose chạy service retention mỗi 24h.
 - Trên Railway, cần **xác minh scheduler/cron thực sự được bật** thay vì giả định script luôn chạy.
 - Backup/restore không được tạo two active writers hoặc phục hồi trạng thái mất booking.
-- Có kế hoạch phục hồi DB secrets, user access và kiểm thử booking sau disaster recovery.
+- Kế hoạch phục hồi bao gồm môi trường DB, quyền truy cập dịch vụ và kiểm thử tính toàn vẹn booking sau khi phục hồi.
 
 ## Observability và hạn chế đã biết
 
 - Email admin là fire-and-forget sau commit, **chưa có durable retry/outbox**. Vì vậy không xác nhận “chắc chắn đã gửi email” chỉ từ HTTP 201.
-- Không có E2E Playwright/Cypress trong source được liệt kê; bộ test `src/tests` hiện tập trung regression logic (trusted-login, notification format, admin filters).
+- Bộ test tự động hiện gồm unit/regression tests và **MySQL integration tests với các yêu cầu đặt lịch đồng thời**. Chưa có bộ browser E2E bằng Playwright/Cypress trong CI.
 - UI lịch cá nhân hiện fetch page=1 limit=100; khi dữ liệu tăng cần review pagination.
 - Không có scheduler retention Railway được định nghĩa trong source; không suy diễn đã hoạt động.
 

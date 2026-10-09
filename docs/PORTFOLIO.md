@@ -42,13 +42,13 @@ sequenceDiagram
 
 **Source:** [booking service](../src/modules/appointments/appointments.service.ts), [slot entity](../src/modules/appointments/staff-booking-slots.entity.ts), [booking docs](BOOKING.md).
 
-**Verification:** GitHub Actions provisions an isolated MySQL 8 database, applies the application's TypeORM migrations and runs integration tests against the actual booking service. The suite verifies 16 concurrent booking attempts, atomic group allocation, rollback of partial reservations and adjacent appointments. These tests establish correctness under the exercised contention scenarios; they are not a throughput benchmark.
+**Verification:** GitHub Actions provisions an isolated MySQL 8 database, applies the application's TypeORM migrations and runs integration tests against the actual booking service. The suite verifies 16 concurrent booking attempts, atomic group allocation, rollback of partial reservations and adjacent appointments. These tests establish correctness under the exercised contention scenarios. They do not measure production throughput or latency.
 
 ## Atomic group bookings
 
 For a party of N, all assigned employees must be free at the *same start time* for the *full duration* of selected services. A single UUID `booking_group_id` links N appointment rows with per-staff assignment, and service prices/durations are snapshotted per appointment.
 
-**Why not accept `staff_id` from the browser?** The user-facing contract deliberately restricts customers to selecting available start times. Server-side allocation prevents clients from selecting an unqualified/busy employee or circumventing availability calculations.
+**Server-side staff assignment:** The booking contract allows customers to select available start times rather than employees. The server determines eligible staff, preventing the client from bypassing staff eligibility and availability checks.
 
 **Constraint:** Appointments can overlap across **different** employees; the forbidden case is overlapping reservations for the **same** employee.
 
@@ -79,7 +79,7 @@ Customers receive an easy-to-read code: the first 8 hexadecimal characters of th
 
 An email to configured ADMIN recipients is triggered **after** appointment transaction commit. The booking succeeds even when Gmail is unavailable, so a third-party failure does not invalidate the salon's reservation.
 
-**Known limitation:** Notification is currently best-effort. Process termination or Gmail outage can lose a notification. For a stronger SLA, write an outbox record in the same DB transaction as the booking, then let a worker deliver with bounded retries, observability and a deduplication strategy.
+**Reliability boundary:** Notification is currently best-effort. Process termination or a Gmail outage can prevent delivery after a booking has committed. A transactional outbox with a separate worker, bounded retries and deduplication would provide stronger delivery guarantees.
 
 **Source:** [notification service](../src/modules/appointments/booking-notification.service.ts).
 
