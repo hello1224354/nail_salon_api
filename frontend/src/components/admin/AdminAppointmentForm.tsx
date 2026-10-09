@@ -6,6 +6,7 @@ import { formatVnd, shortBranchName } from "@/lib/studio-data";
 
 // ADMIN may adjust an existing appointment, never create one on behalf of a customer.
 export type AppointmentPayload = {
+    branch_id?: number;
     customer_phone?: string;
     staff_id?: string;
     service_ids?: string[];
@@ -45,7 +46,7 @@ export function AdminAppointmentForm({
     onCancel: () => void;
 }) {
     const [branchId, setBranchId] = useState(appointment.branch_id);
-    const [staffId, setStaffId] = useState(appointment.staff_id);
+    const [staffId, setStaffId] = useState("");
     const [serviceIds, setServiceIds] = useState<string[]>(
         appointment.appointment_services?.map((service) => service.service_id) ?? []
     );
@@ -71,12 +72,12 @@ export function AdminAppointmentForm({
         event.preventDefault();
         setFormError("");
 
-        if (!branchId || !staffId || !serviceIds.length || !localDateTime) {
-            setFormError("Chọn chi nhánh, nhân viên, ít nhất một dịch vụ và thời gian hẹn.");
+        if (!branchId || !serviceIds.length || !localDateTime) {
+            setFormError("Chọn chi nhánh, ít nhất một dịch vụ và thời gian hẹn.");
             return;
         }
 
-        if (branchStaff.every((person) => person.id !== staffId) ||
+        if ((staffId && branchStaff.every((person) => person.id !== staffId)) ||
             serviceIds.some((id) => branchServices.every((service) => service.id !== id))) {
             setFormError("Nhân viên và dịch vụ phải cùng chi nhánh, đồng thời đang nhận đặt lịch.");
             return;
@@ -99,7 +100,9 @@ export function AdminAppointmentForm({
         if (customerPhone.trim() !== (appointment.customer?.phone ?? "")) {
             payload.customer_phone = customerPhone.trim();
         }
-        if (staffId !== appointment.staff_id) payload.staff_id = staffId;
+        if (branchId !== appointment.branch_id) payload.branch_id = branchId;
+        // Leaving staff empty delegates *all* assignments to backend auto-allocation.
+        if (staffId) payload.staff_id = staffId;
         if (serviceIds.length !== oldIds.length || serviceIds.some((id) => !oldIds.includes(id))) {
             payload.service_ids = serviceIds;
         }
@@ -146,7 +149,7 @@ export function AdminAppointmentForm({
                     <span className={captionClass}>Nhân viên thực hiện</span>
                     <select className={inputClass} value={staffId}
                         onChange={(event) => setStaffId(event.target.value)} required>
-                        <option value="">Chọn nhân viên</option>
+                        <option value="">Tự động gán nhân viên phù hợp</option>
                         {branchStaff.map((person) => (
                             <option key={person.id} value={person.id}>{person.full_name}</option>
                         ))}
@@ -186,7 +189,7 @@ export function AdminAppointmentForm({
             {formError ? <p role="alert" className="rounded-lg bg-[#faeeeb] p-3 text-xs text-[#854d42]">{formError}</p> : null}
             <div className="flex justify-end gap-3 border-t border-line pt-5">
                 <button type="button" onClick={onCancel} className="rounded-full border border-line px-5 py-2.5 text-xs font-semibold">Hủy</button>
-                <button type="submit" disabled={submitting || !branches.length || !branchStaff.length}
+                <button type="submit" disabled={submitting || !branches.length}
                     className="rounded-full bg-ink px-5 py-2.5 text-xs font-semibold text-white disabled:opacity-50">
                     {submitting ? "Đang lưu…" : "Lưu thay đổi"}
                 </button>
