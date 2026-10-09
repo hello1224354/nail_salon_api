@@ -26,7 +26,7 @@ Sơ đồ biểu đạt mối liên hệ **logic**; không phải mọi liên h�
 |---|---|---|
 | `users` | `id` UUID, unique nullable `email`, `phone`, `password_hash`, `role`, `token_version` | ADMIN/STAFF/CUSTOMER |
 | `branches` | `id` int, `name`, `address`, `phone`, `opening_hours` | Chi nhánh |
-| `staffs` | PK/FK `user_id`, `branch_id` | User role STAFF thuộc một branch |
+| `staffs` | PK/FK `user_id`, `branch_id`, `work_start_time`, `work_end_time` | Mỗi nhân viên có ca làm lặp lại hằng ngày theo giờ Việt Nam; mặc định 09:00–20:30, có thể chỉnh trong Admin |
 | `services` | `id` UUID, `branch_id`, `name`, `price`, `duration_minutes`, `booking_enabled`, category/description | Dịch vụ theo branch |
 | `appointments` | `id`, `user_id`, `booking_group_id`, `party_size`, customer/staff/branch snapshots, `start_time`, `end_time`, actual times, `status` | Mỗi bản ghi dành cho một staff |
 | `appointment_services` | PK (`appointment_id`, `service_id`), `service_name`, `price`, `duration_minutes` | Giá/dịch vụ tại thời điểm đặt |

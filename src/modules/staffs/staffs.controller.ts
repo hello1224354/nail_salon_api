@@ -16,6 +16,8 @@ function toPublicStaff(staff: Awaited<ReturnType<typeof staffService.getStaff>>)
         full_name: staff.user.full_name,
         phone: staff.user.phone,
         email: staff.user.email,
+        work_start_time: staff.work_start_time,
+        work_end_time: staff.work_end_time,
     };
 }
 
@@ -27,6 +29,8 @@ function toAdminStaff(staff: NonNullable<Awaited<ReturnType<typeof staffService.
         full_name: staff.user.full_name,
         phone: staff.user.phone,
         email: staff.user.email,
+        work_start_time: staff.work_start_time,
+        work_end_time: staff.work_end_time,
         created_at: staff.created_at,
         updated_at: staff.updated_at,
     };

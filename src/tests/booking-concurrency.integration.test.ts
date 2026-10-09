@@ -19,6 +19,7 @@ import { StaffBookingSlot } from "../modules/appointments/staff-booking-slots.en
 import { Branch } from "../modules/branches/branches.entity";
 import { Service } from "../modules/services/service.entity";
 import { Staff } from "../modules/staffs/staffs.entity";
+import { updateStaff } from "../modules/staffs/staffs.service";
 import { User, UserRole } from "../modules/users/users.entity";
 
 const PARTICIPANTS = 16;
@@ -250,4 +251,38 @@ test("adjacent intervals [start, end) remain bookable without a staff buffer", a
     assert.equal(first.staff_id, second.staff_id);
     assert.equal((await slotsFor(fixture)).length, 4);
     console.log("PASS: adjacent appointments reserve four disjoint 15-minute slots");
+});
+
+
+test("part-time 13:00–20:00 shifts change availability and reject out-of-shift group bookings", async () => {
+    const fixture = await seedFixture("part-time-hours", 3, 2);
+    const staffRepo = AppDataSource.getRepository(Staff);
+    for (const staff of fixture.staffUsers.slice(1)) {
+        await staffRepo.update({ user_id: staff.id }, { work_start_time: "13:00", work_end_time: "20:00" });
+    }
+
+    const at10 = startInVietnamAt(10);
+    const at13 = startInVietnamAt(13);
+    const at20 = startInVietnamAt(20);
+    const day = new Date(at10.getTime() - 10 * 60 * 60 * 1000);
+    const availability = await getAvailability({ date: day, service_ids: [fixture.service.id], party_size: 2 });
+    assert.equal(availability.slots.some(slot => slot.getTime() === at10.getTime()), false, "Only the full-day employee is working at 10");
+    assert.equal(availability.slots.some(slot => slot.getTime() === at13.getTime()), true, "Two part-time employees start at 13");
+    assert.equal(availability.slots.some(slot => slot.getTime() === at20.getTime()), false, "Part-time shifts end exactly at 20");
+
+    await assert.rejects(
+        () => createAppointment(fixture.customers[0].id, UserRole.CUSTOMER, bookingAt(fixture.service, at10, 2)),
+        (error: unknown) => error instanceof AppError && error.code === "SLOT_UNAVAILABLE",
+    );
+    const booked = await createAppointment(
+        fixture.customers[0].id, UserRole.CUSTOMER, bookingAt(fixture.service, at13, 2),
+    );
+    assert.ok(booked.booking_group_id);
+    assert.equal((await appointmentsFor(fixture, at13)).length, 2);
+
+    await assert.rejects(
+        () => updateStaff(booked.staff_id, { work_start_time: "14:00", work_end_time: "20:00" }),
+        (error: unknown) => error instanceof AppError && error.code === "STAFF_SCHEDULE_CONFLICT",
+        "Editing staff hours must not invalidate existing future bookings",
+    );
 });

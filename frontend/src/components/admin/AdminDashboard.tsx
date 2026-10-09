@@ -505,6 +505,8 @@ export function AdminDashboard() {
             phone: String(form.get("phone") || "").trim(),
             email: String(form.get("email") || "").trim(),
             branch_id: Number(form.get("branch_id")),
+            work_start_time: String(form.get("work_start_time") || ""),
+            work_end_time: String(form.get("work_end_time") || ""),
             ...(editingStaff ? (password ? { password } : {}) : { password }),
         };
 
@@ -942,6 +944,13 @@ export function AdminDashboard() {
                         <Field label="Email đăng nhập">
                             <input name="email" type="email" defaultValue={editingStaff?.email ?? ""} className={inputClass} required />
                         </Field>
+                        <Field label="Bắt đầu làm việc">
+                            <input name="work_start_time" type="time" min="09:00" max="20:15" step={900} defaultValue={editingStaff?.work_start_time ?? "09:00"} className={inputClass} required />
+                        </Field>
+                        <Field label="Kết thúc làm việc">
+                            <input name="work_end_time" type="time" min="09:15" max="20:30" step={900} defaultValue={editingStaff?.work_end_time ?? "20:30"} className={inputClass} required />
+                        </Field>
+                        <p className="md:col-span-2 text-xs text-muted">Giờ làm hằng ngày, theo giờ Việt Nam. Nhân viên part-time: 13:00–20:00. Thay đổi ca không được xung đột lịch đã đặt.</p>
                         <Field label={editingStaff ? "Mật khẩu mới (bỏ trống nếu giữ nguyên)" : "Mật khẩu khởi tạo"} span>
                             <input name="password" type="password" autoComplete="new-password" minLength={8} className={inputClass} required={!editingStaff} />
                         </Field>
@@ -1399,12 +1408,13 @@ function StaffPanel({
         <section className="overflow-hidden rounded-[22px] border border-line bg-white">
             <PanelHeading eyebrow="Nhân sự" title="Nhân viên" action="Thêm nhân viên" onAction={onAdd} />
             <div className="overflow-x-auto">
-                <table className="min-w-[760px] w-full text-left text-xs">
+                <table className="min-w-[860px] w-full text-left text-xs">
                     <thead className="bg-[#f8f5f1] text-[9px] uppercase tracking-[0.14em] text-muted">
                         <tr>
                             <th className="px-5 py-3">Nhân viên</th>
                             <th className="px-5 py-3">Liên hệ</th>
                             <th className="px-5 py-3">Chi nhánh</th>
+                            <th className="px-5 py-3">Giờ làm</th>
                             <th className="px-5 py-3">Thao tác</th>
                         </tr>
                     </thead>
@@ -1417,6 +1427,7 @@ function StaffPanel({
                                     <p className="mt-1 text-[10px] text-muted">{person.email || "Chưa có email"}</p>
                                 </td>
                                 <td className="px-5 py-4">{shortBranchName(branches.find((branch) => branch.id === person.branch_id)?.name ?? person.branch_name ?? `#${person.branch_id}`)}</td>
+                                <td className="px-5 py-4 whitespace-nowrap font-semibold">{person.work_start_time}–{person.work_end_time}</td>
                                 <td className="px-5 py-4">
                                     <div className="flex items-center gap-3">
                                         <button type="button" onClick={() => onEdit(person)} className="font-semibold text-accent">

@@ -11,6 +11,9 @@ import { AppointmentService } from "./appointment-services.entity";
 import { StaffBookingSlot } from "./staff-booking-slots.entity";
 import { randomUUID } from "crypto";
 import { notifyAdminsOfNewBooking } from "./booking-notification.service";
+import { Staff } from "../staffs/staffs.entity";
+import { isWithinStaffWorkingHours } from "../staffs/staff-working-hours";
+import { getVietnamMinuteOfDay } from "./booking-time";
 
 const appointmentRepo = AppDataSource.getRepository(Appointment);
 
@@ -29,23 +32,7 @@ function formatMinuteOfDay(minuteOfDay: number) {
     return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
 }
 
-function getBusinessMinuteOfDay(date: Date) {
-    const parts = new Intl.DateTimeFormat("vi-VN", {
-        timeZone: BUSINESS_TIMEZONE,
-        hour: "2-digit",
-        minute: "2-digit",
-        hourCycle: "h23",
-    }).formatToParts(date);
-
-    const getPart = (type: Intl.DateTimeFormatPartTypes) => {
-        return parts.find((part) => part.type === type)?.value ?? "";
-    };
-
-    const hour = Number(getPart("hour"));
-    const minute = Number(getPart("minute"));
-
-    return hour * 60 + minute;
-}
+const getBusinessMinuteOfDay = getVietnamMinuteOfDay;
 
 function assertFifteenMinuteAligned(startTime: Date) {
     const businessStartMinute = getBusinessMinuteOfDay(startTime);
@@ -216,6 +203,7 @@ export const getAvailability = async (data: GetAvailabilityQueryDto) => {
         let availableStaffCount = 0;
 
         for (const staff of staffs) {
+            if (!isWithinStaffWorkingHours(staff, getBusinessMinuteOfDay(startTime), getBusinessMinuteOfDay(endTime))) continue;
             const hasOverlap = appointments.some((appointment) => {
                 return (
                     appointment.staff_id === staff.user_id &&
@@ -339,8 +327,15 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
 
         const slotStarts = getRequiredSlotStarts(data.start_time, endTime);
         const reservedStaffs: typeof candidateStaffs = [];
+        const transactionStaffRepo = manager.getRepository(Staff);
 
         for (const staff of candidateStaffs) {
+            // A locking read ensures ADMIN shift edits cannot race this assignment.
+            const liveSchedule = await transactionStaffRepo.findOne({
+                where: { user_id: staff.user_id },
+                lock: { mode: "pessimistic_read" },
+            });
+            if (!liveSchedule || !isWithinStaffWorkingHours(liveSchedule, businessStartMinute, businessEndMinute)) continue;
             const overlapAppointment = await transactionAppointmentRepo.findOneBy({
                 staff_id: staff.user_id,
                 status: In([
@@ -869,6 +864,13 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
         );
 
         if (hasScheduleChanges) {
+            const assignedStaff = await manager.getRepository(Staff).findOne({
+                where: { user_id: targetStaffId },
+                lock: { mode: "pessimistic_read" },
+            });
+            if (!assignedStaff || !isWithinStaffWorkingHours(assignedStaff, getBusinessMinuteOfDay(startTime), getBusinessMinuteOfDay(endTime))) {
+                throw new AppError("Appointment is outside employee working hours", 409, "STAFF_OUTSIDE_WORK_HOURS");
+            }
             await releaseStaffSlots(
                 manager,
                 appointment.staff_id,

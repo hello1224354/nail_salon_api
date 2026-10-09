@@ -290,6 +290,8 @@ export type AdminStaff = {
     full_name: string;
     phone: string;
     email: string | null;
+    work_start_time: string;
+    work_end_time: string;
     created_at?: string;
     updated_at?: string;
 };

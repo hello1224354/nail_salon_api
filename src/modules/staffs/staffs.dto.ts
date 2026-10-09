@@ -1,5 +1,6 @@
 import { AppError } from "../../common/errors";
 import { parseRegisterUserDto, parseVietnamesePhone } from "../users/users.dto";
+import { assertValidWorkingHours, DEFAULT_WORK_START, DEFAULT_WORK_END } from "./staff-working-hours";
 
 export interface CreateStaffDto {
     full_name: string;
@@ -7,6 +8,8 @@ export interface CreateStaffDto {
     email: string;
     password: string;
     branch_id: number;
+    work_start_time: string;
+    work_end_time: string;
 }
 
 export interface UpdateStaffDto {
@@ -15,6 +18,8 @@ export interface UpdateStaffDto {
     phone?: string;
     email?: string;
     password?: string;
+    work_start_time?: string;
+    work_end_time?: string;
 }
 
 export interface GetStaffsQueryDto {
@@ -58,7 +63,14 @@ export function parseCreateStaffDto(body: unknown): CreateStaffDto {
 
     if (!Number.isInteger(data.branch_id) || (data.branch_id as number) <= 0 || (data.branch_id as number) > 2_147_483_647) throw new AppError("Branch_id must be an integer between 1 and 2147483647", 400, "VALIDATION_ERROR");
 
+    const workStart = data.work_start_time === undefined ? DEFAULT_WORK_START : data.work_start_time;
+    const workEnd = data.work_end_time === undefined ? DEFAULT_WORK_END : data.work_end_time;
+    if (typeof workStart !== "string" || typeof workEnd !== "string") throw new AppError("Working hours must be strings", 400, "INVALID_STAFF_WORK_HOURS");
+    assertValidWorkingHours(workStart, workEnd);
+
     return {
+        work_start_time: workStart,
+        work_end_time: workEnd,
         full_name: userData.full_name,
         phone,
         email: userData.email,
@@ -77,6 +89,17 @@ export function parseUpdateStaffDto(body: unknown): UpdateStaffDto {
     const result: UpdateStaffDto = {};
 
     if (data.branch_id !== undefined) result.branch_id = data.branch_id as number;
+    if (data.work_start_time !== undefined) {
+        if (typeof data.work_start_time !== "string") throw new AppError("Invalid work start time", 400, "INVALID_STAFF_WORK_HOURS");
+        result.work_start_time = data.work_start_time;
+    }
+    if (data.work_end_time !== undefined) {
+        if (typeof data.work_end_time !== "string") throw new AppError("Invalid work end time", 400, "INVALID_STAFF_WORK_HOURS");
+        result.work_end_time = data.work_end_time;
+    }
+    if (result.work_start_time !== undefined && result.work_end_time !== undefined) {
+        assertValidWorkingHours(result.work_start_time, result.work_end_time);
+    }
     if (data.full_name !== undefined) {
         if (typeof data.full_name !== "string" || !data.full_name.trim() || data.full_name.trim().length > 255) {
             throw new AppError("Full_name must be between 1 and 255 characters", 400, "VALIDATION_ERROR");
