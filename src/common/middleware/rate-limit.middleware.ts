@@ -107,6 +107,17 @@ export const authenticatedReadRateLimiter = rateLimit({
     },
 });
 
+export const mediaUploadRateLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    limit: 30,
+    keyGenerator: (req) => req.user!.id,
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: () => {
+        throw new AppError("Too many image uploads. Try again later", 429, "RATE_LIMIT_EXCEEDED");
+    },
+});
+
 export const availabilityRateLimiter = rateLimit({
     windowMs: 60 * 1000,
     limit: 30,

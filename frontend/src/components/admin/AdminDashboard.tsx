@@ -20,9 +20,10 @@ import {
 } from "@/lib/api";
 import { getAuthUser, logoutSession, restoreSession, type AuthUser } from "@/lib/auth";
 import { AdminAppointmentForm, type AppointmentPayload } from "./AdminAppointmentForm";
+import { MediaChooser, MediaPanel, TrendsPanel } from "./AdminMedia";
 import { formatAppointmentStatus, formatServicePrice, formatVnd, localizeBranchName, shortBranchName } from "@/lib/studio-data";
 
-type TabKey = "overview" | "appointments" | "services" | "staff" | "branches" | "offers";
+type TabKey = "overview" | "appointments" | "services" | "staff" | "branches" | "offers" | "media" | "trends";
 
 type LoadState = {
     branches: Branch[];
@@ -51,6 +52,8 @@ const tabItems: Array<{ key: TabKey; label: string; short: string }> = [
     { key: "staff", label: "Nhân viên", short: "Nhân viên" },
     { key: "branches", label: "Chi nhánh", short: "Chi nhánh" },
     { key: "offers", label: "Ưu đãi", short: "Ưu đãi" },
+    { key: "trends", label: "Hot Trend", short: "Trend" },
+    { key: "media", label: "Thư viện ảnh", short: "Ảnh" },
 ];
 
 const statusOrder = ["pending", "confirmed", "in_progress", "completed", "cancelled"];
@@ -190,6 +193,7 @@ export function AdminDashboard() {
     const [editingStaff, setEditingStaff] = useState<AdminStaff | null>(null);
     const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
     const [editingOffer, setEditingOffer] = useState<Offer | null>(null);
+    const [offerImage, setOfferImage] = useState("");
     const [appointmentStatus, setAppointmentStatus] = useState("");
     const [appointmentBranch, setAppointmentBranch] = useState("");
     const [appointmentFromDate, setAppointmentFromDate] = useState("");
@@ -785,16 +789,20 @@ export function AdminDashboard() {
                                         offers={data.offers}
                                         onAdd={() => {
                                             setEditingOffer(null);
+                                            setOfferImage("");
                                             setModal("offer");
                                         }}
                                         onEdit={(offer) => {
                                             setEditingOffer(offer);
+                                            setOfferImage(offer.image);
                                             setModal("offer");
                                         }}
                                         onDelete={deleteOffer}
                                         submitting={submitting}
                                     />
                                 ) : null}
+                                {tab === "media" ? <MediaPanel /> : null}
+                                {tab === "trends" ? <TrendsPanel /> : null}
                             </>
                         )}
                     </div>
@@ -966,9 +974,11 @@ export function AdminDashboard() {
                         <Field label="Đến ngày">
                             <input name="end_date" type="date" defaultValue={editingOffer?.end_date || ""} className={inputClass} required />
                         </Field>
-                        <Field label="Ảnh">
-                            <input name="image" defaultValue={editingOffer?.image || "/nails/nail-01.png"} className={inputClass} required />
-                        </Field>
+                        <div className="md:col-span-2">
+                            <p className="mb-2 text-xs font-semibold text-ink">Ảnh ưu đãi</p>
+                            <MediaChooser value={offerImage} onChange={setOfferImage} />
+                            <input type="hidden" name="image" value={offerImage} required />
+                        </div>
                         <Field label="Thứ tự">
                             <input name="sort_order" type="number" min="0" step="1" defaultValue={editingOffer?.sort_order ?? 0} className={inputClass} required />
                         </Field>
@@ -977,7 +987,7 @@ export function AdminDashboard() {
                         </Field>
                         <div className="flex justify-end gap-3 md:col-span-2">
                             <button type="button" onClick={() => setModal(null)} className="rounded-full border border-line px-5 py-2.5 text-xs font-semibold">Hủy</button>
-                            <button disabled={submitting} className="rounded-full bg-ink px-5 py-2.5 text-xs font-semibold text-white disabled:opacity-50">
+                            <button disabled={submitting || !offerImage} className="rounded-full bg-ink px-5 py-2.5 text-xs font-semibold text-white disabled:opacity-50">
                                 {submitting ? "Đang lưu…" : "Lưu ưu đãi"}
                             </button>
                         </div>

@@ -46,6 +46,7 @@ Backend `src/server.ts` gọi `AppDataSource.showMigrations()` ở production v�
 - `JWT_SECRET` dài/ngẫu nhiên; không tái sử dụng giữa staging/production.
 - `CORS_ORIGIN` chính xác website production; Origin check yêu cầu khớp cho refresh/logout.
 - `GMAIL_*` đủ bốn biến, Gmail OAuth sender còn hiệu lực.
+- Ảnh upload được lưu trong bảng `media_files` dưới dạng MEDIUMBLOB trong MySQL Railway. Không yêu cầu R2 hay secret bổ sung. Khi chạy migration, cần backup database trước. Hướng dẫn: [MEDIA-STORAGE](MEDIA-STORAGE.md).
 - `NEXT_PUBLIC_API_BASE_URL` cấu hình tại Vercel trước build.
 - Cookie production dùng `Secure`, cần HTTPS. Không test login thực qua HTTP.
 

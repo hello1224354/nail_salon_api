@@ -54,6 +54,8 @@ UI có thể render giờ dựa trên ISO UTC bằng timezone Việt Nam; **khô
 - Tổng quan: stats theo ngày từ `/api/appointments/admin/today-summary`.
 - Lịch hẹn: bảng lịch, chi nhánh, trạng thái, thao tác sửa/xóa, chuyển trạng thái; pagination **20 rows/page**.
 - Dịch vụ, Nhân viên, Chi nhánh, Ưu đãi: danh mục/CRUD.
+- Thư viện ảnh: upload, chọn, preview và xóa ảnh trong Railway MySQL (chỉ ADMIN). Form ưu đãi chọn ảnh từ thư viện.
+- Hot Trend: quản lý hình, tiêu đề, link Instagram và thứ tự hiển thị. Xem [MEDIA-STORAGE](MEDIA-STORAGE.md).
 
 **Filters bảng Lịch hẹn hiện tại:**
 

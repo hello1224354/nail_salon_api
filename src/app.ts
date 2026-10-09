@@ -9,6 +9,8 @@ import userRoutes from "./modules/users/users.routes";
 import branchRoutes from "./modules/branches/branches.routes";
 import offerRoutes from "./modules/offers/offers.routes";
 import siteContentRoutes from "./modules/site-content/site-content.routes";
+import mediaRoutes from "./modules/media/media.routes";
+import siteContentAdminRoutes from "./modules/site-content/site-content-admin.routes";
 import { errorHandler } from "./common/error-handler";
 import { auditMutation } from "./common/middleware/audit.middleware";
 
@@ -58,6 +60,8 @@ app.use("/api/users", userRoutes);
 app.use("/api/branches", branchRoutes);
 app.use("/api/offers", offerRoutes);
 app.use("/api/site-content", siteContentRoutes);
+app.use("/api/media", mediaRoutes);
+app.use("/api/site-content/admin", siteContentAdminRoutes);
 
 app.use((req, res) => {
     return res.status(404).json({
