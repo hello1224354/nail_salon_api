@@ -45,7 +45,7 @@ function validateTrend(data: unknown) {
 router.post("/trends", async (req, res) => {
     const parsed = validateTrend(req.body);
     const id = parsed.image_src.split("/")[3];
-    if (!await AppDataSource.getRepository(MediaFile).exist({ where: { id } })) throw new AppError("Image not found", 400, "MEDIA_NOT_FOUND");
+    if (!await AppDataSource.getRepository(MediaFile).exists({ where: { id } })) throw new AppError("Image not found", 400, "MEDIA_NOT_FOUND");
     const salon = await AppDataSource.getRepository(SalonContent).findOneBy({ id: 1 });
     if (!salon) throw new AppError("Salon content not found", 404, "SALON_CONTENT_NOT_FOUND");
     const item = await AppDataSource.getRepository(InstagramTrendItem).save({
@@ -59,7 +59,7 @@ router.put("/trends/:id", async (req, res) => {
     if (!Number.isSafeInteger(id) || id < 1) throw new AppError("Invalid trend id", 400, "VALIDATION_ERROR");
     const parsed = validateTrend(req.body);
     const mediaId = parsed.image_src.split("/")[3];
-    if (!await AppDataSource.getRepository(MediaFile).exist({ where: { id: mediaId } })) throw new AppError("Image not found", 400, "MEDIA_NOT_FOUND");
+    if (!await AppDataSource.getRepository(MediaFile).exists({ where: { id: mediaId } })) throw new AppError("Image not found", 400, "MEDIA_NOT_FOUND");
     const repo = AppDataSource.getRepository(InstagramTrendItem);
     const item = await repo.findOneBy({ id, salon_content_id: 1 });
     if (!item) throw new AppError("Trend not found", 404, "TREND_NOT_FOUND");
