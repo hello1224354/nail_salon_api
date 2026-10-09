@@ -46,7 +46,7 @@ The admin media library stores image data directly in the Railway MySQL database
 | GET | `/api/staffs` và `/api/staffs/admin` | Admin | Danh sách nhân viên |
 | GET | `/api/staffs/me` | Staff | Hồ sơ nhân viên hiện tại |
 | GET | `/api/staffs/:id` | Admin | Chi tiết nhân viên |
-| POST / PUT / DELETE | `/api/staffs` / `/api/staffs/:id` | Admin | CRUD nhân viên |
+| POST / PUT / DELETE | `/api/staffs` / `/api/staffs/:id` | Admin | CRUD nhân viên và giờ làm (`work_start_time`, `work_end_time`, định dạng `HH:mm`, bước 15 phút, trong 09:00–20:30) |
 | GET | `/api/appointments` | Auth | Phân trang, scope/role filters |
 | GET | `/api/appointments/availability` | Customer/Admin | Slot trống theo ngày/dịch vụ/số người |
 | GET | `/api/appointments/admin/today-summary` | Admin | Thống kê ngày Việt Nam |
@@ -153,7 +153,10 @@ Chi tiết chính xác về auth và cookie xem [AUTH-SECURITY](AUTH-SECURITY.md
 
 | Code | Ý nghĩa |
 |---|---|
-| `SLOT_UNAVAILABLE` | Không đủ staff/slot rảnh khi ghi |
+| `SLOT_UNAVAILABLE` | Không đủ nhân viên đang trong ca và còn slot rảnh khi ghi |
+| `INVALID_STAFF_WORK_HOURS` | Giờ làm không hợp lệ hoặc ngoài 09:00–20:30 |
+| `STAFF_SCHEDULE_CONFLICT` | Không thể đổi ca vì còn lịch hẹn tương lai ngoài ca mới |
+| `STAFF_OUTSIDE_WORK_HOURS` | Giờ hẹn được Admin chỉnh nằm ngoài ca nhân viên |
 | `APPOINTMENT_CONFLICT` | Trùng lịch staff |
 | `CUSTOMER_APPOINTMENT_CONFLICT` | Lịch của khách bị trùng (theo policy hiện hành khi phát sinh) |
 | `TOO_MANY_PENDING_APPOINTMENTS` | Tối đa 3 nhóm booking `pending` |
