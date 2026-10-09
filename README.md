@@ -18,7 +18,7 @@ A salon with multiple employees must let customers find bookable times without s
 
 | Customer experience | Staff / admin operations |
 |---|---|
-| Browse salon information, promotions, branches, service prices | Maintain services, branches, employees, promotions and R2-hosted website photos |
+| Browse salon information, promotions, branches, service prices | Maintain services, branches, employees, promotions and database-hosted website photos |
 | Register/login with email OTP and trusted-browser recognition | View a dashboard and manage appointment states |
 | Select services, party size, date and **available time** | Search all appointments by date range, branch, status or customer-facing booking code |
 | Book without choosing staff; receive confirmation code | Receive Gmail notification for a new booking |
