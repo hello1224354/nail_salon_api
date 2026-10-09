@@ -22,7 +22,9 @@ export function inspectImage(bytes: Buffer): { mime: AllowedMime; extension: str
 
 export function safeOriginalFilename(value: unknown): string {
     if (typeof value !== "string") return "uploaded-image";
-    const sanitized = value.split(/[/\\]/).pop()?.replace(/[\x00-\x1f\x7f]/g, "").trim();
+    let name = value;
+    try { name = decodeURIComponent(value); } catch { /* keep original filename */ }
+    const sanitized = name.split(/[/\\]/).pop()?.replace(/[\x00-\x1f\x7f]/g, "").trim();
     return sanitized ? sanitized.slice(0, 255) : "uploaded-image";
 }
 
