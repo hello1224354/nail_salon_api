@@ -91,18 +91,6 @@ function buildTimeGroups(): TimeGroup[] {
 
 const timeGroups = buildTimeGroups();
 
-function formatDateRange(dates: BookingDate[]) {
-    const first = dates[0];
-    const last = dates.at(-1);
-    if (!first || !last) return "";
-
-    if (first.month === last.month && first.year === last.year) {
-        return `${Number(first.day)}–${Number(last.day)} tháng ${Number(last.month)} năm ${last.year}`;
-    }
-
-    return `${Number(first.day)}/${Number(first.month)}/${first.year} – ${Number(last.day)}/${Number(last.month)}/${last.year}`;
-}
-
 function formatLongDate(value: string) {
     if (!value) return "Chọn ngày";
     return new Intl.DateTimeFormat("vi-VN", {
@@ -143,14 +131,13 @@ function isValidVietnamesePhone(value: string) {
     return /^\+84\d{9}$/.test(normalizeVietnamesePhone(value));
 }
 
-function SectionHeading({ number, title, helper }: { number: string; title: string; helper?: string }) {
+function SectionHeading({ number, title }: { number: string; title: string }) {
     return (
         <div>
             <div className="grid grid-cols-[46px_1fr] items-baseline sm:grid-cols-[60px_1fr]">
                 <span className="font-serif text-[24px] font-medium leading-none tracking-[0.05em] text-accent sm:text-[26px]">{number}</span>
                 <h2 className="font-serif text-2xl tracking-[-0.015em] sm:text-[30px]">{title}</h2>
             </div>
-            {helper ? <p className="mt-2 pl-[46px] text-xs leading-5 text-muted sm:pl-[60px]">{helper}</p> : null}
         </div>
     );
 }
@@ -491,7 +478,7 @@ export function BookingForm() {
         <form onSubmit={handleSubmit} className="grid gap-7 xl:grid-cols-[minmax(0,1fr)_420px] xl:items-start xl:gap-10">
             <div className="overflow-hidden rounded-[22px] border border-line bg-surface">
                 <section className="p-5 sm:p-7 lg:p-8">
-                    <SectionHeading number="01" title="Chi nhánh" helper="Chọn nơi bạn muốn làm móng." />
+                    <SectionHeading number="01" title="Chi nhánh" />
                     <div className="mt-6 grid gap-3 sm:grid-cols-2 sm:pl-[60px]">
                         {branches.length > 0 ? (
                             branches.map((branch) => {
@@ -528,7 +515,7 @@ export function BookingForm() {
                 <div className="mx-5 h-px bg-line sm:mx-7 lg:mx-8" />
 
                 <section className="p-5 sm:p-7 lg:p-8">
-                    <SectionHeading number="02" title="Dịch vụ" helper="Chọn dịch vụ bạn muốn làm trong lần hẹn này." />
+                    <SectionHeading number="02" title="Dịch vụ" />
                     <div className="mt-6 space-y-2 sm:pl-[60px]">
                         {servicesLoading ? (
                             Array.from({ length: 5 }, (_, index) => (
@@ -572,7 +559,6 @@ export function BookingForm() {
                     <SectionHeading
                         number="03"
                         title="Số người"
-                        helper="Nếu đi nhiều người, hệ thống sẽ tìm đủ nhân viên rảnh trong cùng khung giờ và tự sắp xếp cho từng người."
                     />
                     <div className="mt-6 sm:pl-[60px]">
                         <div className="flex max-w-sm items-center justify-between rounded-[14px] border border-line bg-cream p-3">
@@ -617,7 +603,7 @@ export function BookingForm() {
                 <div className="mx-5 h-px bg-line sm:mx-7 lg:mx-8" />
 
                 <section className="p-5 sm:p-7 lg:p-8">
-                    <SectionHeading number="04" title="Ngày" helper={`Có thể đặt lịch: ${formatDateRange(dates)}`} />
+                    <SectionHeading number="04" title="Ngày" />
                     <div className="mt-6 grid grid-cols-4 gap-2 sm:grid-cols-7 sm:pl-[60px]">
                         {dates.map((date) => {
                             const selected = date.value === selectedDate;
@@ -647,7 +633,7 @@ export function BookingForm() {
                 <div className="mx-5 h-px bg-line sm:mx-7 lg:mx-8" />
 
                 <section className="p-5 sm:p-7 lg:p-8">
-                    <SectionHeading number="05" title="Giờ còn trống" helper={`Chỉ hiện những giờ còn đủ nhân viên cho ${partySize} người.`} />
+                    <SectionHeading number="05" title="Giờ còn trống" />
                     <div className="mt-6 sm:pl-[60px]">
                         {selectedServiceIds.length === 0 ? (
                             <div className="rounded-[14px] border border-line bg-cream px-4 py-5 text-xs leading-5 text-muted">
@@ -709,7 +695,6 @@ export function BookingForm() {
                     <SectionHeading
                         number="06"
                         title="Thông tin liên hệ"
-                        helper="Số điện thoại chỉ dùng cho lịch hẹn này và không được lưu vào tài khoản."
                     />
                     <div className="mt-6 grid gap-4 sm:grid-cols-2 sm:pl-[60px]">
                         <div className="rounded-[12px] border border-line bg-cream px-4 py-3">
@@ -808,7 +793,6 @@ export function BookingForm() {
                 <section className="rounded-[20px] bg-tint p-5 sm:p-6">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-accent">Thông tin cần biết</p>
                     <p className="mt-3 font-serif text-lg">{selectedBranch?.opening_hours || "09:00–20:30"}</p>
-                    <p className="mt-3 text-xs leading-5 text-muted">Cần đổi hoặc hủy lịch, bạn có thể gọi trực tiếp cho tiệm.</p>
                     <a
                         href={selectedBranch?.phone ? `tel:${selectedBranch.phone.replace(/[^+\d]/g, "")}` : "tel:+84818798098"}
                         className="mt-3 block w-fit text-sm font-semibold hover:text-accent"
