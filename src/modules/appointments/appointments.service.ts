@@ -5,10 +5,11 @@ import { CreateAppointmentDto, GetAppointmentsQueryDto, GetAvailabilityQueryDto,
 import * as staffService from "../staffs/staffs.service";
 import * as serviceService from "../services/services.service";
 import * as branchService from "../branches/branches.service";
-import { EntityManager, In, LessThan, MoreThan, Not, QueryFailedError } from "typeorm";
+import { Between, EntityManager, In, IsNull, LessThan, MoreThan, QueryFailedError } from "typeorm";
 import { User, UserRole } from "../users/users.entity";
 import { AppointmentService } from "./appointment-services.entity";
 import { StaffBookingSlot } from "./staff-booking-slots.entity";
+import { AppointmentStaffAssignment } from "./appointment-staff-assignment.entity";
 import { randomUUID } from "crypto";
 import { notifyAdminsOfNewBooking } from "./booking-notification.service";
 import { Staff } from "../staffs/staffs.entity";
@@ -175,16 +176,15 @@ export const getAvailability = async (data: GetAvailabilityQueryDto) => {
 
     const staffIds = staffs.map((staff) => staff.user_id);
 
-    const appointments = await appointmentRepo.findBy({
-        staff_id: In(staffIds),
-        status: In([
-            AppointmentStatus.PENDING,
-            AppointmentStatus.CONFIRMED,
-            AppointmentStatus.IN_PROGRESS,
-        ]),
-        start_time: LessThan(businessCloseTime),
-        end_time: MoreThan(businessOpenTime),
+    // Reservation slots, not appointment rows, represent occupied employee capacity.
+    // One appointment may occupy the same interval for several employees.
+    const reservedSlots = await AppDataSource.getRepository(StaffBookingSlot).find({
+        where: {
+            staff_id: In(staffIds),
+            slot_start: Between(businessOpenTime, new Date(businessCloseTime.getTime() - 1)),
+        },
     });
+    const occupied = new Set(reservedSlots.map(slot => slot.staff_id + ":" + slot.slot_start.getTime()));
 
     const slots: Date[] = [];
 
@@ -204,13 +204,8 @@ export const getAvailability = async (data: GetAvailabilityQueryDto) => {
 
         for (const staff of staffs) {
             if (!isWithinStaffWorkingHours(staff, getBusinessMinuteOfDay(startTime), getBusinessMinuteOfDay(endTime))) continue;
-            const hasOverlap = appointments.some((appointment) => {
-                return (
-                    appointment.staff_id === staff.user_id &&
-                    appointment.start_time.getTime() < endTime.getTime() &&
-                    appointment.end_time.getTime() > startTime.getTime()
-                );
-            });
+            const hasOverlap = getRequiredSlotStarts(startTime, endTime)
+                .some(slot => occupied.has(staff.user_id + ":" + slot.getTime()));
 
             if (!hasOverlap) {
                 availableStaffCount += 1;
@@ -336,19 +331,8 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
                 lock: { mode: "pessimistic_read" },
             });
             if (!liveSchedule || !isWithinStaffWorkingHours(liveSchedule, businessStartMinute, businessEndMinute)) continue;
-            const overlapAppointment = await transactionAppointmentRepo.findOneBy({
-                staff_id: staff.user_id,
-                status: In([
-                    AppointmentStatus.PENDING,
-                    AppointmentStatus.CONFIRMED,
-                    AppointmentStatus.IN_PROGRESS,
-                ]),
-                start_time: LessThan(endTime),
-                end_time: MoreThan(data.start_time),
-            });
-
-            if (overlapAppointment) continue;
-
+            // The unique (staff_id, slot_start) key checks the real inventory
+            // across all appointments, including legacy reservations.
             const reserved = await tryReserveStaffSlots(
                 manager,
                 staff.user_id,
@@ -373,48 +357,42 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
         }
 
         const bookingGroupId = randomUUID();
-        const savedAppointments: Appointment[] = [];
-
-        for (const staff of reservedStaffs) {
-            const newAppointment = transactionAppointmentRepo.create({
-                user_id: ownerId,
-                booking_group_id: bookingGroupId,
-                party_size: data.party_size,
-                customer_full_name: owner.full_name,
-                customer_phone: data.customer_phone,
-                customer_email: owner.email,
-                staff_id: staff.user_id,
-                staff_full_name: staff.user.full_name,
-                branch_id: branchId,
-                branch_name: branch.name,
-                branch_address: branch.address,
-                start_time: data.start_time,
-                end_time: endTime,
-                status: AppointmentStatus.PENDING,
-            });
-
-            const savedAppointment = await transactionAppointmentRepo.save(newAppointment);
-
-            const appointmentServices = services.map((service) => {
-                return appointmentServiceRepo.create({
-                    appointment_id: savedAppointment.id,
-                    service_id: service.id,
-                    service_name: service.name,
-                    price: service.price,
-                    duration_minutes: service.duration_minutes!,
-                });
-            });
-
-            savedAppointment.appointment_services = await appointmentServiceRepo.save(
-                appointmentServices
-            );
-
-            savedAppointments.push(savedAppointment);
-        }
-
+        const primary = reservedStaffs[0];
+        // Exactly one appointment per customer submission, regardless of party_size.
+        const appointment = await transactionAppointmentRepo.save(transactionAppointmentRepo.create({
+            user_id: ownerId,
+            booking_group_id: bookingGroupId,
+            party_size: data.party_size,
+            customer_full_name: owner.full_name,
+            customer_phone: data.customer_phone,
+            customer_email: owner.email,
+            staff_id: primary.user_id,
+            staff_full_name: primary.user.full_name,
+            branch_id: branchId,
+            branch_name: branch.name,
+            branch_address: branch.address,
+            start_time: data.start_time,
+            end_time: endTime,
+            status: AppointmentStatus.PENDING,
+        }));
+        const assignments = reservedStaffs.map(staff => ({
+            appointment_id: appointment.id,
+            staff_id: staff.user_id,
+            staff_full_name: staff.user.full_name,
+        }));
+        appointment.staff_assignments = await manager.getRepository(AppointmentStaffAssignment).save(assignments);
+        appointment.appointment_services = await appointmentServiceRepo.save(services.map(service =>
+            appointmentServiceRepo.create({
+                appointment_id: appointment.id,
+                service_id: service.id,
+                service_name: service.name,
+                price: service.price,
+                duration_minutes: service.duration_minutes!,
+            })
+        ));
         return {
-            appointment: savedAppointments[0],
-            assignedStaffNames: reservedStaffs.map((staff) => staff.user.full_name),
+            appointment,
+            assignedStaffNames: reservedStaffs.map(staff => staff.user.full_name),
         };
     });
 
@@ -474,6 +452,7 @@ export const getAdminTodaySummary = async () => {
         .addSelect("SUM(CASE WHEN appointment.status = :completed THEN 1 ELSE 0 END)", "completed")
         .addSelect("SUM(CASE WHEN appointment.status = :cancelled THEN 1 ELSE 0 END)", "cancelled")
         .where("appointment.start_time >= :start AND appointment.start_time < :end", { start, end })
+        .andWhere("appointment.merged_into_id IS NULL")
         .setParameters({
             pending: AppointmentStatus.PENDING,
             confirmed: AppointmentStatus.CONFIRMED,
@@ -487,8 +466,9 @@ export const getAdminTodaySummary = async () => {
     // Compute independently: a joined query would multiply appointment counts.
     const revenue = await appointmentRepo.createQueryBuilder("appointment")
         .innerJoin("appointment.appointment_services", "service")
-        .select("COALESCE(SUM(service.price), 0)", "revenue")
+        .select("COALESCE(SUM(service.price * appointment.party_size), 0)", "revenue")
         .where("appointment.status = :completed", { completed: AppointmentStatus.COMPLETED })
+        .andWhere("appointment.merged_into_id IS NULL")
         .andWhere("appointment.actual_completed_at >= :start AND appointment.actual_completed_at < :end", { start, end })
         .getRawOne<{ revenue: string }>();
 
@@ -504,7 +484,9 @@ export const getAdminTodaySummary = async () => {
 
 export const getAllAppointments = async (userId: string, role: UserRole, query: GetAppointmentsQueryDto) => {
     const queryBuilder = appointmentRepo.createQueryBuilder("appointment")
-        .leftJoinAndSelect("appointment.appointment_services", "appointment_services");
+        .leftJoinAndSelect("appointment.appointment_services", "appointment_services")
+        .leftJoinAndSelect("appointment.staff_assignments", "staff_assignments")
+        .where("appointment.merged_into_id IS NULL");
 
     if (role === UserRole.CUSTOMER || (role === UserRole.ADMIN && query.scope === "mine")) {
         queryBuilder.andWhere("appointment.user_id = :user_id", {
@@ -517,15 +499,11 @@ export const getAllAppointments = async (userId: string, role: UserRole, query: 
 
         if (!staff) throw new AppError("Staff profile not found", 404, "STAFF_NOT_FOUND");
 
-        queryBuilder.andWhere("appointment.staff_id = :actor_staff_id", {
-            actor_staff_id: staff.user_id,
-        });
+        queryBuilder.andWhere("EXISTS (SELECT 1 FROM appointment_staff_assignments asa WHERE asa.appointment_id = appointment.id AND asa.staff_id = :actor_staff_id)", { actor_staff_id: staff.user_id });
     }
 
     if (query.staff_id !== undefined) {
-        queryBuilder.andWhere("appointment.staff_id = :filter_staff_id", {
-            filter_staff_id: query.staff_id,
-        });
+        queryBuilder.andWhere("EXISTS (SELECT 1 FROM appointment_staff_assignments asf WHERE asf.appointment_id = appointment.id AND asf.staff_id = :filter_staff_id)", { filter_staff_id: query.staff_id });
     }
 
     if (query.branch_id !== undefined) {
@@ -583,38 +561,14 @@ export const getAllAppointments = async (userId: string, role: UserRole, query: 
 };
 
 export const getAppointment = async (id: string, userId: string, role: UserRole) => {
-    if (role === UserRole.CUSTOMER) {
-        return await appointmentRepo.findOne({
-            where: {
-                id,
-                user_id: userId,
-            },
-            relations: {
-                appointment_services: true,
-            },
-        });
-    }
-
-    if (role === UserRole.STAFF) {
-        return await appointmentRepo.findOne({
-            where: {
-                id,
-                staff_id: userId,
-            },
-            relations: {
-                appointment_services: true,
-            },
-        });
-    }
-
-    return await appointmentRepo.findOne({
-        where: {
-            id,
-        },
-        relations: {
-            appointment_services: true,
-        },
+    const appointment = await appointmentRepo.findOne({
+        where: { id, merged_into_id: IsNull() },
+        relations: { appointment_services: true, staff_assignments: true },
     });
+    if (!appointment) return null;
+    if (role === UserRole.CUSTOMER && appointment.user_id !== userId) return null;
+    if (role === UserRole.STAFF && !appointment.staff_assignments.some(s => s.staff_id === userId)) return null;
+    return appointment;
 };
 
 export const updateAppointment = async (id: string, userId: string, role: UserRole, data: UpdateAppointmentDto) => {
