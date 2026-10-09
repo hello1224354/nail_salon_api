@@ -50,9 +50,9 @@ The UI leaves existing Google Drive and static images unchanged until replaced.
 
 ## Limits and operating considerations
 
-- **Storage is not unlimited or automatically free.** A 5 MiB image adds approximately 5 MiB to the database, plus backup/storage overhead. Railway storage and transfer usage continue to apply.
+- **Storage is not unlimited or automatically free.** A 5 MiB image adds approximately 5 MiB to the database, plus backup/storage overhead. The existing Railway MySQL volume currently has 500 MB allocated, so monitor its free capacity closely. Railway storage and transfer usage continue to apply.
 - **Operational trade-off:** Storing image BLOBs alongside booking data increases database size and I/O load. Suitable for a smaller image gallery and early-stage site, not an unrestricted multi-user photo hosting service.
 - **Cache:** Images use long-lived UUID URLs and a one-hour cache header. Each upload creates a new URL, so replacing an image in an offer/trend will cause the frontend to use a new URL.
-- **Validation:** JPEG/PNG/WebP signature validation and maximum request size. Images are not yet re-encoded/stripped of EXIF metadata; restrict uploads to trusted admins.
+- **Optimization:** The Admin frontend attempts to resize large photos to a maximum side of 1600 pixels and encode smaller WebP images before upload, reducing storage and download costs. The backend still validates format and size independently. Raw API uploads are not server-reencoded, so restrict uploads to trusted admins.
 - **Integrity:** Admin deletion is blocked for images referenced in offers or trends. The URLs are stored in those tables, rather than MySQL foreign keys; concurrent content updates should be handled carefully.
 - **Recovery:** Backups must include the full `media_files` BLOB data, not just table schema/metadata. Restore tests should verify image URLs and booking data.
