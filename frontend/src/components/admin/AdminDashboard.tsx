@@ -343,7 +343,6 @@ export function AdminDashboard() {
         router.refresh();
     }
 
-    const branchCount = data.branches.length;
     const serviceCount = data.services.length;
     const staffCount = data.staff.length;
 
@@ -680,7 +679,6 @@ export function AdminDashboard() {
                                     <Overview
                                         data={data}
                                         todayStats={data.todayStats}
-                                        branchCount={branchCount}
                                         serviceCount={serviceCount}
                                         staffCount={staffCount}
                                         setTab={setTab}
@@ -1009,14 +1007,12 @@ export function AdminDashboard() {
 function Overview({
     data,
     todayStats,
-    branchCount,
     serviceCount,
     staffCount,
     setTab,
 }: {
     data: LoadState;
     todayStats: AdminTodaySummary;
-    branchCount: number;
     serviceCount: number;
     staffCount: number;
     setTab: (tab: TabKey) => void;
