@@ -66,7 +66,7 @@ export function MediaChooser({
             });
             onChange(result.url);
             setPage(1);
-            await load();
+            setList(await apiRequest<MediaList>("/api/media?page=1"));
         } catch (err) {
             setError(getApiErrorMessage(err, "Không tải ảnh lên được."));
         } finally {
