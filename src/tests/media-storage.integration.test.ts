@@ -6,6 +6,8 @@ import "reflect-metadata";
 import assert from "node:assert/strict";
 import { before, after, test } from "node:test";
 import { AppDataSource } from "../config/database";
+import { app } from "../app";
+import type { AddressInfo } from "node:net";
 import { AppError } from "../common/errors";
 import { Offer } from "../modules/offers/offer.entity";
 import { MediaFile } from "../modules/media/media-file.entity";
@@ -42,6 +44,21 @@ test("image binary round-trips through MySQL, metadata lists omit bytes, referen
     const { bytes, file } = await readMedia(saved.id);
     assert.deepEqual(bytes, png);
     assert.equal(file.byte_size, png.length);
+
+    // Exercise the actual public HTTP route; the browser receives image bytes,
+    // not a JSON wrapper or exposed MySQL connection details.
+    const server = app.listen(0, "127.0.0.1");
+    try {
+        await new Promise<void>(resolve => server.once("listening", resolve));
+        const port = (server.address() as AddressInfo).port;
+        const response = await fetch(`http://127.0.0.1:${port}${saved.url}`);
+        assert.equal(response.status, 200);
+        assert.match(response.headers.get("content-type") ?? "", /^image\/png/);
+        assert.equal(response.headers.get("x-content-type-options"), "nosniff");
+        assert.deepEqual(Buffer.from(await response.arrayBuffer()), png);
+    } finally {
+        await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
+    }
 
     const offerRepo = AppDataSource.getRepository(Offer);
     const offer = await offerRepo.save(offerRepo.create({
