@@ -72,6 +72,8 @@ jobs:
         run: npm run migration:run
       - name: Run booking concurrency integration tests
         run: npm run test:booking:integration
+      - name: Verify historical staff archive safety
+        run: npx tsx --test src/tests/staff-archive.integration.test.ts
       - name: Verify MySQL media BLOB lifecycle
         run: npx tsx --test src/tests/media-storage.integration.test.ts
 
