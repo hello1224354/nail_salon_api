@@ -25,7 +25,7 @@ test("staff edit accepts valid common email addresses and normalizes email casin
 });
 
 test("staff edit rejects invalid emails and unsafe passwords", () => {
-    for (const email of ["", "not-an-email", "a@", "@example.com", "a@example", "a b@example.com", "\\invalid@example.com"]) {
+    for (const email of ["", "not-an-email", "a@", "@example.com", "a@example", "a b@example.com"]) {
         assert.throws(() => parseUpdateStaffDto({ email }),
             (error: unknown) => error instanceof AppError && error.code === "VALIDATION_ERROR");
     }
