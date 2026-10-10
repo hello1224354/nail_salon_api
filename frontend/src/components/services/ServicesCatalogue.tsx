@@ -73,12 +73,14 @@ export function ServicesCatalogue() {
 
     return (
         <div>
-            <div role="note" className="rounded-[18px] border-2 border-[#a47560] bg-[#f9ede4] px-5 py-4 text-sm leading-6 text-[#623f33]">
-                <strong className="block text-base">Giá chỉ mang tính tham khảo</strong>
-                Giá thực tế có thể cao hơn theo tình trạng móng, độ phức tạp của mẫu, vật liệu và yêu cầu của khách. Nhân viên sẽ thông báo mức giá thực tế trước khi làm dịch vụ.
+            <div role="note" className="rounded-[22px] border-2 border-[#a47560] bg-[#f9ede4] px-5 py-5 text-[#623f33] sm:px-7 sm:py-6">
+                <strong className="block text-base font-semibold leading-6 sm:text-lg">Giá chỉ mang tính tham khảo</strong>
+                <p className="mt-1.5 text-sm leading-6 sm:text-[15px] sm:leading-7">
+                    Giá thực tế có thể cao hơn theo tình trạng móng, độ phức tạp của mẫu, vật liệu và yêu cầu của khách. Nhân viên sẽ thông báo mức giá thực tế trước khi làm dịch vụ.
+                </p>
             </div>
             {categories.length > 1 ? (
-                <div className="hide-scrollbar flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Nhóm dịch vụ">
+                <div className="hide-scrollbar mt-7 flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Nhóm dịch vụ">
                     {categories.map((category) => {
                         const active = activeCategory === category;
 
