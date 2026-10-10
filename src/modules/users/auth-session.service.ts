@@ -78,7 +78,7 @@ export async function createLoginSession(user: User, fingerprint: SessionFingerp
             lock: { mode: "pessimistic_read" },
         });
 
-        if (!currentUser || currentUser.token_version !== user.token_version) {
+        if (!currentUser || !currentUser.is_active || currentUser.token_version !== user.token_version) {
             throw new AppError(
                 "Authentication state changed. Please sign in again",
                 401,
@@ -196,7 +196,7 @@ export async function refreshSession(refreshToken: string, fingerprint: SessionF
             };
         }
 
-        if (!user || user.id !== session.user_id) {
+        if (!user || !user.is_active || user.id !== session.user_id) {
             await sessionRepo.update(
                 { family_id: session.family_id, revoked_at: IsNull() },
                 { revoked_at: new Date() }

@@ -331,6 +331,11 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
                 lock: { mode: "pessimistic_read" },
             });
             if (!liveSchedule || !isWithinStaffWorkingHours(liveSchedule, businessStartMinute, businessEndMinute)) continue;
+            const activeUser = await manager.getRepository(User).findOne({
+                where: { id: staff.user_id, is_active: true },
+                lock: { mode: "pessimistic_read" },
+            });
+            if (!activeUser) continue;
             // The unique (staff_id, slot_start) key checks the real inventory
             // across all appointments, including legacy reservations.
             const reserved = await tryReserveStaffSlots(
@@ -704,6 +709,11 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
                     lock: { mode: "pessimistic_read" },
                 });
                 if (!locked || !isWithinStaffWorkingHours(locked, startMinute, endMinute)) continue;
+                const activeUser = await manager.getRepository(User).findOne({
+                    where: { id: candidate.user_id, is_active: true },
+                    lock: { mode: "pessimistic_read" },
+                });
+                if (!activeUser) continue;
                 if (!await tryReserveStaffSlots(manager, candidate.user_id, newSlots)) continue;
                 assigned.push(candidate);
                 if (assigned.length === appointment.party_size) break;

@@ -18,10 +18,10 @@ const staffRepo = AppDataSource.getRepository(Staff);
 export const getAllStaffs = async (query: GetStaffsQueryDto) => {
     return await staffRepo.find({
         where: query.branch_id === undefined ? {
-            user: { role: UserRole.STAFF },
+            user: { role: UserRole.STAFF, is_active: true },
         } : {
             branch_id: query.branch_id,
-            user: { role: UserRole.STAFF },
+            user: { role: UserRole.STAFF, is_active: true },
         },
         relations: { user: true },
         order: { created_at: "ASC" },
@@ -31,10 +31,10 @@ export const getAllStaffs = async (query: GetStaffsQueryDto) => {
 export const getAllStaffsForAdmin = async (query: GetStaffsQueryDto) => {
     return await staffRepo.find({
         where: query.branch_id === undefined ? {
-            user: { role: UserRole.STAFF },
+            user: { role: UserRole.STAFF, is_active: true },
         } : {
             branch_id: query.branch_id,
-            user: { role: UserRole.STAFF },
+            user: { role: UserRole.STAFF, is_active: true },
         },
         relations: { user: true, branch: true },
         order: { created_at: "ASC" },
@@ -83,7 +83,7 @@ export const updateStaff = async (userId: string, data: UpdateStaffDto) => {
         const staffs = manager.getRepository(Staff);
         const staff = await staffs.findOne({ where: { user_id: userId }, lock: { mode: "pessimistic_write" } });
         if (!staff) return null;
-        const user = await users.findOne({ where: { id: userId, role: UserRole.STAFF }, lock: { mode: "pessimistic_write" } });
+        const user = await users.findOne({ where: { id: userId, role: UserRole.STAFF, is_active: true }, lock: { mode: "pessimistic_write" } });
         if (!user) throw new AppError("Only staff accounts can be updated here", 403, "FORBIDDEN");
 
         if (data.branch_id !== undefined) {
@@ -146,11 +146,47 @@ export const updateStaff = async (userId: string, data: UpdateStaffDto) => {
 };
 
 export const deleteStaff = async (userId: string) => {
-    const staff = await getStaff(userId);
-    if (!staff) return null;
+    // Preserve assignment/appointment history and foreign keys. "Delete" archives
+    // the staff account, removing it from booking candidates and staff lists.
+    return AppDataSource.transaction(async (manager) => {
+        const users = manager.getRepository(User);
+        const staffs = manager.getRepository(Staff);
 
-    const user = await userService.deleteUser(userId);
-    if (!user) return null;
+        const staff = await staffs.findOne({
+            where: { user_id: userId },
+            lock: { mode: "pessimistic_write" },
+        });
+        if (!staff) return null;
 
-    return staff;
+        const user = await users.findOne({
+            where: { id: userId, role: UserRole.STAFF },
+            lock: { mode: "pessimistic_write" },
+        });
+        if (!user || !user.is_active) return null;
+
+        const upcoming = await manager.getRepository(Appointment)
+            .createQueryBuilder("appointment")
+            .innerJoin("appointment.staff_assignments", "assignment", "assignment.staff_id = :userId", { userId })
+            .where("appointment.merged_into_id IS NULL")
+            .andWhere("appointment.status IN (:...statuses)", {
+                statuses: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED, AppointmentStatus.IN_PROGRESS],
+            })
+            .andWhere("appointment.end_time > :now", { now: new Date() })
+            .getCount();
+        if (upcoming > 0) {
+            throw new AppError("Staff has active or upcoming appointments", 409, "STAFF_HAS_UPCOMING_BOOKINGS");
+        }
+
+        user.is_active = false;
+        user.token_version += 1;
+        await users.save(user);
+
+        await manager.getRepository(RefreshSession).update(
+            { user_id: userId, revoked_at: IsNull() },
+            { revoked_at: new Date() },
+        );
+
+        staff.user = user;
+        return staff;
+    });
 };
