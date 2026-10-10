@@ -60,3 +60,12 @@ The MySQL 8 integration suite must exercise true concurrent transactions to enfo
 - ADMIN staff deletion currently calls native `window.confirm`. TinyFish browser interaction did not complete that dialog, so deletion could not be verified. Prefer an in-page confirmation with explicit Cancel/Delete controls.
 - QA bookings F70CC8EC and AB6476B2 were cancelled and deleted by the UI.
 - QA-TEST STAFF 01–05 were still shown on the last cleanup attempt; QA-TEST STAFF 06 was absent, reason not established.
+
+## Isolated staging deployed (2026-10-10)
+
+- Frontend: https://serpente-nailroom-staging-web.vercel.app (Vercel project `serpente-nailroom-staging-web`, independent of the production project).
+- API: https://api-qa-staging.up.railway.app (Railway project `serpente-nailroom-staging-qa`, environment `staging`).
+- Database: separate MySQL 8.0 with a 500 MB persistent volume; uses a separate JWT secret. No production database or email/OAuth secrets were copied.
+- Verified: frontend homepage, services, signed-out booking, admin login screen; staging API `/health` and branch listing via staging frontend's `/api` rewrite.
+- **BLOCKED FOR AUTHENTICATED E2E:** no QA ADMIN login exists in the isolated database, and email registration/MFA has no staging-only mail provider. Obtain approval for a secure one-time staging ADMIN bootstrap (not via direct production API/SQL), then create all other test records through the actual web ADMIN UI.
+- **BLOCKED PRODUCTION CLEANUP:** native `window.confirm` in staff deletion prevents UI agent from confirming. GitHub issue #77 tracks the in-page confirmation fix. Do not claim the QA staff have been deleted.
