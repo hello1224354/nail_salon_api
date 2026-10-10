@@ -152,17 +152,30 @@ export const deleteStaff = async (userId: string) => {
         const users = manager.getRepository(User);
         const staffs = manager.getRepository(Staff);
 
+        const staff = await staffs.findOne({
+            where: { user_id: userId },
+            lock: { mode: "pessimistic_write" },
+        });
+        if (!staff) return null;
+
         const user = await users.findOne({
             where: { id: userId, role: UserRole.STAFF },
             lock: { mode: "pessimistic_write" },
         });
         if (!user || !user.is_active) return null;
 
-        const staff = await staffs.findOne({
-            where: { user_id: userId },
-            relations: { branch: true },
-        });
-        if (!staff) return null;
+        const upcoming = await manager.getRepository(Appointment)
+            .createQueryBuilder("appointment")
+            .innerJoin("appointment.staff_assignments", "assignment", "assignment.staff_id = :userId", { userId })
+            .where("appointment.merged_into_id IS NULL")
+            .andWhere("appointment.status IN (:...statuses)", {
+                statuses: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED, AppointmentStatus.IN_PROGRESS],
+            })
+            .andWhere("appointment.end_time > :now", { now: new Date() })
+            .getCount();
+        if (upcoming > 0) {
+            throw new AppError("Staff has active or upcoming appointments", 409, "STAFF_HAS_UPCOMING_BOOKINGS");
+        }
 
         user.is_active = false;
         user.token_version += 1;
