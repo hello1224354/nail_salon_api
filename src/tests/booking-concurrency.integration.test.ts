@@ -292,6 +292,39 @@ test("part-time 13:00–20:00 shifts change availability and reject out-of-shift
     );
 });
 
+test("STAFF can book personal appointments separately from assigned work", async () => {
+    const fixture = await seedFixture("staff-as-customer", 3, 1);
+    const staffCustomer = fixture.staffUsers[0];
+    await AppDataSource.getRepository(Staff).update(
+        { user_id: staffCustomer.id },
+        { work_start_time: "13:00", work_end_time: "20:00" },
+    );
+    const personal = await createAppointment(
+        staffCustomer.id, UserRole.STAFF, bookingAt(fixture.service, startInVietnamAt(10), 1),
+    );
+    assert.equal(personal.user_id, staffCustomer.id);
+    assert.notEqual(personal.staff_id, staffCustomer.id);
+    const work = await createAppointment(
+        fixture.customers[0].id, UserRole.CUSTOMER, bookingAt(fixture.service, startInVietnamAt(14), 1),
+    );
+    assert.equal(work.staff_id, staffCustomer.id);
+    const mine = await getAllAppointments(staffCustomer.id, UserRole.STAFF, {
+        scope: "mine", page: 1, limit: 10,
+    });
+    assert.deepEqual(mine.appointments.map(a => a.id), [personal.id]);
+    const assigned = await getAllAppointments(staffCustomer.id, UserRole.STAFF, {
+        page: 1, limit: 10,
+    });
+    assert.deepEqual(assigned.appointments.map(a => a.id), [work.id]);
+    assert.equal((await getAppointment(personal.id, staffCustomer.id, UserRole.STAFF))?.id, personal.id);
+    assert.equal((await getAppointment(work.id, staffCustomer.id, UserRole.STAFF))?.id, work.id);
+    const unrelated = fixture.staffUsers.find(s => s.id !== staffCustomer.id && s.id !== personal.staff_id);
+    assert.ok(unrelated);
+    assert.equal(await getAppointment(personal.id, unrelated!.id, UserRole.STAFF), null);
+    assert.equal((await getAppointment(work.id, fixture.customers[0].id, UserRole.CUSTOMER))?.id, work.id);
+    assert.equal(await getAppointment(work.id, staffCustomer.id, UserRole.CUSTOMER), null);
+});
+
 test("ADMIN edit with no chosen staff automatically reassigns the entire group and its slots", async () => {
     const fixture = await seedFixture("group-admin-auto", 3, 1);
     const firstStart = startInVietnamAt(13);

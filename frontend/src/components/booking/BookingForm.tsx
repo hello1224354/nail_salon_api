@@ -14,6 +14,7 @@ import {
     type ServiceList,
 } from "@/lib/api";
 import { clearSession, restoreSession, type AuthUser } from "@/lib/auth";
+import { canUseCustomerFeatures as canBook } from "@/lib/roles";
 import {
     decorateService,
     formatServicePrice,
@@ -37,9 +38,6 @@ type TimeGroup = {
 };
 
 const BUSINESS_TIMEZONE = "Asia/Ho_Chi_Minh";
-function canBook(role: string): boolean {
-    return role.toLowerCase() === "customer" || role.toLowerCase() === "admin";
-}
 
 function getBusinessDates(): BookingDate[] {
     const formatter = new Intl.DateTimeFormat("en-CA", {
@@ -248,7 +246,7 @@ export function BookingForm() {
                 if (cancelled) return;
 
                 if (!canBook(currentUser.role)) {
-                    setFormError("Trang đặt lịch dành cho tài khoản CUSTOMER hoặc ADMIN.");
+                    setFormError("Trang đặt lịch dành cho tài khoản CUSTOMER, STAFF hoặc ADMIN.");
                     setUser(currentUser);
                     setBranches(branchData.branches);
                     return;
@@ -450,7 +448,7 @@ export function BookingForm() {
         }
 
         if (!canBook(user.role)) {
-            setFormError("Trang đặt lịch dành cho tài khoản CUSTOMER hoặc ADMIN.");
+            setFormError("Trang đặt lịch dành cho tài khoản CUSTOMER, STAFF hoặc ADMIN.");
             return;
         }
 
