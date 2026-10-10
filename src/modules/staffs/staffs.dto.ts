@@ -1,5 +1,5 @@
 import { AppError } from "../../common/errors";
-import { parseRegisterUserDto, parseVietnamesePhone } from "../users/users.dto";
+import { parseEmail, parseRegisterUserDto, parseVietnamesePhone } from "../users/users.dto";
 import { assertValidWorkingHours, DEFAULT_WORK_START, DEFAULT_WORK_END } from "./staff-working-hours";
 
 export interface CreateStaffDto {
@@ -107,12 +107,7 @@ export function parseUpdateStaffDto(body: unknown): UpdateStaffDto {
         result.full_name = data.full_name.trim();
     }
     if (data.phone !== undefined) result.phone = parseVietnamesePhone(data.phone);
-    if (data.email !== undefined) {
-        if (typeof data.email !== "string" || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(data.email.trim()) || data.email.length > 255) {
-            throw new AppError("Email must be valid", 400, "VALIDATION_ERROR");
-        }
-        result.email = data.email.trim().toLowerCase();
-    }
+    if (data.email !== undefined) result.email = parseEmail(data.email);
     if (data.password !== undefined) {
         if (typeof data.password !== "string" || data.password.length < 8 || Buffer.byteLength(data.password, "utf8") > 72) {
             throw new AppError("Password must be 8 to 72 bytes", 400, "VALIDATION_ERROR");
