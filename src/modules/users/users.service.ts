@@ -71,7 +71,7 @@ export const registerUser = async (data: RegisterUserDto) => {
 export const loginUser = async (data: LoginUserDto) => {
     const user = await userRepo.findOneBy({ email: data.email });
 
-    if (!user) {
+    if (!user || !user.is_active) {
         await bcrypt.compare(data.password, DUMMY_PASSWORD_HASH);
         throw new AppError("Invalid email or password", 401, "INVALID_CREDENTIALS");
     }
