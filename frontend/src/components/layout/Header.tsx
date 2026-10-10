@@ -281,7 +281,7 @@ export function Header() {
                             >
                                 {authUser.role.toLowerCase() === "staff" ? "Khu vực nhân viên" : "Đặt lịch ngay"}
                             </Link>
-                        ) : null>
+                        ) : null}
 
                         <div className="mt-3 rounded-2xl border border-line bg-surface p-3">
                             {authUser ? (
