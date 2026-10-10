@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import type { FormEvent } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     ApiError,
     apiRequest,
@@ -171,6 +171,7 @@ export function BookingForm() {
     const [customerPhone, setCustomerPhone] = useState("");
     const [initialLoading, setInitialLoading] = useState(true);
     const [servicesLoading, setServicesLoading] = useState(false);
+    const [servicesError, setServicesError] = useState("");
     const [availabilityLoading, setAvailabilityLoading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [formError, setFormError] = useState("");
@@ -190,6 +191,41 @@ export function BookingForm() {
     const createdTotalPrice =
         createdServices.reduce((sum, service) => sum + service.price, 0) *
         (createdAppointment?.party_size ?? 1);
+
+    // Fetch immediately after branch bootstrap. Every request settles or times out;
+    // older responses cannot override a newer branch selection.
+    const servicesRequestId = useRef(0);
+    const loadServicesForBranch = useCallback(async (branchId: number) => {
+        const requestId = ++servicesRequestId.current;
+        const controller = new AbortController();
+        const timeout = window.setTimeout(() => controller.abort(), 12_000);
+
+        setServices([]);
+        setServicesError("");
+        setServicesLoading(true);
+
+        try {
+            const data = await apiRequest<ServiceList>(
+                `/api/services?branch_id=${branchId}&page=1&limit=100`,
+                { signal: controller.signal }
+            );
+            if (requestId !== servicesRequestId.current) return;
+            setServices(
+                data.services
+                    .filter((service) => service.booking_enabled && service.duration_minutes !== null)
+                    .map(decorateService)
+            );
+        } catch (loadError) {
+            if (requestId !== servicesRequestId.current) return;
+            const timedOut = loadError instanceof Error && loadError.name === "AbortError";
+            setServicesError(timedOut
+                ? "Tải dịch vụ quá thời gian chờ. Vui lòng thử lại."
+                : getApiErrorMessage(loadError, "Chưa tải được dịch vụ. Vui lòng thử lại."));
+        } finally {
+            window.clearTimeout(timeout);
+            if (requestId === servicesRequestId.current) setServicesLoading(false);
+        }
+    }, []);
 
     useEffect(() => {
         let cancelled = false;
@@ -219,8 +255,9 @@ export function BookingForm() {
 
                 setUser(currentUser);
                 setBranches(branchData.branches);
-                setSelectedBranchId(branchData.branches[0]?.id ?? null);
-                setServicesLoading(branchData.branches.length > 0);
+                const branchId = branchData.branches[0]?.id ?? null;
+                setSelectedBranchId(branchId);
+                if (branchId !== null) void loadServicesForBranch(branchId);
             } catch (loadError) {
                 if (cancelled) return;
 
@@ -240,45 +277,9 @@ export function BookingForm() {
 
         return () => {
             cancelled = true;
+            servicesRequestId.current += 1;
         };
-    }, [router]);
-
-    useEffect(() => {
-        if (selectedBranchId === null || !user || !canBook(user.role)) {
-            return;
-        }
-
-        let cancelled = false;
-
-        async function loadServices() {
-            try {
-                const data = await apiRequest<ServiceList>(
-                    `/api/services?branch_id=${selectedBranchId}&page=1&limit=100`
-                );
-
-                if (!cancelled) {
-                    setServices(
-                        data.services
-                            .filter((service) => service.booking_enabled && service.duration_minutes !== null)
-                            .map(decorateService)
-                    );
-                }
-            } catch (loadError) {
-                if (!cancelled) {
-                    setServices([]);
-                    setFormError(getApiErrorMessage(loadError, "Chưa tải được danh sách dịch vụ có thể đặt trực tuyến."));
-                }
-            } finally {
-                if (!cancelled) setServicesLoading(false);
-            }
-        }
-
-        loadServices();
-
-        return () => {
-            cancelled = true;
-        };
-    }, [selectedBranchId, user]);
+    }, [router, loadServicesForBranch]);
 
     useEffect(() => {
         if (!user || !canBook(user.role) || selectedServiceIds.length === 0 || !selectedDate) {
@@ -371,7 +372,7 @@ export function BookingForm() {
 
         setSelectedBranchId(branchId);
         setServices([]);
-        setServicesLoading(true);
+        void loadServicesForBranch(branchId);
         setSelectedServiceIds([]);
         setPartySize(1);
         setMaxPartySize(null);
@@ -530,11 +531,23 @@ export function BookingForm() {
                 <section className="p-5 sm:p-7 lg:p-8">
                     <SectionHeading number="02" title="Dịch vụ" helper="Chọn dịch vụ bạn muốn làm trong lần hẹn này." />
                     <div className="mt-6 space-y-2 sm:pl-[60px]">
+                        {servicesError && !servicesLoading ? (
+                            <div role="alert" className="rounded-[12px] border border-[#cdaea1] bg-[#f7e8e3] px-4 py-4 text-xs leading-5 text-[#8b4334]">
+                                <p>{servicesError}</p>
+                                <button
+                                    type="button"
+                                    onClick={() => { if (selectedBranchId !== null) void loadServicesForBranch(selectedBranchId); }}
+                                    className="focus-ring mt-3 rounded-full border border-[#8b4334] px-4 py-2 font-semibold hover:bg-white"
+                                >
+                                    Thử tải lại dịch vụ
+                                </button>
+                            </div>
+                        ) : null}
                         {servicesLoading ? (
                             Array.from({ length: 5 }, (_, index) => (
                                 <div key={index} className="h-[62px] animate-pulse rounded-[12px] border border-line bg-cream" />
                             ))
-                        ) : services.length > 0 ? (
+                        ) : servicesError ? null : services.length > 0 ? (
                             services.map((service) => {
                                 const selected = selectedServiceIds.includes(service.id);
                                 return (
