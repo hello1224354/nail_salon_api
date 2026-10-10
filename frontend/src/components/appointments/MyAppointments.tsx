@@ -261,6 +261,9 @@ export function MyAppointments() {
                             const status = appointment.status.toLowerCase();
                             const services = appointment.appointment_services ?? [];
                             const total = services.reduce((sum, service) => sum + service.price, 0);
+                            const actual = appointment.actual_prices ?? [];
+                            const totalActual = actual.reduce((sum, item) => sum + item.actual_price, 0);
+                            const allPriced = actual.length === appointment.party_size * services.length && services.length > 0;
                             const duration = services.reduce((sum, service) => sum + service.duration_minutes, 0);
 
                             return (
@@ -312,6 +315,17 @@ export function MyAppointments() {
                                     </div>
 
                                     <p role="note" className="mt-4 rounded-lg bg-[#f9ede4] p-3 text-xs leading-5 text-[#623f33]">Giá trên lịch hẹn là giá tham khảo. Giá thực tế có thể cao hơn; nhân viên sẽ thông báo trước khi thực hiện.</p>
+                                    {actual.length > 0 ? (
+                                        <div className="mt-3 rounded-lg border border-line bg-white p-3 text-xs">
+                                            <p className="font-semibold">Giá thực tế nhân viên đã nhập</p>
+                                            {actual.map(item => <p key={item.staff_id + ":" + item.service_id} className="mt-1">
+                                                {(appointment.assigned_staff ?? []).find(p => p.id === item.staff_id)?.full_name ?? "Nhân viên"}
+                                                {" · "}{services.find(s => s.service_id === item.service_id)?.service_name ?? "Dịch vụ"}
+                                                {": "}<strong>{formatVnd(item.actual_price)} VND</strong>
+                                            </p>)}
+                                            <p className="mt-2 font-semibold">{allPriced ? "Tổng giá thực tế: " + formatVnd(totalActual) + " VND" : "Đang chờ các nhân viên cập nhật đủ giá thực tế."}</p>
+                                        </div>
+                                    ) : null}
                                     <div className="mt-5 flex items-end justify-between gap-5 border-t border-line pt-4">
                                         <div>
                                             <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-muted">Thời lượng</p>

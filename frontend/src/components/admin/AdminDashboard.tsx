@@ -21,9 +21,10 @@ import {
 import { getAuthUser, logoutSession, restoreSession, type AuthUser } from "@/lib/auth";
 import { AdminAppointmentForm, type AppointmentPayload } from "./AdminAppointmentForm";
 import { MediaChooser, MediaPanel, TrendsPanel } from "./AdminMedia";
+import { AdminWalkInsPanel } from "./AdminWalkInsPanel";
 import { formatAppointmentStatus, formatServicePrice, formatVnd, localizeBranchName, shortBranchName } from "@/lib/studio-data";
 
-type TabKey = "overview" | "appointments" | "services" | "staff" | "branches" | "offers" | "media" | "trends";
+type TabKey = "overview" | "appointments" | "services" | "staff" | "branches" | "offers" | "media" | "trends" | "walkins";
 
 type LoadState = {
     branches: Branch[];
@@ -48,6 +49,7 @@ const emptyState: LoadState = {
 const tabItems: Array<{ key: TabKey; label: string; short: string }> = [
     { key: "overview", label: "Tổng quan", short: "Tổng quan" },
     { key: "appointments", label: "Lịch hẹn", short: "Lịch" },
+    { key: "walkins", label: "Khách vãng lai", short: "Vãng lai" },
     { key: "services", label: "Dịch vụ", short: "Dịch vụ" },
     { key: "staff", label: "Nhân viên", short: "Nhân viên" },
     { key: "branches", label: "Chi nhánh", short: "Chi nhánh" },
@@ -799,6 +801,7 @@ export function AdminDashboard() {
                                     />
                                 ) : null}
                                 {tab === "media" ? <MediaPanel /> : null}
+                                 {tab === "walkins" ? <AdminWalkInsPanel /> : null}
                                 {tab === "trends" ? <TrendsPanel /> : null}
                             </>
                         )}

@@ -140,6 +140,7 @@ const errorMessagesByCode: Record<string, string> = {
     INVALID_APPOINTMENT_TIME: "Giờ bắt đầu phải nằm trên mốc 15 phút.",
     OUTSIDE_BUSINESS_HOURS: "Khung giờ đã chọn nằm ngoài giờ mở cửa của tiệm.",
     APPOINTMENT_CONFLICT: "Khung giờ này không còn khả dụng.",
+    ACTUAL_PRICES_INCOMPLETE: "Mọi nhân viên trong nhóm phải nhập đủ giá thực tế trước khi hoàn thành.",
 };
 
 export function getApiErrorMessage(error: unknown, fallback: string) {
@@ -229,6 +230,34 @@ export type Availability = {
     slots: string[];
 };
 
+export type AppointmentActualPrice = {
+    appointment_id: string;
+    staff_id: string;
+    service_id: string;
+    actual_price: number;
+    updated_at: string;
+};
+
+export type WalkInVisit = {
+    id: string;
+    staff_id: string;
+    staff_full_name: string;
+    branch_id: number;
+    branch_name: string;
+    customer_name: string;
+    customer_phone: string | null;
+    customer_email: string | null;
+    served_at: string;
+    services: Array<{
+        service_id: string;
+        service_name: string;
+        reference_price: number;
+        actual_price: number;
+    }>;
+};
+
+export type WalkInList = { visits: WalkInVisit[]; total: number };
+
 export type AppointmentService = {
     service_id: string;
     service_name: string;
@@ -250,6 +279,7 @@ export type Appointment = {
     actual_completed_at?: string | null;
     status: string;
     appointment_services?: AppointmentService[];
+    actual_prices?: AppointmentActualPrice[];
     customer?: {
         id: string;
         full_name: string;
