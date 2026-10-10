@@ -214,8 +214,7 @@ export default function StaffPage() {
                         <p className="mt-1 text-xs text-muted">{dateVN(visit.served_at)}</p>
                         <div className="mt-3 space-y-2">{visit.services.map(s => <p key={s.service_id} className="flex justify-between gap-3 text-xs"><span>{s.service_name}</span><strong>{vnd(s.actual_price)}</strong></p>)}</div>
                         <p className="mt-3 border-t border-line pt-3 text-right font-semibold">{vnd(visit.services.reduce((n, s) => n + s.actual_price, 0))}</p>
-                    </article>;
-            })}
+                    </article>)}
                 </div>}
             </section>
         </> : <section className="mt-6 space-y-5">
@@ -254,7 +253,8 @@ export default function StaffPage() {
                     ) : null}
                     {appt.status === "in_progress" ? <button className={actionClass} type="button" disabled={saving} onClick={() => void changeStatus(appt, "completed")}>Hoàn thành</button> : null}
                 </div>
-            </article>)}
+            </article>;
+            })}
         </section>}
     </main>;
 }
