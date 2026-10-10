@@ -73,6 +73,10 @@ export function ServicesCatalogue() {
 
     return (
         <div>
+            <div role="note" className="rounded-[18px] border-2 border-[#a47560] bg-[#f9ede4] px-5 py-4 text-sm leading-6 text-[#623f33]">
+                <strong className="block text-base">Giá chỉ mang tính tham khảo</strong>
+                Giá thực tế có thể cao hơn theo tình trạng móng, độ phức tạp của mẫu, vật liệu và yêu cầu của khách. Nhân viên sẽ thông báo mức giá thực tế trước khi làm dịch vụ.
+            </div>
             {categories.length > 1 ? (
                 <div className="hide-scrollbar flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Nhóm dịch vụ">
                     {categories.map((category) => {
@@ -167,6 +171,7 @@ export function ServicesCatalogue() {
                             </div>
 
                             <div className="sm:text-right">
+                                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Giá tham khảo</p>
                                 <p className="text-lg font-semibold tabular-nums">{formatServicePrice(service)}</p>
                                 {service.price_max && service.price_min && service.price_max > service.price_min ? (
                                     <p className="mt-1 text-[10px] text-muted">Giá tùy mẫu hoặc số lượng chi tiết</p>

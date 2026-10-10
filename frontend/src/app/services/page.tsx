@@ -14,7 +14,7 @@ export default function ServicesPage() {
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">Bảng giá Serpente</p>
                 <h1 className="mt-3 font-serif text-5xl tracking-[-0.035em] sm:text-6xl lg:text-[72px]">Dịch vụ</h1>
                 <p className="mt-3 max-w-2xl text-sm leading-6 text-muted sm:text-base">
-                    Xem giá từng dịch vụ trước khi đặt. Dịch vụ chưa có thời lượng chính thức vẫn được niêm yết, nhưng chưa mở đặt lịch trực tuyến.
+                    Tất cả giá dưới đây là giá tham khảo, không phải giá thanh toán cuối cùng. Giá thực tế có thể cao hơn tùy tình trạng móng, mẫu thiết kế, vật liệu và yêu cầu phát sinh. Nhân viên sẽ báo giá thực tế trước khi thực hiện. Dịch vụ chưa có thời lượng chính thức chưa mở đặt lịch trực tuyến.
                 </p>
 
                 <div className="mt-8">
