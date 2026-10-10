@@ -53,7 +53,7 @@ export default function StaffManagementPage() {
             await apiRequest<AdminStaff>(`/api/staffs/${person.id}`, { method: "DELETE" });
             await refreshStaff();
             setPendingDelete(null);
-            setNotice(`Đã xóa nhân viên “${person.full_name}”.`);
+            setNotice(`Đã ngừng hoạt động nhân viên “${person.full_name}”.`);
         } catch (cause) {
             setError(getApiErrorMessage(cause, "Chưa xóa được nhân viên."));
         } finally {
@@ -70,7 +70,7 @@ export default function StaffManagementPage() {
             <div className="mx-auto max-w-5xl">
                 <Link href="/admin" className="text-sm font-semibold underline">← Quay lại quản trị</Link>
                 <h1 className="mt-6 font-serif text-4xl">Quản lý nhân viên</h1>
-                <p className="mt-3 text-sm text-[#736d67]">Xóa nhân viên chỉ sau khi xác nhận trong trang. Các lịch hẹn cũ vẫn lưu thông tin.</p>
+                <p className="mt-3 text-sm text-[#736d67]">Ngừng hoạt động nhân viên để không nhận lịch mới hoặc đăng nhập. Lịch sử phân công nhân viên vẫn được giữ lại.</p>
                 {notice ? <p role="status" className="mt-5 rounded-xl bg-white p-4 text-sm">{notice}</p> : null}
                 {error ? <p role="alert" className="mt-5 rounded-xl border border-red-300 bg-white p-4 text-sm text-red-700">{error}</p> : null}
                 <div className="mt-7 overflow-x-auto rounded-2xl bg-white shadow-sm">
@@ -91,7 +91,7 @@ export default function StaffManagementPage() {
                                         <td className="px-5 py-4">{person.email || "—"}</td>
                                         <td className="px-5 py-4">{person.work_start_time}–{person.work_end_time}</td>
                                         <td className="px-5 py-4">
-                                            <button type="button" className="font-semibold text-red-800 underline" onClick={() => { setError(""); setNotice(""); setPendingDelete(person); }}>Xóa</button>
+                                            <button type="button" className="font-semibold text-red-800 underline" onClick={() => { setError(""); setNotice(""); setPendingDelete(person); }}>Ngừng hoạt động</button>
                                         </td>
                                     </tr>
                                 ))}
@@ -103,14 +103,14 @@ export default function StaffManagementPage() {
             {pendingDelete ? (
                 <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/55 p-4" role="presentation">
                     <div role="dialog" aria-modal="true" aria-labelledby="staff-delete-title" className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-                        <h2 id="staff-delete-title" className="font-serif text-2xl">Xác nhận xóa nhân viên</h2>
+                        <h2 id="staff-delete-title" className="font-serif text-2xl">Xác nhận ngừng hoạt động</h2>
                         <p className="mt-4 text-sm leading-6">
-                            Xóa vĩnh viễn <strong>{pendingDelete.full_name}</strong> ({pendingDelete.email})?
-                            Tài khoản nhân viên sẽ bị xóa và không thể khôi phục.
+                            Ngừng hoạt động <strong>{pendingDelete.full_name}</strong> ({pendingDelete.email})?
+                            Tài khoản không thể đăng nhập hoặc nhận lịch mới. Dữ liệu lịch hẹn cũ được lưu để đối soát.
                         </p>
                         <div className="mt-6 flex justify-end gap-3">
                             <button type="button" disabled={deleting} onClick={() => setPendingDelete(null)} className="rounded-full border px-5 py-2 text-sm disabled:opacity-50">Hủy</button>
-                            <button type="button" disabled={deleting} onClick={() => void confirmDelete()} className="rounded-full bg-red-800 px-5 py-2 text-sm text-white disabled:opacity-50">{deleting ? "Đang xóa…" : "Xóa nhân viên"}</button>
+                            <button type="button" disabled={deleting} onClick={() => void confirmDelete()} className="rounded-full bg-red-800 px-5 py-2 text-sm text-white disabled:opacity-50">{deleting ? "Đang xử lý…" : "Ngừng hoạt động"}</button>
                         </div>
                     </div>
                 </div>
