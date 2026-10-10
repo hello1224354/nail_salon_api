@@ -554,7 +554,7 @@ export function BookingForm() {
                                             <span className={`block truncate text-sm ${selected ? "font-semibold" : "font-medium"}`}>{service.name}</span>
                                             <span className="mt-0.5 block text-[10px] text-muted">{service.duration_minutes} phút</span>
                                         </span>
-                                        <span className="shrink-0 text-xs font-semibold tabular-nums">{formatVnd(service.price)} VND</span>
+                                        <span className="shrink-0 text-xs font-semibold tabular-nums">Tham khảo: {formatServicePrice(service)}</span>
                                     </label>
                                 );
                             })
@@ -760,7 +760,7 @@ export function BookingForm() {
                                     selectedServices.map((service) => (
                                         <div key={service.id} className="flex items-start justify-between gap-4 text-xs">
                                             <span>{service.name}</span>
-                                            <span className="shrink-0 font-semibold tabular-nums">{formatServicePrice(service)}</span>
+                                            <span className="shrink-0 font-semibold tabular-nums">Tham khảo: {formatServicePrice(service)}</span>
                                         </div>
                                     ))
                                 ) : (
@@ -787,9 +787,13 @@ export function BookingForm() {
                         </div>
                     </div>
 
+                    <div role="note" className="mt-5 rounded-xl border-2 border-[#a47560] bg-[#f9ede4] px-4 py-3 text-xs leading-5 text-[#623f33]">
+                        <strong className="block text-sm">Giá có thể thay đổi</strong>
+                        Đây là giá tham khảo khi đặt lịch, không phải số tiền thanh toán cuối cùng. Giá thực tế có thể cao hơn tùy tình trạng móng, mẫu, vật liệu và yêu cầu phát sinh. Nhân viên sẽ báo giá trước khi thực hiện.
+                    </div>
                     <div className="my-5 h-px bg-line" />
                     <div className="flex items-end justify-between gap-4">
-                        <span className="text-xs text-muted">Tổng dự kiến</span>
+                        <span className="text-xs text-muted">Tổng giá tham khảo</span>
                         <span className="font-serif text-2xl tabular-nums">{formatVnd(totalPrice)} VND</span>
                     </div>
 
@@ -892,7 +896,7 @@ export function BookingForm() {
                             </p>
                         </div>
                         <div className="text-right">
-                            <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-muted">Tổng dự kiến</p>
+                            <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-muted">Tổng giá tham khảo</p>
                             <p className="mt-1 font-serif text-xl tabular-nums">{formatVnd(createdServices.length > 0 ? createdTotalPrice : totalPrice)} VND</p>
                         </div>
                     </div>

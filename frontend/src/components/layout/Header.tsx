@@ -131,8 +131,8 @@ export function Header() {
 
                     {authUser ? (
                         <>
-                            <Link href="/book" className="focus-ring flex h-9 min-w-[126px] items-center justify-center rounded-full bg-ink px-4 text-xs font-semibold text-white shadow-[0_6px_18px_rgba(45,39,35,0.12)] transition-all hover:-translate-y-0.5 hover:shadow-[0_9px_22px_rgba(45,39,35,0.16)]">
-                                Đặt lịch ngay
+                            <Link href={authUser.role.toLowerCase() === "staff" ? "/staff" : "/book"} className="focus-ring flex h-9 min-w-[126px] items-center justify-center rounded-full bg-ink px-4 text-xs font-semibold text-white shadow-[0_6px_18px_rgba(45,39,35,0.12)] transition-all hover:-translate-y-0.5 hover:shadow-[0_9px_22px_rgba(45,39,35,0.16)]">
+                                {authUser.role.toLowerCase() === "staff" ? "Khu vực nhân viên" : "Đặt lịch ngay"}
                             </Link>
 
                             <div ref={accountMenuRef} className="relative">
@@ -159,6 +159,18 @@ export function Header() {
                                         <p className="mt-1 truncate text-xs text-muted">{authUser.email || "Chưa có email"}</p>
                                     </div>
                                     <div className="h-px bg-line" />
+                                    {authUser?.role.toLowerCase() === "staff" ? (
+                                        <Link href="/staff" role="menuitem" onClick={() => setAccountOpen(false)}
+                                            className="focus-ring mt-1 block rounded-xl px-3 py-2.5 text-xs font-semibold text-ink hover:bg-tint">
+                                            Khu vực nhân viên
+                                        </Link>
+                                    ) : null}
+                                    {authUser?.role.toLowerCase() === "admin" ? (
+                                        <Link href="/admin" role="menuitem" onClick={() => setAccountOpen(false)}
+                                            className="focus-ring mt-1 block rounded-xl px-3 py-2.5 text-xs font-semibold text-ink hover:bg-tint">
+                                            Trang quản trị
+                                        </Link>
+                                    ) : null}
                                     <Link
                                         href="/appointments"
                                         role="menuitem"
@@ -263,11 +275,11 @@ export function Header() {
 
                         {authUser ? (
                             <Link
-                                href="/book"
+                                href={authUser.role.toLowerCase() === "staff" ? "/staff" : "/book"}
                                 onClick={() => setMobileOpen(false)}
                                 className="focus-ring mt-3 rounded-full bg-ink px-5 py-3.5 text-center text-xs font-semibold text-white"
                             >
-                                Đặt lịch ngay
+                                {authUser.role.toLowerCase() === "staff" ? "Khu vực nhân viên" : "Đặt lịch ngay"}
                             </Link>
                         ) : null}
 

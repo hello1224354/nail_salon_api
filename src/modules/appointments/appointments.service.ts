@@ -10,6 +10,9 @@ import { User, UserRole } from "../users/users.entity";
 import { AppointmentService } from "./appointment-services.entity";
 import { StaffBookingSlot } from "./staff-booking-slots.entity";
 import { AppointmentStaffAssignment } from "./appointment-staff-assignment.entity";
+import { AppointmentActualPrice } from "./appointment-actual-price.entity";
+import { WalkInVisit } from "../walk-ins/walk-in-visit.entity";
+import { WalkInVisitService } from "../walk-ins/walk-in-visit-service.entity";
 import { randomUUID } from "crypto";
 import { notifyAdminsOfNewBooking } from "./booking-notification.service";
 import { Staff } from "../staffs/staffs.entity";
@@ -461,15 +464,21 @@ export const getAdminTodaySummary = async () => {
         })
         .getRawOne<Record<string, string | null>>();
 
-    // Revenue is the booked service-price snapshot of appointments actually
-    // completed during this business day, not a claim that payment was received.
-    // Compute independently: a joined query would multiply appointment counts.
-    const revenue = await appointmentRepo.createQueryBuilder("appointment")
-        .innerJoin("appointment.appointment_services", "service")
-        .select("COALESCE(SUM(service.price * appointment.party_size), 0)", "revenue")
+    // Revenue is entered actual prices only, never indicative catalogue prices.
+    // Walk-ins use staff-entered prices and are recorded on their visit date.
+    const revenue = await AppDataSource.getRepository(AppointmentActualPrice)
+        .createQueryBuilder("actual")
+        .innerJoin(Appointment, "appointment", "appointment.id = actual.appointment_id")
+        .select("COALESCE(SUM(actual.actual_price), 0)", "revenue")
         .where("appointment.status = :completed", { completed: AppointmentStatus.COMPLETED })
         .andWhere("appointment.merged_into_id IS NULL")
         .andWhere("appointment.actual_completed_at >= :start AND appointment.actual_completed_at < :end", { start, end })
+        .getRawOne<{ revenue: string }>();
+    const walkInRevenue = await AppDataSource.getRepository(WalkInVisitService)
+        .createQueryBuilder("line")
+        .innerJoin(WalkInVisit, "visit", "visit.id = line.visit_id")
+        .select("COALESCE(SUM(line.actual_price), 0)", "revenue")
+        .where("visit.served_at >= :start AND visit.served_at < :end", { start, end })
         .getRawOne<{ revenue: string }>();
 
     return {
@@ -478,7 +487,7 @@ export const getAdminTodaySummary = async () => {
         confirmed: Number(counts?.confirmed ?? 0),
         completed: Number(counts?.completed ?? 0),
         cancelled: Number(counts?.cancelled ?? 0),
-        revenue: Number(revenue?.revenue ?? 0),
+        revenue: Number(revenue?.revenue ?? 0) + Number(walkInRevenue?.revenue ?? 0),
     };
 };
 
@@ -486,6 +495,7 @@ export const getAllAppointments = async (userId: string, role: UserRole, query: 
     const queryBuilder = appointmentRepo.createQueryBuilder("appointment")
         .leftJoinAndSelect("appointment.appointment_services", "appointment_services")
         .leftJoinAndSelect("appointment.staff_assignments", "staff_assignments")
+        .leftJoinAndSelect("appointment.actual_prices", "actual_prices")
         .where("appointment.merged_into_id IS NULL");
 
     if (role === UserRole.CUSTOMER || (role === UserRole.ADMIN && query.scope === "mine")) {
@@ -563,7 +573,7 @@ export const getAllAppointments = async (userId: string, role: UserRole, query: 
 export const getAppointment = async (id: string, userId: string, role: UserRole) => {
     const appointment = await appointmentRepo.findOne({
         where: { id, merged_into_id: IsNull() },
-        relations: { appointment_services: true, staff_assignments: true },
+        relations: { appointment_services: true, staff_assignments: true, actual_prices: true },
     });
     if (!appointment) return null;
     if (role === UserRole.CUSTOMER && appointment.user_id !== userId) return null;
@@ -580,7 +590,7 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
             where: role === UserRole.CUSTOMER
                 ? { id, user_id: userId, merged_into_id: IsNull() }
                 : { id, merged_into_id: IsNull() },
-            relations: { appointment_services: true, staff_assignments: true },
+            relations: { appointment_services: true, staff_assignments: true, actual_prices: true },
             lock: { mode: "pessimistic_write" },
         });
         if (!appointment) return null;
@@ -633,7 +643,15 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
                     throw new AppError("Appointment cannot start or complete before its scheduled time", 409, "APPOINTMENT_NOT_STARTED_YET");
                 }
                 if (data.status === AppointmentStatus.IN_PROGRESS) appointment.actual_started_at = new Date();
-                if (data.status === AppointmentStatus.COMPLETED) appointment.actual_completed_at = new Date();
+                if (data.status === AppointmentStatus.COMPLETED) {
+                    // Every employee in this group must enter each service's actual charge.
+                    const count = await manager.getRepository(AppointmentActualPrice).countBy({ appointment_id: appointment.id });
+                    const expected = appointment.staff_assignments.length * appointment.appointment_services.length;
+                    if (count !== expected) {
+                        throw new AppError("Every assigned employee must enter actual prices before completion", 409, "ACTUAL_PRICES_INCOMPLETE");
+                    }
+                    appointment.actual_completed_at = new Date();
+                }
             }
             if (data.status === AppointmentStatus.COMPLETED || data.status === AppointmentStatus.CANCELLED) {
                 const slots = getRequiredSlotStarts(appointment.start_time, appointment.end_time);
@@ -713,6 +731,9 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
                 (data.staff_id !== undefined && !assigned.some(s => s.user_id === data.staff_id))) {
                 throw new AppError("Not enough available staff for the appointment", 409, "SLOT_UNAVAILABLE");
             }
+            // Price ownership is tied to each assigned staff member and service.
+            // A reschedule/reassignment clears stale actual entries before new assignments.
+            await manager.getRepository(AppointmentActualPrice).delete({ appointment_id: appointment.id });
             await assignmentRepo.delete({ appointment_id: appointment.id });
             appointment.staff_assignments = await assignmentRepo.save(assigned.map(staff => ({
                 appointment_id: appointment.id,

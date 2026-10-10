@@ -12,6 +12,7 @@ router.get("/availability", authenticate, requireRole(UserRole.CUSTOMER, UserRol
 router.get("/admin/today-summary", authenticate, requireRole(UserRole.ADMIN), controller.getAdminTodaySummary);
 router.post("/", authenticate, requireRole(UserRole.CUSTOMER, UserRole.ADMIN), bookingRateLimiter, controller.createAppointment);
 router.get("/:id", authenticate, controller.getAppointmentById);
+router.put("/:id/actual-prices/:serviceId", authenticate, requireRole(UserRole.STAFF), controller.setActualPrice);
 router.put("/:id", authenticate, requireRole(UserRole.STAFF, UserRole.ADMIN), controller.updateAppointment);
 router.delete("/:id", authenticate, requireRole(UserRole.ADMIN), controller.deleteAppointment);
 
