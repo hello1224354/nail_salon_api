@@ -173,6 +173,7 @@ export function BookingForm() {
     const [servicesLoading, setServicesLoading] = useState(false);
     const [servicesError, setServicesError] = useState("");
     const [availabilityLoading, setAvailabilityLoading] = useState(false);
+    const [availabilityError, setAvailabilityError] = useState("");
     const [submitting, setSubmitting] = useState(false);
     const [formError, setFormError] = useState("");
     const [createdAppointment, setCreatedAppointment] = useState<Appointment | null>(null);
@@ -288,12 +289,27 @@ export function BookingForm() {
         };
     }, [router, loadServicesForBranch]);
 
+    // The availability effect is the only owner of its loading state.
+    // Refreshing the selected date still changes availabilityRefreshKey.
     useEffect(() => {
         if (!user || !canBook(user.role) || selectedServiceIds.length === 0 || !selectedDate) {
+            setAvailabilityLoading(false);
+            setAvailabilityError("");
+            setAvailableSlots(new Map());
+            setMaxPartySize(null);
+            setSelectedTime("");
             return;
         }
 
         let cancelled = false;
+        const controller = new AbortController();
+        let timeout: ReturnType<typeof setTimeout> | undefined;
+        let timedOut = false;
+        setAvailabilityLoading(true);
+        setAvailabilityError("");
+        setAvailableSlots(new Map());
+        setMaxPartySize(null);
+        setSelectedTime("");
 
         async function loadAvailability() {
             try {
@@ -302,20 +318,30 @@ export function BookingForm() {
                     date: `${selectedDate}T00:00:00+07:00`,
                     party_size: String(partySize),
                 });
-                const data = await apiRequest<Availability>(
-                    `/api/appointments/availability?${params.toString()}`
-                );
-
+                // Promise.race bounds the entire API call, including session-refresh
+                // handling that might otherwise outlive an aborted fetch.
+                const timeoutFailure = new Promise<never>((_, reject) => {
+                    timeout = setTimeout(() => {
+                        timedOut = true;
+                        controller.abort();
+                        reject(new Error("AVAILABILITY_TIMEOUT"));
+                    }, 12_000);
+                });
+                const data = await Promise.race([
+                    apiRequest<Availability>(
+                        `/api/appointments/availability?${params.toString()}`,
+                        { signal: controller.signal }
+                    ),
+                    timeoutFailure,
+                ]);
                 if (cancelled) return;
 
                 const slotMap = new Map<string, string>();
                 for (const slot of data.slots) {
                     slotMap.set(formatSlotTime(slot), slot);
                 }
-
                 setMaxPartySize(data.max_party_size);
                 setAvailableSlots(slotMap);
-                setSelectedTime((current) => (slotMap.has(current) ? current : ""));
             } catch (loadError) {
                 if (cancelled) return;
 
@@ -324,19 +350,24 @@ export function BookingForm() {
                     router.replace("/login");
                     return;
                 }
-
                 setAvailableSlots(new Map());
                 setSelectedTime("");
-                setFormError(getApiErrorMessage(loadError, "Chưa kiểm tra được các giờ còn trống."));
+                setMaxPartySize(null);
+                setAvailabilityError(
+                    timedOut
+                        ? "Kiểm tra giờ trống quá thời gian chờ. Vui lòng thử lại."
+                        : getApiErrorMessage(loadError, "Chưa kiểm tra được các giờ còn trống.")
+                );
             } finally {
+                if (timeout !== undefined) clearTimeout(timeout);
                 if (!cancelled) setAvailabilityLoading(false);
             }
         }
-
-        loadAvailability();
-
+        void loadAvailability();
         return () => {
             cancelled = true;
+            controller.abort();
+            if (timeout !== undefined) clearTimeout(timeout);
         };
     }, [availabilityRefreshKey, partySize, router, selectedDate, selectedServiceIds, user]);
 
@@ -365,7 +396,6 @@ export function BookingForm() {
         setMaxPartySize(null);
         setSelectedTime("");
         setAvailableSlots(new Map());
-        setAvailabilityLoading(false);
         setFormError("");
     }
 
@@ -383,7 +413,6 @@ export function BookingForm() {
         setPartySize(1);
         setMaxPartySize(null);
         setAvailableSlots(new Map());
-        setAvailabilityLoading(false);
         setSelectedTime("");
         setFormError("");
     };
@@ -398,7 +427,6 @@ export function BookingForm() {
 
         setSelectedServiceIds(next);
         setMaxPartySize(null);
-        setAvailabilityLoading(next.length > 0);
     };
 
     function changePartySize(nextPartySize: number) {
@@ -408,7 +436,6 @@ export function BookingForm() {
         setPartySize(nextPartySize);
         setSelectedTime("");
         setAvailableSlots(new Map());
-        setAvailabilityLoading(selectedServiceIds.length > 0);
         setFormError("");
     }
 
@@ -461,7 +488,6 @@ export function BookingForm() {
 
             setCreatedAppointment(appointment);
             setSelectedTime("");
-            setAvailabilityLoading(true);
             setAvailabilityRefreshKey((value) => value + 1);
         } catch (submitError) {
             if (submitError instanceof ApiError && submitError.status === 401) {
@@ -647,8 +673,9 @@ export function BookingForm() {
                                     type="button"
                                     onClick={() => {
                                         setSelectedDate(date.value);
+                                        // Also refetch when tapping the currently selected day.
+                                        setAvailabilityRefreshKey((value) => value + 1);
                                         setAvailableSlots(new Map());
-                                        setAvailabilityLoading(selectedServiceIds.length > 0);
                                         setSelectedTime("");
                                         setFormError("");
                                     }}
@@ -678,6 +705,17 @@ export function BookingForm() {
                                 {Array.from({ length: 3 }, (_, index) => (
                                     <div key={index} className="h-[74px] animate-pulse rounded-[14px] border border-line bg-cream" />
                                 ))}
+                            </div>
+                        ) : availabilityError ? (
+                            <div role="alert" className="rounded-[14px] border border-[#cdaea1] bg-[#f7e8e3] px-4 py-5 text-xs leading-5 text-[#8b4334]">
+                                <p>{availabilityError}</p>
+                                <button
+                                    type="button"
+                                    onClick={() => setAvailabilityRefreshKey((value) => value + 1)}
+                                    className="focus-ring mt-3 rounded-full border border-[#8b4334] px-4 py-2 font-semibold hover:bg-white"
+                                >
+                                    Thử kiểm tra lại giờ trống
+                                </button>
                             </div>
                         ) : availableSlots.size === 0 ? (
                             <div className="rounded-[14px] border border-line bg-cream px-4 py-5">
