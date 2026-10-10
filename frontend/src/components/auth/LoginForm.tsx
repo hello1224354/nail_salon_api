@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import type { FormEvent } from "react";
 import { useState } from "react";
 import { apiRequest, getApiErrorMessage } from "@/lib/api";
-import { logoutSession, saveSession, type AuthUser } from "@/lib/auth";
+import { saveSession, type AuthUser } from "@/lib/auth";
 
 type SessionLoginData = {
     mfa_required?: false;
@@ -49,7 +49,7 @@ export function LoginForm() {
             });
 
             if ("mfa_required" in data && data.mfa_required) {
-                if (!["customer", "admin"].includes(data.user.role.toLowerCase())) {
+                if (!["customer", "admin", "staff"].includes(data.user.role.toLowerCase())) {
                     throw new Error("Tài khoản này không được phép đăng nhập tại đây.");
                 }
                 setChallengeId(data.challenge_id);
@@ -59,13 +59,8 @@ export function LoginForm() {
                 return;
             }
 
-            if (data.user.role.toLowerCase() !== "customer" && data.user.role.toLowerCase() !== "admin") {
-                await logoutSession();
-                throw new Error("Tài khoản nhân viên không dùng trang đặt lịch dành cho khách.");
-            }
-
             saveSession(data.access_token, data.user);
-            router.push("/book");
+            router.push(data.user.role.toLowerCase() === "staff" ? "/staff" : "/book");
             router.refresh();
         } catch (submitError) {
             setError(getApiErrorMessage(submitError, submitError instanceof Error ? submitError.message : "Chưa đăng nhập được. Vui lòng kiểm tra thông tin và thử lại."));
@@ -86,13 +81,12 @@ export function LoginForm() {
                 body: JSON.stringify({ challenge_id: challengeId, code: otp }),
             });
 
-            if (!["customer", "admin"].includes(data.user.role.toLowerCase())) {
-                await logoutSession();
-                throw new Error("Tài khoản này không được phép đặt lịch.");
+            if (!["customer", "admin", "staff"].includes(data.user.role.toLowerCase())) {
+                throw new Error("Vai trò tài khoản không hợp lệ.");
             }
 
             saveSession(data.access_token, data.user);
-            router.push("/book");
+            router.push(data.user.role.toLowerCase() === "staff" ? "/staff" : "/book");
             router.refresh();
         } catch (submitError) {
             setError(getApiErrorMessage(
