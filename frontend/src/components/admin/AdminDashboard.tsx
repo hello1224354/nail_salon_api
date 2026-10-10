@@ -1263,8 +1263,24 @@ function AppointmentsPanel({
                                     <td className="max-w-[240px] px-5 py-4">
                                         <p className="leading-5">{appointment.appointment_services?.map((service) => service.service_name).join(", ") || "—"}</p>
                                         <p className="mt-1 text-[10px] text-muted">
-                                            {formatVnd(appointment.appointment_services?.reduce((sum, service) => sum + service.price, 0) || 0)} VND
+                                            Giá tham khảo / người: {formatVnd(appointment.appointment_services?.reduce((sum, service) => sum + service.price, 0) || 0)} VND
                                         </p>
+                                        {(appointment.actual_prices ?? []).length > 0 ? (
+                                            <div className="mt-2 space-y-1 border-t border-line pt-2 text-[10px]">
+                                                <p className="font-semibold text-accent">Giá thực tế nhân viên nhập</p>
+                                                {(appointment.actual_prices ?? []).map(line => (
+                                                    <p key={line.staff_id + ":" + line.service_id}>
+                                                        {(appointment.assigned_staff ?? []).find(staff => staff.id === line.staff_id)?.full_name ?? "Nhân viên"}:
+                                                        {" "}{formatVnd(line.actual_price)}đ
+                                                    </p>
+                                                ))}
+                                                <p className="font-semibold">
+                                                    {(appointment.actual_prices ?? []).length === (appointment.appointment_services?.length ?? 0) * appointment.party_size
+                                                        ? "Tổng thực tế: " + formatVnd((appointment.actual_prices ?? []).reduce((sum, row) => sum + row.actual_price, 0)) + "đ"
+                                                        : "Chưa nhập đủ giá cho cả nhóm"}
+                                                </p>
+                                            </div>
+                                        ) : null}
                                     </td>
                                     <td className="px-5 py-4">
                                         <p>{appointment.assigned_staff?.map(person => person.full_name).join(", ")
