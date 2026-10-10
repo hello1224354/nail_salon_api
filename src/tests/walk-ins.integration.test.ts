@@ -11,7 +11,7 @@ import { User, UserRole } from "../modules/users/users.entity";
 import { Branch } from "../modules/branches/branches.entity";
 import { Staff } from "../modules/staffs/staffs.entity";
 import { Service } from "../modules/services/service.entity";
-import { AppointmentStatus } from "../modules/appointments/appointments.entity";
+import { Appointment, AppointmentStatus } from "../modules/appointments/appointments.entity";
 import { createAppointment, getAdminTodaySummary, getAppointment, updateAppointment } from "../modules/appointments/appointments.service";
 import { setActualPriceForStaff } from "../modules/appointments/appointments.prices";
 import { parseCreateWalkInDto } from "../modules/walk-ins/walk-ins.dto";
@@ -106,7 +106,21 @@ test("two staff price one group appointment independently, without changing refe
     );
     await updateAppointment(booking.id, admin.id, UserRole.ADMIN, { status: AppointmentStatus.CONFIRMED });
     await setActualPriceForStaff(booking.id, service.id, staff1.id, 180000);
+    // Simulate reaching the scheduled time on disposable test DB only.
+    await AppDataSource.getRepository(Appointment).update(
+        { id: booking.id },
+        {
+            status: AppointmentStatus.IN_PROGRESS,
+            start_time: new Date(Date.now() - 60_000),
+            end_time: new Date(Date.now() - 30_000),
+        },
+    );
+    await assert.rejects(
+        updateAppointment(booking.id, staff1.id, UserRole.STAFF, { status: AppointmentStatus.COMPLETED }),
+        (e: unknown) => e instanceof AppError && e.code === "ACTUAL_PRICES_INCOMPLETE",
+    );
     await setActualPriceForStaff(booking.id, service.id, staff2.id, 220000);
+    await updateAppointment(booking.id, staff1.id, UserRole.STAFF, { status: AppointmentStatus.COMPLETED });
     await assert.rejects(
         setActualPriceForStaff(booking.id, service.id, customer.id, 5),
         (e: unknown) => e instanceof AppError && e.statusCode === 403,

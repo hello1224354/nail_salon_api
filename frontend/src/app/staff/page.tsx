@@ -41,18 +41,15 @@ export default function StaffPage() {
         setServices(svc.services);
         setAppointments(appts.appointments);
         setVisits(walkins.visits);
-        setOnlinePrices(old => {
-            const next = { ...old };
-            for (const appt of appts.appointments) {
-                for (const item of appt.actual_prices ?? []) {
-                    if (item.staff_id === staff.id) {
-                        const key = appt.id + ":" + item.service_id;
-                        if (next[key] === undefined) next[key] = String(item.actual_price);
-                    }
+        const latestPrices: Record<string, string> = {};
+        for (const appt of appts.appointments) {
+            for (const item of appt.actual_prices ?? []) {
+                if (item.staff_id === staff.id) {
+                    latestPrices[appt.id + ":" + item.service_id] = String(item.actual_price);
                 }
             }
-            return next;
-        });
+        }
+        setOnlinePrices(latestPrices);
     }, []);
 
     useEffect(() => {
