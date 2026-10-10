@@ -304,6 +304,7 @@ export function BookingForm() {
         let cancelled = false;
         const controller = new AbortController();
         let timeout: ReturnType<typeof setTimeout> | undefined;
+        let timedOut = false;
         setAvailabilityLoading(true);
         setAvailabilityError("");
         setAvailableSlots(new Map());
@@ -321,6 +322,7 @@ export function BookingForm() {
                 // handling that might otherwise outlive an aborted fetch.
                 const timeoutFailure = new Promise<never>((_, reject) => {
                     timeout = setTimeout(() => {
+                        timedOut = true;
                         controller.abort();
                         reject(new Error("AVAILABILITY_TIMEOUT"));
                     }, 12_000);
@@ -352,7 +354,7 @@ export function BookingForm() {
                 setSelectedTime("");
                 setMaxPartySize(null);
                 setAvailabilityError(
-                    loadError instanceof Error && loadError.message === "AVAILABILITY_TIMEOUT"
+                    timedOut
                         ? "Kiểm tra giờ trống quá thời gian chờ. Vui lòng thử lại."
                         : getApiErrorMessage(loadError, "Chưa kiểm tra được các giờ còn trống.")
                 );
