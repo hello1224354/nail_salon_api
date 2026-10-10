@@ -4,6 +4,8 @@ import { parseCreateAppointmentDto, parseGetAppointmentsQuery, parseGetAvailabil
 import { AppError } from "../../common/errors";
 import { Appointment } from "./appointments.entity";
 import { parseUuidParam } from "../../common/validators";
+import { setActualPriceForStaff } from "./appointments.prices";
+import { validActualPrice } from "../walk-ins/walk-ins.dto";
 
 function toAppointmentResponse(appointment: Appointment) {
     const {
@@ -140,4 +142,16 @@ export const deleteAppointment = async (req: Request, res: Response) => {
             data: toAppointmentResponse(data),
         }
     });
+};
+
+export const setActualPrice = async (req: Request, res: Response) => {
+    if (!req.user) throw new AppError("Authentication required", 401, "AUTHENTICATION_REQUIRED");
+    const appointmentId = parseUuidParam(req.params.id, "Appointment id");
+    const serviceId = parseUuidParam(req.params.serviceId, "Service id");
+    const body = req.body as Record<string, unknown> | null;
+    if (!body || !validActualPrice(body.actual_price)) {
+        throw new AppError("Actual price must be a non-negative whole VND amount", 400, "VALIDATION_ERROR");
+    }
+    const result = await setActualPriceForStaff(appointmentId, serviceId, req.user.id, body.actual_price);
+    return res.status(200).json({ success: { data: result, message: "Actual price saved" } });
 };

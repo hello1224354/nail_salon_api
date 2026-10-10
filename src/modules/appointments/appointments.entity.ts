@@ -1,6 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, Index } from "typeorm";
 import { AppointmentService } from "./appointment-services.entity";
 import { AppointmentStaffAssignment } from "./appointment-staff-assignment.entity";
+import { AppointmentActualPrice } from "./appointment-actual-price.entity";
 
 export enum AppointmentStatus {
     PENDING = "pending",
@@ -32,6 +33,9 @@ export class Appointment {
 
     @OneToMany(() => AppointmentStaffAssignment, assignment => assignment.appointment)
     staff_assignments: AppointmentStaffAssignment[];
+
+    @OneToMany(() => AppointmentActualPrice, price => price.appointment)
+    actual_prices: AppointmentActualPrice[];
 
     @Column({ type: "varchar" })
     customer_full_name: string;
