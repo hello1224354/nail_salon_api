@@ -127,6 +127,7 @@ export default function StaffPage() {
         if (raw === undefined || raw.trim() === "" || !Number.isSafeInteger(amount) || amount < 0 || amount > 1_000_000_000) {
             setError("Nhập giá thực tế hợp lệ bằng VND."); return;
         }
+        if (!window.confirm("Đã thông báo giá thực tế " + vnd(amount) + " cho khách trước khi thực hiện?")) return;
         setSaving(true); setError(""); setMessage("");
         try {
             await apiRequest("/api/appointments/" + appt.id + "/actual-prices/" + serviceId, {

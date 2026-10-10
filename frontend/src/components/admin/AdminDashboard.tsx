@@ -1075,7 +1075,8 @@ function Overview({
                 <section className="rounded-[22px] border border-line bg-[#2d2926] p-5 text-white">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#d0ad97]">Hôm nay</p>
                     <div className="mt-5 border-b border-white/15 pb-5">
-                        <h2 className="text-sm font-medium text-white/75">Tổng doanh thu hôm nay</h2>
+                        <h2 className="text-sm font-medium text-white/75">Tổng giá thực tế đã ghi nhận hôm nay</h2>
+                        <p className="mt-1 text-[10px] text-white/55">Lịch hoàn thành và khách vãng lai; không tính giá tham khảo.</p>
                         <p className="mt-2 font-serif text-[clamp(1.8rem,3vw,2.5rem)] leading-tight tracking-[-0.025em] tabular-nums">
                             {formatVnd(todayStats.revenue)}đ
                         </p>

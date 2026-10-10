@@ -73,6 +73,8 @@ jobs:
         run: npm run migration:run
       - name: Run booking concurrency integration tests
         run: npm run test:booking:integration
+      - name: Test walk-in and group actual pricing on ephemeral MySQL
+        run: npx tsx --test src/tests/walk-ins.integration.test.ts
       - name: Verify MySQL media BLOB lifecycle
         run: npx tsx --test src/tests/media-storage.integration.test.ts
 
