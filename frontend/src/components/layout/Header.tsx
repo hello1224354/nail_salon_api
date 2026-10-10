@@ -131,8 +131,8 @@ export function Header() {
 
                     {authUser ? (
                         <>
-                            <Link href={authUser.role.toLowerCase() === "staff" ? "/staff" : "/book"} className="focus-ring flex h-9 min-w-[126px] items-center justify-center rounded-full bg-ink px-4 text-xs font-semibold text-white shadow-[0_6px_18px_rgba(45,39,35,0.12)] transition-all hover:-translate-y-0.5 hover:shadow-[0_9px_22px_rgba(45,39,35,0.16)]">
-                                {authUser.role.toLowerCase() === "staff" ? "Khu vực nhân viên" : "Đặt lịch ngay"}
+                            <Link href="/book" className="focus-ring flex h-9 min-w-[126px] items-center justify-center rounded-full bg-ink px-4 text-xs font-semibold text-white shadow-[0_6px_18px_rgba(45,39,35,0.12)] transition-all hover:-translate-y-0.5 hover:shadow-[0_9px_22px_rgba(45,39,35,0.16)]">
+                                Đặt lịch ngay
                             </Link>
 
                             <div ref={accountMenuRef} className="relative">
@@ -275,11 +275,11 @@ export function Header() {
 
                         {authUser ? (
                             <Link
-                                href={authUser.role.toLowerCase() === "staff" ? "/staff" : "/book"}
+                                href="/book"
                                 onClick={() => setMobileOpen(false)}
                                 className="focus-ring mt-3 rounded-full bg-ink px-5 py-3.5 text-center text-xs font-semibold text-white"
                             >
-                                {authUser.role.toLowerCase() === "staff" ? "Khu vực nhân viên" : "Đặt lịch ngay"}
+                                Đặt lịch ngay
                             </Link>
                         ) : null}
 
@@ -293,6 +293,15 @@ export function Header() {
                                             <p className="mt-0.5 truncate text-[11px] text-muted">{authUser.email || "Chưa có email"}</p>
                                         </div>
                                     </div>
+                                    {authUser.role.toLowerCase() === "staff" ? (
+                                        <Link
+                                            href="/staff"
+                                            onClick={() => setMobileOpen(false)}
+                                            className="focus-ring mb-2 block w-full rounded-full border border-line px-5 py-3 text-center text-xs font-semibold text-ink"
+                                        >
+                                            Khu vực nhân viên
+                                        </Link>
+                                    ) : null}
                                     <Link
                                         href="/appointments"
                                         onClick={() => setMobileOpen(false)}

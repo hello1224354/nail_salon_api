@@ -11,12 +11,10 @@ import {
     type AppointmentList,
 } from "@/lib/api";
 import { clearSession, restoreSession, type AuthUser } from "@/lib/auth";
+import { canUseCustomerFeatures as canBook } from "@/lib/roles";
 import { formatAppointmentStatus, formatVnd, localizeBranchName } from "@/lib/studio-data";
 
 const BUSINESS_TIMEZONE = "Asia/Ho_Chi_Minh";
-function canBook(role: string): boolean {
-    return role.toLowerCase() === "customer" || role.toLowerCase() === "admin";
-}
 
 const filters = [
     { value: "all", label: "Tất cả" },
@@ -97,7 +95,7 @@ export function MyAppointments() {
                 if (cancelled) return;
 
                 if (!canBook(currentUser.role)) {
-                    setError("Trang này dành cho tài khoản CUSTOMER hoặc ADMIN.");
+                    setError("Trang này dành cho tài khoản CUSTOMER, STAFF hoặc ADMIN.");
                     setAppointments([]);
                     return;
                 }
@@ -140,7 +138,7 @@ export function MyAppointments() {
             const [currentUser, appointmentData] = await fetchAppointmentContext();
 
             if (!canBook(currentUser.role)) {
-                setError("Trang này dành cho tài khoản CUSTOMER hoặc ADMIN.");
+                setError("Trang này dành cho tài khoản CUSTOMER, STAFF hoặc ADMIN.");
                 setAppointments([]);
                 return;
             }

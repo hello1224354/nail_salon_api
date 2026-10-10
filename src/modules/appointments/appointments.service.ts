@@ -7,6 +7,7 @@ import * as serviceService from "../services/services.service";
 import * as branchService from "../branches/branches.service";
 import { Between, EntityManager, In, IsNull, LessThan, MoreThan, QueryFailedError } from "typeorm";
 import { User, UserRole } from "../users/users.entity";
+import { hasRoleAccess } from "../../common/role-permissions";
 import { AppointmentService } from "./appointment-services.entity";
 import { StaffBookingSlot } from "./staff-booking-slots.entity";
 import { AppointmentStaffAssignment } from "./appointment-staff-assignment.entity";
@@ -231,10 +232,10 @@ export const getAvailability = async (data: GetAvailabilityQueryDto) => {
 };
 
 export const createAppointment = async (actorId: string, actorRole: UserRole, data: CreateAppointmentDto) => {
-    // ADMIN can book for themselves via the public flow, subject to the same
-    // rules as CUSTOMER. Neither role may impersonate another user or pick staff.
-    if (actorRole !== UserRole.CUSTOMER && actorRole !== UserRole.ADMIN) {
-        throw new AppError("Only customers and admins can create personal appointments", 403, "FORBIDDEN");
+    // STAFF may book as a customer, using their own user identity.
+    // Public bookings never allow impersonation or staff selection.
+    if (!hasRoleAccess(actorRole, [UserRole.CUSTOMER, UserRole.ADMIN])) {
+        throw new AppError("This role cannot create personal appointments", 403, "FORBIDDEN");
     }
 
     if (data.user_id !== undefined || data.customer_email !== undefined || data.staff_id !== undefined) {
@@ -498,13 +499,13 @@ export const getAllAppointments = async (userId: string, role: UserRole, query: 
         .leftJoinAndSelect("appointment.actual_prices", "actual_prices")
         .where("appointment.merged_into_id IS NULL");
 
-    if (role === UserRole.CUSTOMER || (role === UserRole.ADMIN && query.scope === "mine")) {
+    if (role === UserRole.CUSTOMER || (query.scope === "mine" && (role === UserRole.ADMIN || role === UserRole.STAFF))) {
         queryBuilder.andWhere("appointment.user_id = :user_id", {
             user_id: userId,
         });
     }
 
-    if (role === UserRole.STAFF) {
+    if (role === UserRole.STAFF && query.scope !== "mine") {
         const staff = await staffService.getStaff(userId);
 
         if (!staff) throw new AppError("Staff profile not found", 404, "STAFF_NOT_FOUND");
@@ -577,7 +578,8 @@ export const getAppointment = async (id: string, userId: string, role: UserRole)
     });
     if (!appointment) return null;
     if (role === UserRole.CUSTOMER && appointment.user_id !== userId) return null;
-    if (role === UserRole.STAFF && !appointment.staff_assignments.some(s => s.staff_id === userId)) return null;
+    if (role === UserRole.STAFF && appointment.user_id !== userId &&
+        !appointment.staff_assignments.some(s => s.staff_id === userId)) return null;
     return appointment;
 };
 
