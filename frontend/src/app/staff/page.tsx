@@ -23,6 +23,7 @@ export default function StaffPage() {
     const [tab, setTab] = useState<"walkin" | "bookings">("walkin");
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [nowMs, setNowMs] = useState(0);
     const [error, setError] = useState("");
     const [message, setMessage] = useState("");
     const [customerName, setCustomerName] = useState("");
@@ -75,6 +76,14 @@ export default function StaffPage() {
         })();
         return () => { mounted = false; };
     }, [router, load]);
+
+    // Keep the start control in sync with appointment time without changing the server's rule.
+    // Initial 0 avoids rendering a premature start action during SSR/hydration.
+    useEffect(() => {
+        setNowMs(Date.now());
+        const clock = window.setInterval(() => setNowMs(Date.now()), 30_000);
+        return () => window.clearInterval(clock);
+    }, []);
 
     const chosen = useMemo(() => chosenIds.map(id => services.find(s => s.id === id))
         .filter((s): s is Service => Boolean(s)), [chosenIds, services]);
@@ -137,7 +146,12 @@ export default function StaffPage() {
     }
 
     async function changeStatus(appt: Appointment, status: "in_progress" | "completed") {
-        if (!profile || saving || !window.confirm("Xác nhận cập nhật trạng thái lịch hẹn?")) return;
+        if (!profile || saving) return;
+        if (Date.now() < new Date(appt.start_time).getTime()) {
+            setError("Lịch hẹn chưa đến giờ. Chỉ có thể bắt đầu từ " + dateVN(appt.start_time) + ".");
+            return;
+        }
+        if (!window.confirm("Xác nhận cập nhật trạng thái lịch hẹn?")) return;
         setSaving(true); setError(""); setMessage("");
         try {
             await apiRequest("/api/appointments/" + appt.id, {
@@ -200,12 +214,15 @@ export default function StaffPage() {
                         <p className="mt-1 text-xs text-muted">{dateVN(visit.served_at)}</p>
                         <div className="mt-3 space-y-2">{visit.services.map(s => <p key={s.service_id} className="flex justify-between gap-3 text-xs"><span>{s.service_name}</span><strong>{vnd(s.actual_price)}</strong></p>)}</div>
                         <p className="mt-3 border-t border-line pt-3 text-right font-semibold">{vnd(visit.services.reduce((n, s) => n + s.actual_price, 0))}</p>
-                    </article>)}
+                    </article>;
+            })}
                 </div>}
             </section>
         </> : <section className="mt-6 space-y-5">
             <p className="rounded-xl border border-[#e5c0a6] bg-[#fff1e6] p-4 text-xs leading-5">Booking nhóm vẫn có một mã lịch. Mỗi nhân viên nhập giá thực tế của riêng mình; muốn hoàn thành lịch, tất cả nhân viên được giao phải nhập đủ giá.</p>
-            {appointments.length === 0 ? <p className="text-sm text-muted">Chưa có lịch hẹn được giao.</p> : appointments.map(appt => <article key={appt.id} className="rounded-[22px] border border-line bg-white p-5 sm:p-7">
+            {appointments.length === 0 ? <p className="text-sm text-muted">Chưa có lịch hẹn được giao.</p> : appointments.map(appt => {
+                const canStart = nowMs > 0 && nowMs >= new Date(appt.start_time).getTime();
+                return <article key={appt.id} className="rounded-[22px] border border-line bg-white p-5 sm:p-7">
                 <p className="text-xs text-accent">Mã {(appt.booking_group_id || appt.id).slice(0, 8).toUpperCase()} · {appt.party_size} người</p>
                 <h3 className="mt-1 font-serif text-2xl">{appt.customer?.full_name || "Khách"}</h3>
                 <p className="mt-2 text-xs text-muted">{dateVN(appt.start_time)} · {formatAppointmentStatus(appt.status)}</p>
@@ -221,7 +238,20 @@ export default function StaffPage() {
                 })}</div>
                 <p className="mt-4 text-xs text-muted">Đã nhập giá: {(appt.actual_prices ?? []).length}/{(appt.appointment_services?.length ?? 0) * appt.party_size} phần của toàn bộ nhóm.</p>
                 <div className="mt-4 flex justify-end gap-3">
-                    {appt.status === "confirmed" ? <button className={actionClass} type="button" disabled={saving} onClick={() => void changeStatus(appt, "in_progress")}>Bắt đầu làm</button> : null}
+                    {appt.status === "confirmed" ? (
+                        <div className="flex flex-wrap items-center justify-end gap-3">
+                            {!canStart ? (
+                                <span className="text-xs leading-5 text-muted" role="status">
+                                    Chưa đến giờ hẹn · Có thể bắt đầu từ {dateVN(appt.start_time)}
+                                </span>
+                            ) : null}
+                            <button className={actionClass} type="button" disabled={saving || !canStart}
+                                aria-label={canStart ? "Bắt đầu làm" : "Chưa đến giờ hẹn"}
+                                onClick={() => void changeStatus(appt, "in_progress")}>
+                                {canStart ? "Bắt đầu làm" : "Chưa đến giờ hẹn"}
+                            </button>
+                        </div>
+                    ) : null}
                     {appt.status === "in_progress" ? <button className={actionClass} type="button" disabled={saving} onClick={() => void changeStatus(appt, "completed")}>Hoàn thành</button> : null}
                 </div>
             </article>)}
