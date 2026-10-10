@@ -141,6 +141,8 @@ const errorMessagesByCode: Record<string, string> = {
     OUTSIDE_BUSINESS_HOURS: "Khung giờ đã chọn nằm ngoài giờ mở cửa của tiệm.",
     APPOINTMENT_CONFLICT: "Khung giờ này không còn khả dụng.",
     ACTUAL_PRICES_INCOMPLETE: "Mọi nhân viên trong nhóm phải nhập đủ giá thực tế trước khi hoàn thành.",
+    APPOINTMENT_NOT_STARTED_YET: "Lịch hẹn chưa đến giờ bắt đầu. Vui lòng kiểm tra lại ngày và giờ đã hẹn.",
+    INVALID_STATUS_TRANSITION: "Không thể chuyển sang trạng thái này. Vui lòng tải lại danh sách lịch hẹn.",
 };
 
 export function getApiErrorMessage(error: unknown, fallback: string) {
