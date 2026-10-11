@@ -6,8 +6,10 @@ import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { RouteMotion } from "@/components/layout/RouteMotion";
 import { BranchProvider } from "@/components/branch/BranchProvider";
+import { SITE_ORIGIN } from "@/lib/site-url";
 
 export const metadata: Metadata = {
+    metadataBase: new URL(SITE_ORIGIN),
     applicationName: "Serpente Nail Room",
     title: {
         default: "Serpente Nail Room",
