@@ -63,7 +63,7 @@ async function connectDebugger(wsUrl) {
 }
 
 const measure = `(() => {
-    const shell = document.querySelector(".site-shell");
+    const shell = document.querySelector("main .site-shell");
     if (!shell) throw new Error("Site shell missing");
     const container = document.createElement("div");
     container.dataset.responsiveQa = "true";
@@ -137,7 +137,7 @@ try {
         await debuggerClient.send("Page.navigate", { url: "http://127.0.0.1:3001/services" }, sessionId);
         await until(async () => {
             const response = await debuggerClient.send("Runtime.evaluate", {
-                expression: 'document.readyState === "complete" && !!document.querySelector(".site-shell")',
+                expression: 'document.readyState === "complete" && !!document.querySelector("main .site-shell")',
                 returnByValue: true,
             }, sessionId);
             return response.result?.value;
