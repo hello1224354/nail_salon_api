@@ -21,6 +21,11 @@ assert.match(sitemap, /SITE_ORIGIN/);
 assert.match(robots, /SITE_ORIGIN/);
 assert.match(robots, /\/sitemap\.xml/);
 
+const nextConfig = read("../next.config.ts");
+assert.ok(nextConfig.includes('has: [{ type: "host" as const, value: "nail-salon-web-v2.vercel.app" }]'));
+assert.ok(nextConfig.includes('destination: `${SITE_ORIGIN}/:path*`'));
+assert.ok(nextConfig.includes("permanent: true"));
+
 const legacyDomain = ["nail-salon-web-v2", "vercel", "app"].join(".");
 for (const file of [
     "../../README.md",
