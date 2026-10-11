@@ -67,12 +67,12 @@ export function CurrentOffers({ offers, instagramHandle }: CurrentOffersProps) {
     if (offers.length === 0) {
         return (
             <section className="overflow-hidden rounded-[28px] border border-line bg-surface">
-                <div className="grid min-h-[420px] gap-10 p-7 sm:p-10 lg:grid-cols-[1fr_0.72fr] lg:items-center lg:p-14">
+                <div className="grid min-w-0 gap-[clamp(1.5rem,3vw,2.5rem)] p-[clamp(1.25rem,3vw,3.5rem)] lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] lg:items-center">
                     <div>
                         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">
                             Ưu đãi
                         </p>
-                        <h1 className="mt-4 max-w-xl font-serif text-[46px] leading-[0.96] tracking-[-0.035em] sm:text-6xl lg:text-[74px]">
+                        <h1 className="mt-4 max-w-xl font-serif text-[clamp(2.3rem,5vw,4.625rem)] leading-[1.03] tracking-[-0.035em]">
                             Ưu đãi mới
                             <br />
                             sẽ có tại đây.
@@ -97,9 +97,9 @@ export function CurrentOffers({ offers, instagramHandle }: CurrentOffersProps) {
                         </div>
                     </div>
 
-                    <div className="relative overflow-hidden rounded-[24px] bg-tint p-8 sm:p-10">
+                    <div className="relative min-w-0 rounded-[24px] bg-tint p-[clamp(1.25rem,3vw,2.5rem)]">
                         <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-accent">Sắp ra mắt</p>
-                        <p className="mt-4 font-serif text-4xl leading-tight">Chương trình dành riêng cho khách của Serpente.</p>
+                        <p className="fluid-card-title mt-4 font-serif">Chương trình dành riêng cho khách của Serpente.</p>
                         <div className="mt-12 h-px bg-accent/20" />
                         <p className="mt-5 text-xs leading-5 text-muted">
                             {instagramHandle
@@ -122,12 +122,12 @@ export function CurrentOffers({ offers, instagramHandle }: CurrentOffersProps) {
                         className="min-w-0 flex-[0_0_100%]"
                         aria-label={`Ưu đãi ${index + 1} trên ${offers.length}`}
                     >
-                        <div className="grid gap-9 lg:grid-cols-[0.9fr_1.1fr] lg:items-center lg:gap-16">
+                        <div className="grid min-w-0 gap-[clamp(1.25rem,3vw,3rem)] lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-center">
                             <div className="py-2 lg:py-10">
                                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">
                                     Đang áp dụng
                                 </p>
-                                <h1 className="mt-4 max-w-md font-serif text-[42px] leading-[0.96] tracking-[-0.03em] sm:text-6xl lg:text-[74px]">
+                                <h1 className="mt-4 max-w-md font-serif text-[clamp(2.25rem,5vw,4.625rem)] leading-[1.03] tracking-[-0.03em]">
                                     Ưu đãi
                                     <br />
                                     tại Serpente.
