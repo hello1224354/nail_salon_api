@@ -5,6 +5,7 @@ import { apiRequest, type OfferList, type SalonContent } from "@/lib/api";
 
 export const metadata: Metadata = {
     title: "Serpente Nail Room",
+    alternates: { canonical: "/" },
     description: "Bảng giá, lịch hẹn, mẫu móng và thông tin chính thức của Serpente Nail Room tại Quận 8.",
 };
 
