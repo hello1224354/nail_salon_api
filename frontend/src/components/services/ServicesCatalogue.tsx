@@ -128,15 +128,15 @@ export function ServicesCatalogue() {
             ) : null}
 
             {!branchesLoading && !loading && visibleServices.length > 0 ? (
-                <div className="mt-7 overflow-hidden rounded-[22px] border border-line bg-surface">
+                <div className="mt-7 min-w-0 rounded-[22px] border border-line bg-surface">
                     {visibleServices.map((service, index) => (
                         <article
                             key={service.id}
-                            className={`grid gap-4 px-5 py-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:px-7 ${
+                            className={`flex min-w-0 flex-wrap items-center gap-4 px-[clamp(1.25rem,2.5vw,1.75rem)] py-5 ${
                                 index > 0 ? "border-t border-line" : ""
                             }`}
                         >
-                            <div className="min-w-0">
+                            <div className="min-w-0 flex-[1_1_16rem]">
                                 <div className="flex flex-wrap items-center gap-2">
                                     {service.subcategory ? (
                                         <span className="text-[9px] font-semibold uppercase tracking-[0.14em] text-accent">
@@ -155,7 +155,7 @@ export function ServicesCatalogue() {
                                     ) : null}
                                 </div>
 
-                                <h2 className="mt-2 font-serif text-[24px] leading-tight tracking-[-0.02em] sm:text-[28px]">
+                                <h2 className="mt-2 break-words font-serif text-[clamp(1.35rem,2.5vw,1.9rem)] leading-tight tracking-[-0.02em]">
                                     {service.display_name || service.name}
                                 </h2>
 
@@ -172,7 +172,7 @@ export function ServicesCatalogue() {
                                 ) : null}
                             </div>
 
-                            <div className="sm:text-right">
+                            <div className="min-w-0 flex-[0_1_12rem] text-left sm:ml-auto sm:text-right">
                                 <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Giá tham khảo</p>
                                 <p className="text-lg font-semibold tabular-nums">{formatServicePrice(service)}</p>
                                 {service.price_max && service.price_min && service.price_max > service.price_min ? (
