@@ -143,12 +143,10 @@ function isValidVietnamesePhone(value: string) {
 
 function SectionHeading({ number, title, helper }: { number: string; title: string; helper?: string }) {
     return (
-        <div>
-            <div className="grid grid-cols-[46px_1fr] items-baseline sm:grid-cols-[60px_1fr]">
-                <span className="font-serif text-[24px] font-medium leading-none tracking-[0.05em] text-accent sm:text-[26px]">{number}</span>
-                <h2 className="font-serif text-2xl tracking-[-0.015em] sm:text-[30px]">{title}</h2>
-            </div>
-            {helper ? <p className="mt-2 pl-[46px] text-xs leading-5 text-muted sm:pl-[60px]">{helper}</p> : null}
+        <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-baseline gap-x-[clamp(0.75rem,2vw,1rem)]">
+            <span className="font-serif text-[clamp(1.35rem,2.5vw,1.625rem)] font-medium leading-none tracking-[0.05em] text-accent">{number}</span>
+            <h2 className="min-w-0 font-serif text-[clamp(1.4rem,3vw,1.875rem)] leading-tight tracking-[-0.015em]">{title}</h2>
+            {helper ? <p className="col-start-2 mt-2 min-w-0 text-xs leading-5 text-muted">{helper}</p> : null}
         </div>
     );
 }
@@ -510,20 +508,20 @@ export function BookingForm() {
 
     if (initialLoading) {
         return (
-            <div className="grid gap-7 xl:grid-cols-[minmax(0,1fr)_420px] xl:items-start xl:gap-10" aria-label="Đang tải biểu mẫu đặt lịch">
-                <div className="h-[900px] animate-pulse rounded-[22px] border border-line bg-surface" />
-                <div className="h-[520px] animate-pulse rounded-[22px] border border-line bg-surface" />
+            <div className="grid min-w-0 gap-[clamp(1.25rem,3vw,2.5rem)] xl:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)] xl:items-start" aria-label="Đang tải biểu mẫu đặt lịch">
+                <div className="min-h-[55vh] animate-pulse rounded-[22px] border border-line bg-surface" />
+                <div className="min-h-[35vh] animate-pulse rounded-[22px] border border-line bg-surface" />
             </div>
         );
     }
 
     return (
         <>
-        <form onSubmit={handleSubmit} className="grid gap-7 xl:grid-cols-[minmax(0,1fr)_420px] xl:items-start xl:gap-10">
-            <div className="overflow-hidden rounded-[22px] border border-line bg-surface">
-                <section className="p-5 sm:p-7 lg:p-8">
+        <form onSubmit={handleSubmit} className="grid min-w-0 gap-[clamp(1.25rem,3vw,2.5rem)] xl:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)] xl:items-start">
+            <div className="min-w-0 rounded-[22px] border border-line bg-surface">
+                <section className="min-w-0 p-[clamp(1rem,2.5vw,2rem)]">
                     <SectionHeading number="01" title="Chi nhánh" helper="Chọn nơi bạn muốn làm móng." />
-                    <div className="mt-6 grid gap-3 sm:grid-cols-2 sm:pl-[60px]">
+                    <div className="mt-6 grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(min(100%,16rem),1fr))]">
                         {branches.length > 0 ? (
                             branches.map((branch) => {
                                 const selected = branch.id === selectedBranchId;
@@ -541,9 +539,9 @@ export function BookingForm() {
                                             onChange={() => handleBranchChange(branch.id)}
                                             className="mt-0.5 accent-[#986a58]"
                                         />
-                                        <span>
-                                            <span className="block text-sm font-semibold">{shortBranchName(branch.name)}</span>
-                                            <span className="mt-1 block text-[11px] leading-4 text-muted">{localizeAddress(branch.address)}</span>
+                                        <span className="min-w-0">
+                                            <span className="block break-words text-sm font-semibold">{shortBranchName(branch.name)}</span>
+                                            <span className="mt-1 block break-words text-[11px] leading-4 text-muted">{localizeAddress(branch.address)}</span>
                                         </span>
                                     </label>
                                 );
@@ -556,11 +554,11 @@ export function BookingForm() {
                     </div>
                 </section>
 
-                <div className="mx-5 h-px bg-line sm:mx-7 lg:mx-8" />
+                <div className="mx-[clamp(1rem,2.5vw,2rem)] h-px bg-line" />
 
-                <section className="p-5 sm:p-7 lg:p-8">
+                <section className="min-w-0 p-[clamp(1rem,2.5vw,2rem)]">
                     <SectionHeading number="02" title="Dịch vụ" helper="Chọn dịch vụ bạn muốn làm trong lần hẹn này." />
-                    <div className="mt-6 space-y-2 sm:pl-[60px]">
+                    <div className="mt-6 min-w-0 space-y-2">
                         {servicesLoading ? (
                             Array.from({ length: 5 }, (_, index) => (
                                 <div key={index} className="h-[62px] animate-pulse rounded-[12px] border border-line bg-cream" />
@@ -584,7 +582,7 @@ export function BookingForm() {
                                 return (
                                     <label
                                         key={service.id}
-                                        className={`flex cursor-pointer items-center gap-3 rounded-[12px] border px-3 py-2.5 transition-colors ${
+                                        className={`grid min-w-0 cursor-pointer grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3 gap-y-1 rounded-[12px] border px-3 py-2.5 transition-colors ${
                                             selected ? "border-accent bg-tint" : "border-line bg-surface hover:border-accent/40"
                                         }`}
                                     >
@@ -595,10 +593,10 @@ export function BookingForm() {
                                             className="size-4 shrink-0 accent-[#986a58]"
                                         />
                                         <span className="min-w-0 flex-1">
-                                            <span className={`block truncate text-sm ${selected ? "font-semibold" : "font-medium"}`}>{service.name}</span>
+                                            <span className={`block break-words text-sm ${selected ? "font-semibold" : "font-medium"}`}>{service.name}</span>
                                             <span className="mt-0.5 block text-[10px] text-muted">{service.duration_minutes} phút</span>
                                         </span>
-                                        <span className="shrink-0 text-xs font-semibold tabular-nums">Tham khảo: {formatServicePrice(service)}</span>
+                                        <span className="col-start-2 min-w-0 text-xs font-semibold tabular-nums">Tham khảo: {formatServicePrice(service)}</span>
                                     </label>
                                 );
                             })
@@ -610,17 +608,17 @@ export function BookingForm() {
                     </div>
                 </section>
 
-                <div className="mx-5 h-px bg-line sm:mx-7 lg:mx-8" />
+                <div className="mx-[clamp(1rem,2.5vw,2rem)] h-px bg-line" />
 
-                <section className="p-5 sm:p-7 lg:p-8">
+                <section className="min-w-0 p-[clamp(1rem,2.5vw,2rem)]">
                     <SectionHeading
                         number="03"
                         title="Số người"
                         helper="Nếu đi nhiều người, hệ thống sẽ tìm đủ nhân viên rảnh trong cùng khung giờ và tự sắp xếp cho từng người."
                     />
-                    <div className="mt-6 sm:pl-[60px]">
-                        <div className="flex max-w-sm items-center justify-between rounded-[14px] border border-line bg-cream p-3">
-                            <div>
+                    <div className="mt-6 min-w-0">
+                        <div className="flex w-full flex-wrap items-center justify-between gap-4 rounded-[14px] border border-line bg-cream p-[clamp(0.75rem,2vw,1.125rem)]">
+                            <div className="min-w-0 flex-[1_1_12rem]">
                                 <p className="text-sm font-semibold">{partySize} người</p>
                                 <p className="mt-1 text-[11px] leading-4 text-muted">
                                     {maxPartySize === null
@@ -630,7 +628,7 @@ export function BookingForm() {
                                           : "Hiện chưa có nhân viên phù hợp tại chi nhánh này."}
                                 </p>
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex shrink-0 items-center gap-2">
                                 <button
                                     type="button"
                                     onClick={() => changePartySize(partySize - 1)}
@@ -658,11 +656,11 @@ export function BookingForm() {
                     </div>
                 </section>
 
-                <div className="mx-5 h-px bg-line sm:mx-7 lg:mx-8" />
+                <div className="mx-[clamp(1rem,2.5vw,2rem)] h-px bg-line" />
 
-                <section className="p-5 sm:p-7 lg:p-8">
+                <section className="min-w-0 p-[clamp(1rem,2.5vw,2rem)]">
                     <SectionHeading number="04" title="Ngày" helper={`Có thể đặt lịch: ${formatDateRange(dates)}`} />
-                    <div className="mt-6 grid grid-cols-4 gap-2 sm:grid-cols-7 sm:pl-[60px]">
+                    <div className="mt-6 grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,4.25rem),1fr))] gap-2">
                         {dates.map((date) => {
                             const selected = date.value === selectedDate;
                             return (
@@ -689,11 +687,11 @@ export function BookingForm() {
                     </div>
                 </section>
 
-                <div className="mx-5 h-px bg-line sm:mx-7 lg:mx-8" />
+                <div className="mx-[clamp(1rem,2.5vw,2rem)] h-px bg-line" />
 
-                <section className="p-5 sm:p-7 lg:p-8">
+                <section className="min-w-0 p-[clamp(1rem,2.5vw,2rem)]">
                     <SectionHeading number="05" title="Giờ còn trống" />
-                    <div className="mt-6 sm:pl-[60px]">
+                    <div className="mt-6 min-w-0">
                         {selectedServiceIds.length === 0 ? (
                             <div className="rounded-[14px] border border-line bg-cream px-4 py-5 text-xs leading-5 text-muted">
                                 Chọn dịch vụ trước để xem giờ còn nhận lịch.
@@ -725,7 +723,7 @@ export function BookingForm() {
                                 {timeGroups.map((group) => (
                                     <div key={group.label}>
                                         <p className="mb-2 text-xs font-semibold">{group.label}</p>
-                                        <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+                                        <div className="grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,4.4rem),1fr))] gap-2">
                                             {group.times.map((time) => {
                                                 const available = availableSlots.has(time);
                                                 const selected = time === selectedTime && available;
@@ -759,23 +757,23 @@ export function BookingForm() {
                     </div>
                 </section>
 
-                <div className="mx-5 h-px bg-line sm:mx-7 lg:mx-8" />
+                <div className="mx-[clamp(1rem,2.5vw,2rem)] h-px bg-line" />
 
-                <section className="p-5 sm:p-7 lg:p-8">
+                <section className="min-w-0 p-[clamp(1rem,2.5vw,2rem)]">
                     <SectionHeading
                         number="06"
                         title="Thông tin liên hệ"
                     />
-                    <div className="mt-6 grid gap-4 sm:grid-cols-2 sm:pl-[60px]">
-                        <div className="rounded-[12px] border border-line bg-cream px-4 py-3">
+                    <div className="mt-6 grid min-w-0 gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,15rem),1fr))]">
+                        <div className="min-w-0 rounded-[12px] border border-line bg-cream px-4 py-3">
                             <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">Họ và tên</p>
                             <p className="mt-1 text-sm font-semibold">{user?.full_name || "—"}</p>
                         </div>
-                        <div className="rounded-[12px] border border-line bg-cream px-4 py-3">
+                        <div className="min-w-0 rounded-[12px] border border-line bg-cream px-4 py-3">
                             <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">Email tài khoản</p>
-                            <p className="mt-1 truncate text-sm font-semibold">{user?.email || "—"}</p>
+                            <p className="mt-1 break-all text-sm font-semibold">{user?.email || "—"}</p>
                         </div>
-                        <label className="block sm:col-span-2">
+                        <label className="block min-w-0 [grid-column:1/-1]">
                             <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">
                                 Số điện thoại xác nhận lịch
                             </span>
@@ -797,7 +795,7 @@ export function BookingForm() {
                 </section>
             </div>
 
-            <aside className="space-y-5 xl:sticky xl:top-[98px]">
+            <aside className="min-w-0 space-y-5">
                 <section className="rounded-[22px] border-2 border-accent bg-surface p-5 shadow-[0_16px_40px_rgba(48,40,35,0.06)] sm:p-6">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-accent">Lịch bạn đang chọn</p>
                     <h2 className="mt-2 font-serif text-3xl">Xem lại trước khi đặt</h2>
@@ -848,7 +846,7 @@ export function BookingForm() {
                         Đây là giá tham khảo khi đặt lịch, không phải số tiền thanh toán cuối cùng. Giá thực tế có thể cao hơn tùy tình trạng móng, mẫu, vật liệu và yêu cầu phát sinh. Nhân viên sẽ báo giá trước khi thực hiện.
                     </div>
                     <div className="my-5 h-px bg-line" />
-                    <div className="flex items-end justify-between gap-4">
+                    <div className="flex flex-wrap items-end justify-between gap-4">
                         <span className="text-xs text-muted">Tổng giá tham khảo</span>
                         <span className="font-serif text-2xl tabular-nums">{formatVnd(totalPrice)} VND</span>
                     </div>
