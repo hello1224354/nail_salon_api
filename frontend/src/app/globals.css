@@ -54,21 +54,29 @@ body {
 }
 
 .site-shell {
-    width: calc(100% - 40px);
-    max-width: 1600px;
+    /* Fluid gutters use the actual available width, not device-specific offsets. */
+    width: min(calc(100% - clamp(1.5rem, 5vw, 5rem)), 100rem);
+    min-width: 0;
     margin-inline: auto;
 }
 
-@media (min-width: 640px) {
-    .site-shell {
-        width: calc(100% - 64px);
-    }
+/* Let card count follow the container's available space, not a viewport breakpoint. */
+.fluid-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 21rem), 1fr));
+    gap: clamp(0.875rem, 1.75vw, 1.25rem);
 }
 
-@media (min-width: 1024px) {
-    .site-shell {
-        width: calc(100% - 80px);
-    }
+.fluid-section-title {
+    font-size: clamp(1.9rem, 3.6vw, 3.125rem);
+    line-height: 1.14;
+    overflow-wrap: anywhere;
+}
+
+.fluid-card-title {
+    font-size: clamp(1.4rem, 2.6vw, 2.125rem);
+    line-height: 1.2;
+    overflow-wrap: anywhere;
 }
 
 button,
