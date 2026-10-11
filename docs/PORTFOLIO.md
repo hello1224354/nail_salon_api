@@ -1,6 +1,6 @@
 # Engineering case study — Serpente Nail Room
 
-[Live application](https://nail-salon-web-v2.vercel.app/) · [Product tour](DEMO.md) · [Architecture](ARCHITECTURE.md) · [Repository README](../README.md)
+[Live application](https://serpentenailroom.site/) · [Product tour](DEMO.md) · [Architecture](ARCHITECTURE.md) · [Repository README](../README.md)
 
 ## Product context and technical goal
 
@@ -85,7 +85,7 @@ An email to configured ADMIN recipients is triggered **after** appointment trans
 
 ## Deployment and verification
 
-- Live frontend: [Vercel](https://nail-salon-web-v2.vercel.app/).
+- Live frontend: [Vercel](https://serpentenailroom.site/).
 - API status: [Railway health endpoint](https://api-production-e911.up.railway.app/health).
 - CI: backend typecheck, unit/regression tests, **MySQL integration tests**, compilation and dependency audit; frontend typecheck, build, CSP and dependency checks; Docker/VPS configuration validation.
 - Release pipeline: GitHub Actions with separately deployed Next.js frontend on Vercel and Express backend on Railway.
