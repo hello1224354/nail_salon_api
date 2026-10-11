@@ -4,6 +4,7 @@ import { ServicesCatalogue } from "@/components/services/ServicesCatalogue";
 
 export const metadata: Metadata = {
     title: "Dịch vụ",
+    alternates: { canonical: "/services" },
     description: "Xem đầy đủ bảng giá dịch vụ hiện có tại Serpente Nail Room.",
 };
 
