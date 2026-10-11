@@ -98,7 +98,17 @@ jobs:
       - run: node --experimental-strip-types --test scripts/test-staff-login.mjs
       - run: node scripts/check-production-domain.mjs
       - run: npx tsc --noEmit
+      - run: node --test scripts/check-responsive-layout.mjs
       - run: npm run build
+      - name: Verify fluid layouts in Chrome at 360–1280px
+        run: node scripts/check-responsive-browser.mjs
+      - name: Save responsive browser screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: responsive-layout-screenshots
+          path: frontend/responsive-artifacts/
+          if-no-files-found: ignore
       - run: node scripts/check-csp.mjs
       - run: node scripts/audit-ci.mjs
 
