@@ -4,6 +4,7 @@ import "./book.css";
 
 export const metadata: Metadata = {
     title: "Đặt lịch",
+    alternates: { canonical: "/book" },
     description: "Chọn dịch vụ, số người và giờ còn trống để đặt lịch tại Serpente Nail Room.",
 };
 
