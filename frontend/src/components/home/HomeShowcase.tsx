@@ -366,7 +366,7 @@ export function HomeShowcase({ content }: { content: SalonContent | null }) {
                                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">
                                     Hot trend
                                 </p>
-                                <h2 className="mt-3 max-w-3xl font-serif text-4xl tracking-[-0.025em] sm:text-5xl">
+                                <h2 className="fluid-section-title mt-3 max-w-3xl font-serif tracking-[-0.025em]">
                                     Mẫu nail đang được yêu thích
                                 </h2>
                             </div>
@@ -395,17 +395,17 @@ export function HomeShowcase({ content }: { content: SalonContent | null }) {
                     <div className="site-shell py-14 lg:py-20">
                         <div className="max-w-3xl">
                             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">Một vài điều về tiệm</p>
-                            <h2 className="mt-3 font-serif text-4xl tracking-[-0.025em] sm:text-5xl">
+                            <h2 className="fluid-section-title mt-3 font-serif tracking-[-0.025em]">
                                 Để buổi làm móng thoải mái hơn
                             </h2>
                         </div>
 
-                        <div className="mt-8 grid gap-4 md:grid-cols-3">
+                        <div className="fluid-card-grid mt-8">
                             {details.map((item) => (
-                                <article key={item.title} className="rounded-[22px] border border-line bg-surface p-6 sm:p-7">
+                                <article key={item.title} className="min-w-0 rounded-[22px] border border-line bg-surface p-[clamp(1rem,2.4vw,1.75rem)]">
                                     <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-accent">{item.eyebrow}</p>
-                                    <h3 className="mt-4 font-serif text-3xl leading-tight">{item.title}</h3>
-                                    <p className="mt-3 text-sm leading-6 text-muted">{item.body}</p>
+                                    <h3 className="fluid-card-title mt-4 font-serif">{item.title}</h3>
+                                    <p className="mt-3 break-words text-sm leading-6 text-muted">{item.body}</p>
                                 </article>
                             ))}
                         </div>
@@ -419,7 +419,7 @@ export function HomeShowcase({ content }: { content: SalonContent | null }) {
                         <div className="flex flex-wrap items-end justify-between gap-4">
                             <div>
                                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">Đánh giá từ khách hàng</p>
-                                <h2 className="mt-3 font-serif text-4xl tracking-[-0.025em] sm:text-5xl">
+                                <h2 className="fluid-section-title mt-3 font-serif tracking-[-0.025em]">
                                     Khách đã ghé Serpente nói gì?
                                 </h2>
                             </div>
