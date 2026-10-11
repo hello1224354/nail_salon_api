@@ -4,7 +4,7 @@
 
 **A deployed nail salon booking platform with concurrency-safe staff allocation, account security, and an administrative dashboard.**
 
-[**Live website**](https://nail-salon-web-v2.vercel.app/) · [**Service catalog**](https://nail-salon-web-v2.vercel.app/services) · [**API health**](https://api-production-e911.up.railway.app/health) · [**Technical documentation**](docs/README.md) · [**Engineering case study**](docs/PORTFOLIO.md) · [**Product tour**](docs/DEMO.md)
+[**Live website**](https://serpentenailroom.site/) · [**Service catalog**](https://serpentenailroom.site/services) · [**API health**](https://api-production-e911.up.railway.app/health) · [**Technical documentation**](docs/README.md) · [**Engineering case study**](docs/PORTFOLIO.md) · [**Product tour**](docs/DEMO.md)
 
 ![Security Hardening CI](https://github.com/hello1224354/nail_salon_api/actions/workflows/security-hardening-ci.yml/badge.svg)
 
@@ -24,7 +24,7 @@ A salon with multiple employees must let customers find bookable times without s
 | Book without choosing staff; receive confirmation code | Receive Gmail notification for a new booking |
 | Review personal appointment status | View assigned appointments according to server-side role rules |
 
-**Application:** [Homepage](https://nail-salon-web-v2.vercel.app/) · [Services](https://nail-salon-web-v2.vercel.app/services) · [Booking](https://nail-salon-web-v2.vercel.app/book) · [Admin](https://nail-salon-web-v2.vercel.app/admin/login). Booking and management features are accessible to authenticated users with the appropriate role.
+**Application:** [Homepage](https://serpentenailroom.site/) · [Services](https://serpentenailroom.site/services) · [Booking](https://serpentenailroom.site/book) · [Admin](https://serpentenailroom.site/admin/login). Booking and management features are accessible to authenticated users with the appropriate role.
 
 ## Architecture
 
@@ -88,10 +88,10 @@ The current implementation focuses on appointment scheduling rather than online 
 
 | Area | URL | What it provides |
 |---|---|---|
-| Salon homepage | [Open](https://nail-salon-web-v2.vercel.app/) | Branch information, promotions, gallery and customer reviews |
-| Service catalog | [Open](https://nail-salon-web-v2.vercel.app/services) | Services grouped by category with pricing |
-| Appointment booking | [Open](https://nail-salon-web-v2.vercel.app/book) | Service selection, available time slots and booking confirmation (login required) |
-| Admin dashboard | [Login](https://nail-salon-web-v2.vercel.app/admin/login) | Booking management, search, filters and business data (admin access required) |
+| Salon homepage | [Open](https://serpentenailroom.site/) | Branch information, promotions, gallery and customer reviews |
+| Service catalog | [Open](https://serpentenailroom.site/services) | Services grouped by category with pricing |
+| Appointment booking | [Open](https://serpentenailroom.site/book) | Service selection, available time slots and booking confirmation (login required) |
+| Admin dashboard | [Login](https://serpentenailroom.site/admin/login) | Booking management, search, filters and business data (admin access required) |
 
 See the [product tour](docs/DEMO.md) for the principal user journeys.
 

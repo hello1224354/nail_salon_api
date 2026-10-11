@@ -1,6 +1,6 @@
 # Serpente Nail Room — Product tour
 
-**Live application:** https://nail-salon-web-v2.vercel.app/
+**Live application:** https://serpentenailroom.site/
 
 Serpente Nail Room provides a public service catalog, customer appointment booking, and an access-controlled operations dashboard. The public pages are available without signing in; booking and management workflows require an authenticated account.
 
@@ -8,9 +8,9 @@ Serpente Nail Room provides a public service catalog, customer appointment booki
 
 | Page | Description |
 |---|---|
-| [Home](https://nail-salon-web-v2.vercel.app/) | Salon introduction, promotional content, nail-design gallery, customer reviews and location information |
-| [Services](https://nail-salon-web-v2.vercel.app/services) | Service catalog with category filters, descriptions and pricing |
-| [Booking](https://nail-salon-web-v2.vercel.app/book) | Selection of services, group size, date and available start time; authentication is required to submit a booking |
+| [Home](https://serpentenailroom.site/) | Salon introduction, promotional content, nail-design gallery, customer reviews and location information |
+| [Services](https://serpentenailroom.site/services) | Service catalog with category filters, descriptions and pricing |
+| [Booking](https://serpentenailroom.site/book) | Selection of services, group size, date and available start time; authentication is required to submit a booking |
 
 ## Customer appointment flow
 
@@ -27,7 +27,7 @@ The customer chooses a **time slot**, not an employee. The API assigns eligible 
 
 ## Appointment administration
 
-The [admin sign-in page](https://nail-salon-web-v2.vercel.app/admin/login) leads to a role-restricted dashboard for authorized staff. Its appointment table supports filtering by branch, status and date range, and searching by the same short booking reference shown to the customer. Appointments advance through server-validated states from pending to completion or cancellation.
+The [admin sign-in page](https://serpentenailroom.site/admin/login) leads to a role-restricted dashboard for authorized staff. Its appointment table supports filtering by branch, status and date range, and searching by the same short booking reference shown to the customer. Appointments advance through server-validated states from pending to completion or cancellation.
 
 ## Supporting implementation
 

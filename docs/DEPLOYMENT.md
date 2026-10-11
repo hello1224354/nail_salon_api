@@ -6,7 +6,7 @@ Source đối chiếu: `.github/workflows/security-hardening-ci.yml`, `Dockerfil
 
 | Thành phần | Dịch vụ | URL |
 |---|---|---|
-| Web Next.js | Vercel: `nail-salon-web-v2` | https://nail-salon-web-v2.vercel.app/ |
+| Web Next.js | Vercel: `nail-salon-web-v2` | https://serpentenailroom.site/ |
 | API Express | Railway: `api` | https://api-production-e911.up.railway.app |
 | API health | Express | https://api-production-e911.up.railway.app/health |
 | Database | MySQL qua biến môi trường backend | Không expose credentials công khai |
@@ -31,7 +31,7 @@ CI PASS xác nhận kết quả build và các bài kiểm thử của commit. T
 1. Tạo feature branch từ `main` mới nhất; code + regression tests + docs trong cùng PR.
 2. Chạy CI/đọc diff trước merge, không merge khi job FAIL.
 3. Merge vào `main` khi head còn khớp/không conflict.
-4. **Vercel:** kiểm tra project `nail-salon-web-v2` nhận đúng commit SHA và deployment `READY`; xác nhận domain production đã gắn deployment. Chỉ frontend đổi vẫn cần verify website.
+4. **Vercel:** kiểm tra project nội bộ `nail-salon-web-v2` nhận đúng commit SHA và deployment `READY`; xác nhận `https://serpentenailroom.site` trỏ đúng deployment production, không chỉ kiểm tra URL deployment `.vercel.app`. Alias cũ phải chuyển hướng về domain chính, không được quảng bá làm website độc lập.
 5. **Railway:** kiểm tra service `api` nhận đúng commit SHA và deployment `SUCCESS`. Nếu auto-deploy không nhận, kiểm tra GitHub source/branch trong Railway thay vì giả định deploy đã chạy.
 6. Kiểm tra logs backend có DB migrations hoàn tất và `Server is running on port: 3000`.
 7. Gọi `/health`, xem site live, sau đó test các chức năng thay đổi với test account và test data được phép.
@@ -44,7 +44,7 @@ Backend `src/server.ts` gọi `AppDataSource.showMigrations()` ở production v�
 - `NODE_ENV=production`, `DB_SYNCHRONIZE=false`, `DB_LOGGING=false`.
 - `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` trỏ đúng DB và quyền tối thiểu.
 - `JWT_SECRET` dài/ngẫu nhiên; không tái sử dụng giữa staging/production.
-- `CORS_ORIGIN` chính xác website production; Origin check yêu cầu khớp cho refresh/logout.
+- `CORS_ORIGIN=https://serpentenailroom.site` cho website production; Origin check yêu cầu khớp chính xác cho refresh/logout. Không thay bằng URL deployment tạm hoặc domain cũ.
 - `GMAIL_*` đủ bốn biến, Gmail OAuth sender còn hiệu lực.
 - Ảnh upload được lưu trong bảng `media_files` dưới dạng MEDIUMBLOB trong MySQL Railway. Không yêu cầu R2 hay secret bổ sung. Khi chạy migration, cần backup database trước. Hướng dẫn: [MEDIA-STORAGE](MEDIA-STORAGE.md).
 - `NEXT_PUBLIC_API_BASE_URL` cấu hình tại Vercel trước build.
