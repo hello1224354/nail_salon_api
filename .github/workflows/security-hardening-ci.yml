@@ -107,6 +107,8 @@ jobs:
       - run: npm run build
       - name: Verify fluid layouts in Chrome at 360–1280px
         run: node scripts/check-responsive-browser.mjs
+      - name: Verify booking modal actions fit mobile viewports
+        run: node scripts/check-booking-modal-browser.mjs
       - name: Save responsive browser screenshots
         if: always()
         uses: actions/upload-artifact@v4
