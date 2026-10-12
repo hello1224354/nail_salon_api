@@ -28,6 +28,9 @@ function emitAuthChanged() {
 }
 
 export function saveSession(nextAccessToken: string, user: AuthUser) {
+    // A login or successful refresh invalidates responses from older refresh
+    // attempts. Otherwise an older 401 can clear a newer successful login.
+    sessionEpoch += 1;
     accessToken = nextAccessToken;
     authUser = user;
     emitAuthChanged();
@@ -42,6 +45,8 @@ export function getAuthUser() {
 }
 
 export function clearSession() {
+    // A pending refresh must never restore a session after logout.
+    sessionEpoch += 1;
     accessToken = null;
     authUser = null;
     emitAuthChanged();
@@ -73,7 +78,7 @@ async function performRefresh() {
     try {
         let result = await requestRefreshOnce();
 
-        if (refreshEpoch !== sessionEpoch) return false;
+        if (refreshEpoch !== sessionEpoch) return Boolean(accessToken && authUser);
 
         const refreshErrorCode =
             result.body && "error" in result.body
@@ -86,11 +91,11 @@ async function performRefresh() {
         ) {
             await new Promise((resolve) => window.setTimeout(resolve, 150));
 
-            if (refreshEpoch !== sessionEpoch) return false;
+            if (refreshEpoch !== sessionEpoch) return Boolean(accessToken && authUser);
 
             result = await requestRefreshOnce();
 
-            if (refreshEpoch !== sessionEpoch) return false;
+            if (refreshEpoch !== sessionEpoch) return Boolean(accessToken && authUser);
         }
 
         const data =
@@ -108,7 +113,7 @@ async function performRefresh() {
             return false;
         }
 
-        if (refreshEpoch !== sessionEpoch) return false;
+        if (refreshEpoch !== sessionEpoch) return Boolean(accessToken && authUser);
 
         saveSession(data.access_token, data.user);
         return true;
@@ -125,7 +130,8 @@ export async function refreshSession() {
         });
     }
 
-    return await refreshPromise;
+    const restored = await refreshPromise;
+    return restored || Boolean(accessToken && authUser);
 }
 
 export async function restoreSession() {
@@ -134,7 +140,6 @@ export async function restoreSession() {
 }
 
 export async function logoutSession() {
-    sessionEpoch += 1;
     clearSession();
 
     if (typeof window !== "undefined") {

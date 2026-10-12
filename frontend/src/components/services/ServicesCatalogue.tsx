@@ -155,7 +155,7 @@ export function ServicesCatalogue() {
                                     ) : null}
                                 </div>
 
-                                <h2 className="mt-2 break-words font-serif text-[clamp(1.35rem,2.5vw,1.9rem)] leading-tight tracking-[-0.02em]">
+                                <h2 className="mt-2 break-words font-serif text-[clamp(1.35rem,2.5vw,1.9rem)] leading-[1.3] tracking-normal [word-spacing:0.13em]">
                                     {service.display_name || service.name}
                                 </h2>
 
