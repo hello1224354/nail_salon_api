@@ -1,22 +1,29 @@
-/* Booking confirmation dialog. The page layout itself is governed by its
-   semantic grid and flex components, not brittle DOM-position selectors. */
-.route-transition > section:has(.booking-success-overlay) {
-  animation: none !important;
-  transform: none !important;
-}
-
-.booking-success-overlay {
-  display: grid !important;
-  min-height: 100dvh;
-  place-items: center;
-  overflow-y: auto;
-  padding: clamp(0.75rem, 2vw, 1.5rem);
-}
-
-.booking-success-panel {
-  width: min(100%, 37.5rem);
+/* Native dialog is elevated into the browser top layer, outside the
+   animated booking section and sticky navigation stacking contexts. */
+.booking-success-dialog {
+  width: min(calc(100% - 1.5rem), 35rem);
+  max-width: 35rem;
   max-height: calc(100dvh - 1.5rem);
-  margin-block: auto;
-  border-radius: clamp(1rem, 3vw, 1.75rem) !important;
-  box-shadow: 0 28px 90px rgba(48, 40, 35, 0.28) !important;
+  margin: auto;
+  padding: 0;
+  overflow: hidden;
+  border-radius: clamp(1rem, 3vw, 1.75rem);
+  box-shadow: 0 28px 90px rgba(48, 40, 35, 0.28);
+}
+
+.booking-success-dialog[open] {
+  display: flex;
+}
+
+.booking-success-dialog::backdrop {
+  background: rgba(45, 39, 35, 0.65);
+  backdrop-filter: blur(2px);
+}
+
+.booking-success-details {
+  scrollbar-width: thin;
+}
+
+.booking-success-actions {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
 }
