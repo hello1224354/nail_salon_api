@@ -17,7 +17,7 @@ Frontend Next rewrite `/api/:path*` sang `NEXT_PUBLIC_API_BASE_URL`. Trên Verce
 
 ## Triển khai
 
-Repository không còn bộ kiểm thử hoặc workflow GitHub Actions. Vercel và Railway xây dựng ứng dụng từ mã nguồn theo cấu hình deployment riêng. Giữ nguyên lệnh build và migration để dịch vụ khởi động.
+Repository không còn bộ kiểm thử. Workflow GitHub Actions [Build](../.github/workflows/build.yml) chỉ cài dependencies và build backend/frontend (hai status checks bắt buộc của nhánh `main`), **không chạy test, QA, audit hoặc kiểm tra trình duyệt**. Vercel và Railway triển khai ứng dụng theo cấu hình deployment riêng.
 
 ## Quy trình deploy an toàn
 
