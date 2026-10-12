@@ -1,9 +1,14 @@
 import { ipKeyGenerator, rateLimit } from "express-rate-limit";
 import { AppError } from "../errors";
 
+// All route-level middleware admits at least 100 calls per configured window.
+// Security checks such as per-account failed-login audits and per-OTP attempt
+// limits remain independent safeguards against brute-force attacks.
+export const API_REQUEST_LIMIT = 100;
+
 export const loginRateLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    limit: 5,
+    limit: API_REQUEST_LIMIT,
     skipSuccessfulRequests: true,
     standardHeaders: true,
     legacyHeaders: false,
@@ -14,7 +19,7 @@ export const loginRateLimiter = rateLimit({
 
 export const registerRateLimiter = rateLimit({
     windowMs: 60 * 60 * 1000,
-    limit: 5,
+    limit: API_REQUEST_LIMIT,
     standardHeaders: true,
     legacyHeaders: false,
     handler: () => {
@@ -24,7 +29,7 @@ export const registerRateLimiter = rateLimit({
 
 export const mfaRateLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    limit: 10,
+    limit: API_REQUEST_LIMIT,
     standardHeaders: true,
     legacyHeaders: false,
     handler: () => {
@@ -34,7 +39,7 @@ export const mfaRateLimiter = rateLimit({
 
 export const passwordRecoveryRateLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    limit: 5,
+    limit: API_REQUEST_LIMIT,
     standardHeaders: true,
     legacyHeaders: false,
     handler: () => {
@@ -44,7 +49,7 @@ export const passwordRecoveryRateLimiter = rateLimit({
 
 export const refreshRateLimiter = rateLimit({
     windowMs: 5 * 60 * 1000,
-    limit: 60,
+    limit: API_REQUEST_LIMIT,
     standardHeaders: true,
     legacyHeaders: false,
     handler: () => {
@@ -54,7 +59,7 @@ export const refreshRateLimiter = rateLimit({
 
 export const accountOtpRateLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    limit: 5,
+    limit: API_REQUEST_LIMIT,
     keyGenerator: (req) => req.user?.id ?? ipKeyGenerator(req.ip ?? ""),
     standardHeaders: true,
     legacyHeaders: false,
@@ -65,7 +70,7 @@ export const accountOtpRateLimiter = rateLimit({
 
 export const sensitiveAccountActionRateLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    limit: 5,
+    limit: API_REQUEST_LIMIT,
     keyGenerator: (req) => req.user!.id,
     skipSuccessfulRequests: true,
     standardHeaders: true,
@@ -77,7 +82,7 @@ export const sensitiveAccountActionRateLimiter = rateLimit({
 
 export const bookingRateLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    limit: 5,
+    limit: API_REQUEST_LIMIT,
     keyGenerator: (req) => req.user!.id,
     standardHeaders: true,
     legacyHeaders: false,
@@ -109,7 +114,7 @@ export const authenticatedReadRateLimiter = rateLimit({
 
 export const mediaUploadRateLimiter = rateLimit({
     windowMs: 60 * 60 * 1000,
-    limit: 30,
+    limit: API_REQUEST_LIMIT,
     keyGenerator: (req) => req.user!.id,
     standardHeaders: true,
     legacyHeaders: false,
@@ -118,7 +123,7 @@ export const mediaUploadRateLimiter = rateLimit({
     },
 });
 
-export const AVAILABILITY_REQUESTS_PER_MINUTE = 100;
+export const AVAILABILITY_REQUESTS_PER_MINUTE = API_REQUEST_LIMIT;
 
 export const availabilityRateLimiter = rateLimit({
     windowMs: 60 * 1000,
