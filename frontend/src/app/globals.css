@@ -300,12 +300,7 @@ select:focus {
     }
 }
 
-.booking-success-overlay {
-    animation: booking-success-backdrop-in 220ms ease-out both;
-    backdrop-filter: blur(2px);
-}
-
-.booking-success-panel {
+.booking-success-dialog[open] {
     animation: booking-success-rise 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
@@ -323,8 +318,7 @@ select:focus {
         transition-duration: 0.01ms !important;
     }
 
-    .booking-success-overlay,
-    .booking-success-panel {
+    .booking-success-dialog {
         animation: none;
     }
 }
