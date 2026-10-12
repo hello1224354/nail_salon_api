@@ -174,7 +174,7 @@ export function BookingForm() {
     const [submitting, setSubmitting] = useState(false);
     const [formError, setFormError] = useState("");
     const [createdAppointment, setCreatedAppointment] = useState<Appointment | null>(null);
-    const successDialogRef = useRef<HTMLElement | null>(null);
+    const successDialogRef = useRef<HTMLDialogElement | null>(null);
     const [availabilityRefreshKey, setAvailabilityRefreshKey] = useState(0);
 
     const selectedBranch = branches.find((branch) => branch.id === selectedBranchId) ?? null;
@@ -376,24 +376,20 @@ export function BookingForm() {
 
     useEffect(() => {
         if (!createdAppointment) return;
+        const dialog = successDialogRef.current;
+        if (!dialog) return;
 
-        const previousOverflow = document.body.style.overflow;
-        const previousFocus = document.activeElement instanceof HTMLElement
+        const previouslyFocused = document.activeElement instanceof HTMLElement
             ? document.activeElement
             : null;
-        document.body.style.overflow = "hidden";
-        successDialogRef.current?.focus();
 
-        const handleKeyDown = (event: KeyboardEvent) => {
-            if (event.key === "Escape") closeSuccessModal();
-        };
-
-        window.addEventListener("keydown", handleKeyDown);
+        // Native modal top layer works independently of the animated page
+        // sections, sticky header and stacking contexts.
+        if (!dialog.open) dialog.showModal();
 
         return () => {
-            document.body.style.overflow = previousOverflow;
-            window.removeEventListener("keydown", handleKeyDown);
-            previousFocus?.focus();
+            if (dialog.open) dialog.close();
+            previouslyFocused?.focus();
         };
     }, [createdAppointment]);
 
@@ -890,21 +886,15 @@ export function BookingForm() {
         </form>
 
         {createdAppointment && typeof document !== "undefined" ? createPortal(
-            <div
-                className="booking-success-overlay fixed inset-0 z-[200] flex items-center justify-center bg-ink/60"
-                role="presentation"
-                onMouseDown={(event) => {
-                    if (event.target === event.currentTarget) closeSuccessModal();
-                }}
-            >
-                <section
+                <dialog
                     ref={successDialogRef}
-                    tabIndex={-1}
-                    role="dialog"
-                    aria-modal="true"
                     aria-labelledby="booking-success-title"
                     aria-describedby="booking-success-status"
-                    className="booking-success-panel relative flex min-h-0 w-full max-w-[560px] flex-col overflow-hidden rounded-[24px] border border-white/40 bg-surface focus:outline-none sm:rounded-[28px]"
+                    onCancel={(event) => {
+                        event.preventDefault();
+                        closeSuccessModal();
+                    }}
+                    className="booking-success-dialog booking-success-panel min-h-0 flex-col overflow-hidden rounded-[24px] border border-white/40 bg-surface p-0 focus:outline-none sm:rounded-[28px]"
                 >
                     <div className="relative shrink-0 px-5 pb-4 pt-5 sm:px-8 sm:pb-5 sm:pt-7">
                         <button
@@ -989,8 +979,7 @@ export function BookingForm() {
                             Xem lịch của tôi
                         </button>
                     </div>
-                </section>
-            </div>,
+                </dialog>,
             document.body,
         ) : null}
         </>
