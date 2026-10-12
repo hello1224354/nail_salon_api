@@ -677,6 +677,11 @@ export function AdminDashboard() {
                     </header>
 
                     <div className="px-4 py-5 sm:px-6 sm:py-7 lg:px-8 lg:py-8">
+                        {toast ? (
+                            <p role="status" className="mb-5 rounded-2xl border border-line bg-[#2d2926] px-5 py-4 text-xs leading-5 text-white">
+                                {toast}
+                            </p>
+                        ) : null}
                         {error ? (
                             <div className="mb-5 rounded-2xl border border-[#d8aaa0] bg-[#faeeeb] px-5 py-4 text-xs text-[#854d42]">
                                 {error}
@@ -1012,11 +1017,7 @@ export function AdminDashboard() {
                 </Modal>
             ) : null}
 
-            {toast ? (
-                <p role="status" className="mx-auto my-5 w-full max-w-6xl rounded-2xl border border-line bg-[#2d2926] px-5 py-4 text-xs leading-5 text-white">
-                    {toast}
-                </p>
-            ) : null}
+
         </div>
     );
 }
