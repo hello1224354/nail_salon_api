@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import {
     apiRequest,
@@ -144,22 +144,36 @@ function Modal({
     onClose: () => void;
     children: React.ReactNode;
 }) {
+    const dialogRef = useRef<HTMLDialogElement>(null);
+    const headingId = useId();
+
     useEffect(() => {
-        const handler = (event: KeyboardEvent) => {
-            if (event.key === "Escape") onClose();
+        const dialog = dialogRef.current;
+        if (!dialog) return;
+        dialog.showModal();
+        return () => {
+            if (dialog.open) dialog.close();
         };
-        window.addEventListener("keydown", handler);
-        return () => window.removeEventListener("keydown", handler);
-    }, [onClose]);
+    }, []);
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-[#211c19]/45 p-0 backdrop-blur-[2px] sm:items-center sm:p-5">
-            <button className="absolute inset-0 cursor-default" aria-label="Đóng" onClick={onClose} />
-            <div className="relative z-10 max-h-[92vh] w-full overflow-y-auto rounded-t-[24px] border border-line bg-cream p-5 shadow-[0_30px_100px_rgba(48,40,35,0.22)] sm:max-w-2xl sm:rounded-[24px] sm:p-7">
+        <dialog
+            ref={dialogRef}
+            aria-labelledby={headingId}
+            onCancel={(event) => {
+                event.preventDefault();
+                onClose();
+            }}
+            onMouseDown={(event) => {
+                if (event.target === event.currentTarget) onClose();
+            }}
+            className="site-modal w-[min(calc(100%-1.5rem),42rem)] max-h-[calc(100dvh-1.5rem)] overflow-y-auto rounded-[24px] border border-line bg-cream p-5 shadow-[0_30px_100px_rgba(48,40,35,0.22)] sm:p-7"
+        >
+            <div className="relative">
                 <div className="flex items-start justify-between gap-5">
                     <div>
                         <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-accent">Quản trị</p>
-                        <h2 className="mt-2 font-serif text-3xl tracking-[-0.025em]">{title}</h2>
+                        <h2 id={headingId} className="mt-2 font-serif text-3xl tracking-[-0.025em]">{title}</h2>
                     </div>
                     <button
                         type="button"
@@ -172,7 +186,7 @@ function Modal({
                 </div>
                 <div className="mt-6">{children}</div>
             </div>
-        </div>
+        </dialog>
     );
 }
 
@@ -999,9 +1013,9 @@ export function AdminDashboard() {
             ) : null}
 
             {toast ? (
-                <div className="fixed bottom-5 right-5 z-[120] max-w-sm rounded-2xl border border-line bg-[#2d2926] px-5 py-4 text-xs leading-5 text-white shadow-2xl">
+                <p role="status" className="mx-auto my-5 w-full max-w-6xl rounded-2xl border border-line bg-[#2d2926] px-5 py-4 text-xs leading-5 text-white">
                     {toast}
-                </div>
+                </p>
             ) : null}
         </div>
     );
