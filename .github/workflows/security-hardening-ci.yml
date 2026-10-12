@@ -26,6 +26,7 @@ jobs:
       - run: npx tsx --test src/tests/trusted-login-device.test.ts
       - run: npx tsx --test src/tests/trusted-origins.test.ts
       - run: npx tsx --test src/tests/availability-rate-limit.test.ts
+      - run: npx tsx --test src/tests/all-rate-limits.test.ts
       - run: npx tsx --test src/tests/booking-notification.test.ts
       - run: npx tsx --test src/tests/admin-appointment-filters.test.ts
       - run: npx tsx --test src/tests/role-permissions.test.ts
