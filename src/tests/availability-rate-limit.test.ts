@@ -19,7 +19,7 @@ test("a signed-in user can query availability 100 times per minute before HTTP 4
     });
 
     const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
-        res.status(error.status ?? 500).json({ code: error.code });
+        res.status(error.statusCode ?? 500).json({ code: error.code });
     };
     app.use(errorHandler);
 
