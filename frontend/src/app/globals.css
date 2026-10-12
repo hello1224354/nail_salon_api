@@ -284,6 +284,16 @@ select:focus {
     }
 }
 
+.site-modal {
+    margin: auto;
+    color: var(--foreground);
+}
+
+.site-modal::backdrop {
+    background: rgba(33, 28, 25, 0.55);
+    backdrop-filter: blur(2px);
+}
+
 @keyframes booking-success-backdrop-in {
     from { opacity: 0; }
     to { opacity: 1; }
