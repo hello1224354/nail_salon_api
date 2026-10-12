@@ -7,7 +7,7 @@ const root = fileURLToPath(new URL("../src", import.meta.url));
 const forbidden = ["fi", "xed"].join("");
 const classPattern = new RegExp(`(?:^|[\\s"'\\x60])${forbidden}(?=$|[\\s"'\\x60])`);
 const cssPattern = new RegExp(`position\\s*:\\s*${forbidden}\\b`, "i");
-const validExtensions = /\\.(?:tsx?|jsx?|css|scss|html)$/i;
+const validExtensions = /\.(?:tsx?|jsx?|css|scss|html)$/i;
 const violations = [];
 
 function visit(dir) {
@@ -18,7 +18,7 @@ function visit(dir) {
             continue;
         }
         if (!validExtensions.test(entry)) continue;
-        const lines = readFileSync(path, "utf8").split(/\\r?\\n/);
+        const lines = readFileSync(path, "utf8").split(/\r?\n/);
         lines.forEach((line, i) => {
             if (classPattern.test(line) || cssPattern.test(line)) {
                 violations.push(`${relative(root, path)}:${i + 1}`);
