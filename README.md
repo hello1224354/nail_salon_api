@@ -6,8 +6,6 @@
 
 [**Live website**](https://serpentenailroom.site/) · [**Service catalog**](https://serpentenailroom.site/services) · [**API health**](https://api-production-e911.up.railway.app/health) · [**Technical documentation**](docs/README.md) · [**Engineering case study**](docs/PORTFOLIO.md) · [**Product tour**](docs/DEMO.md)
 
-![Security Hardening CI](https://github.com/hello1224354/nail_salon_api/actions/workflows/security-hardening-ci.yml/badge.svg)
-
 ## Problem and approach
 
 A salon with multiple employees must let customers find bookable times without selecting an employee. Two customers may attempt the same time simultaneously, so simply displaying an available slot and checking again with a SQL `SELECT` is not sufficient to prevent double booking. The system must also support multi-person reservations and give administrators an operational workflow.
@@ -36,8 +34,6 @@ flowchart LR
   API --> Booking[Booking engine]
   Booking --> DB[(MySQL / TypeORM)]
   API --> Email[Gmail API / OAuth2]
-  CI[GitHub Actions] -.-> Next
-  CI -.-> API
 ```
 
 | Layer | Technology |
@@ -47,7 +43,7 @@ flowchart LR
 | Persistence | MySQL 8, TypeORM, versioned migrations |
 | Security | JWT access tokens, refresh-token rotation/reuse detection, email OTP, account-scoped trusted-browser cookies, RBAC |
 | Integration | Gmail API via OAuth2 |
-| Delivery | GitHub Actions CI, Vercel (web), Railway (API); alternative VPS/Docker Compose configuration |
+| Delivery | Vercel (web), Railway (API); alternative VPS/Docker Compose configuration |
 
 ## Engineering highlights
 
@@ -120,24 +116,9 @@ npm run dev
 
 Frontend: http://localhost:3001 · Backend: http://localhost:3000 · Health: http://localhost:3000/health. Email OTP requires separate Gmail OAuth configuration; never commit credentials.
 
-## Verification
+## Build
 
-```bash
-# Repository root
-npm run typecheck
-npx tsx --test src/tests/trusted-login-device.test.ts
-npx tsx --test src/tests/booking-notification.test.ts
-npx tsx --test src/tests/admin-appointment-filters.test.ts
-npm run build
-# Real MySQL 8 integration suite runs in GitHub Actions using an isolated database
+Backend: `npm run build`. Frontend: `cd frontend && npm run build`.
+The applications are deployed separately via Railway and Vercel, without a repository test suite or GitHub Actions testing workflow.
 
-# Frontend
-cd frontend
-npx tsc --noEmit
-npm run build
-```
-
-The [GitHub Actions workflow](.github/workflows/security-hardening-ci.yml) also provisions an isolated MySQL 8 instance for **16-request booking contention**, group atomicity, transaction rollback and adjacent-slot regression tests. Backend/frontend builds, dependency audits and frontend CSP checks run alongside it.
-
-**Deep dives:** [API](docs/API.md) · [DB schema](docs/DATABASE.md) · [Booking rules](docs/BOOKING.md) · [Security](docs/AUTH-SECURITY.md) · [Deployment](docs/DEPLOYMENT.md) · [Operations](docs/TESTING-OPERATIONS.md).
-
+**Deep dives:** [API](docs/API.md) · [DB schema](docs/DATABASE.md) · [Booking rules](docs/BOOKING.md) · [Security](docs/AUTH-SECURITY.md) · [Deployment](docs/DEPLOYMENT.md) · [Operations](docs/OPERATIONS.md).

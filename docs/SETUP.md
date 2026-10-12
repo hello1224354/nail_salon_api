@@ -2,10 +2,10 @@
 
 ## Prerequisites
 
-- Node.js **22+** và npm (`.github/workflows/security-hardening-ci.yml` dùng 22; `Dockerfile` dùng 24).
+- Node.js **22+** và npm (`Dockerfile` dùng Node 24).
 - Docker Engine + Docker Compose v2 để chạy MySQL 8 local.
 - Git, terminal; nền tảng Windows có thể dùng PowerShell (thay `cp` bằng `Copy-Item`).
-- Gmail OAuth credentials **chỉ khi cần** test chức năng gửi OTP/email. Không lưu credentials vào Git.
+- Gmail OAuth credentials khi bật chức năng gửi OTP/email. Không lưu credentials vào Git.
 
 ## 1. Clone & database
 
@@ -28,7 +28,6 @@ docker compose ps
 
 ```bash
 npm ci
-npm run typecheck
 npm run dev
 ```
 
@@ -85,7 +84,7 @@ Lệnh `npm run start` của Next không được cấu hình sẵn để sử d
 
 ## 5. Gmail
 
-Sender `src/modules/users/email.service.ts` trao đổi refresh token qua Google OAuth token endpoint, sau đó POST Gmail `users/me/messages/send`. Cần refresh token với quyền gửi Gmail hợp lệ của địa chỉ `GMAIL_FROM_EMAIL`. Các chức năng phụ thuộc sender: OTP đăng ký, OTP đăng nhập, reset/đổi mật khẩu và thông báo booking cho admin. Nếu thiếu cấu hình, `EMAIL_NOT_CONFIGURED` hoặc lỗi gửi; không tự tạo bypass OTP để test.
+Sender `src/modules/users/email.service.ts` trao đổi refresh token qua Google OAuth token endpoint, sau đó POST Gmail `users/me/messages/send`. Cần refresh token với quyền gửi Gmail hợp lệ của địa chỉ `GMAIL_FROM_EMAIL`. Các chức năng phụ thuộc sender: OTP đăng ký, OTP đăng nhập, reset/đổi mật khẩu và thông báo booking cho admin. Nếu thiếu cấu hình, `EMAIL_NOT_CONFIGURED` hoặc lỗi gửi; không tự tạo bypass OTP.
 
 ## 6. Troubleshooting setup
 
@@ -96,4 +95,4 @@ Sender `src/modules/users/email.service.ts` trao đổi refresh token qua Google
 - OTP không được gửi: kiểm tra đủ 4 biến Gmail, OAuth scope/token, server logs; không chia sẻ token.
 - Lỗi frontend fetch: kiểm tra `NEXT_PUBLIC_API_BASE_URL`, API health, cấu hình rewrite/CORS.
 
-Xem [DEPLOYMENT](DEPLOYMENT.md) cho production và [TESTING](TESTING-OPERATIONS.md) cho kiểm tra.
+Xem [DEPLOYMENT](DEPLOYMENT.md) cho production và [OPERATIONS](OPERATIONS.md) cho vận hành.

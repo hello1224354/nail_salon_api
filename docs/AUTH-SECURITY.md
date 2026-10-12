@@ -22,7 +22,7 @@ Mỗi route protected dùng `authenticate` + `requireRole`; service còn enforce
 - Login trên **trusted browser** đúng user + token_version + role + User-Agent hash + hạn dùng → bypass OTP, vẫn cần password.
 - STAFF không nằm trong nhánh OTP đó theo code `loginUser`.
 
-Mã OTP được sinh và xác minh ở backend, không hard-code trong ứng dụng. Các bài test tự động sử dụng dữ liệu kiểm thử thay vì thông tin tài khoản production.
+Mã OTP được sinh và xác minh ở backend, không hard-code trong ứng dụng.
 
 ## Access JWT & refresh
 
@@ -42,7 +42,6 @@ Mã OTP được sinh và xác minh ở backend, không hard-code trong ứng d�
 - Khi verify OTP mới, chỉ revoke proof trước đó **thuộc cùng user**, không ảnh hưởng tài khoản khác.
 - Code có legacy shared-cookie fallback để cookie cũ còn hợp lệ tiếp tục được xác minh bởi server.
 - Đổi mật khẩu/reset password/khóa phiên nhạy cảm có thể revoke trust theo user. Nếu trình duyệt đổi User-Agent, cookie hết hạn hoặc bị revoke, lần login tiếp theo cần OTP.
-- Luồng kiểm thử bắt buộc: A OTP → logout → B OTP → logout → A không OTP → B không OTP.
 
 ## Các biện pháp khác
 

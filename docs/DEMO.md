@@ -34,7 +34,6 @@ The [admin sign-in page](https://serpentenailroom.site/admin/login) leads to a r
 - [Concurrency-safe booking design](BOOKING.md) — staff assignment, group reservations and lifecycle constraints.
 - [API contract](API.md) — booking and administrative endpoints, authentication and filters.
 - [Engineering case study](PORTFOLIO.md) — database concurrency, session security and transaction boundaries.
-- [CI workflow](../.github/workflows/security-hardening-ci.yml) — automated TypeScript builds, security checks and real-MySQL concurrency regression tests.
 
 ---
 

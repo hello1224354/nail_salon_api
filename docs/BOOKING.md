@@ -91,21 +91,6 @@ Nội dung có UUID nhóm, trạng thái, khách, chi nhánh, thời gian, nhân
 
 Email là **best-effort fire-and-forget**: Gmail lỗi không rollback booking. Chưa có queue/outbox hoặc retry bền vững, vì vậy cần log/monitoring nếu yêu cầu độ tin cậy cao. OTP cũng dùng Gmail sender nhưng là luồng khác.
 
-## 7. Integration tests với MySQL thật
-
-Job CI `backend-mysql-integration` chạy các migrations trên database riêng rồi thực hiện 16 request đồng thời vào cùng slot, 16 group bookings đồng thời, rollback khi group thiếu staff và kiểm tra hai ca sát giờ. Test code: [`booking-concurrency.integration.test.ts`](../src/tests/booking-concurrency.integration.test.ts). Chi tiết lệnh tại [TESTING-OPERATIONS](TESTING-OPERATIONS.md). Đây là kiểm thử tính đúng đắn, không phải benchmark throughput.
-
-## 8. Trường hợp kiểm thử cần giữ
-
-- Hai requests đồng thời đặt **cùng staff + slot**: không thể cùng thắng.
-- Đặt hai lịch sát nhau (09:00–09:15 và 09:15–09:30): **không overlap**.
-- Service thuộc các branch khác nhau: reject.
-- Dịch vụ thiếu duration hoặc disabled: reject.
-- Group size lớn hơn staff trống: không tạo partial booking.
-- Không được gửi `staff_id` từ public form.
-- Max 3 pending booking groups.
-- Không được chuyển `confirmed → in_progress` trước start.
-- Khi chuyển sang trạng thái kết thúc hoặc hủy, hệ thống giải phóng slot nhưng vẫn giữ appointment để tra cứu lịch sử.
-- Mã frontend phải khớp mã search admin.
+## 7. Tài liệu liên quan
 
 Chi tiết request/response được mô tả tại [API](API.md); cấu trúc reservation tại [DATABASE](DATABASE.md).

@@ -8,7 +8,7 @@ The application supports a nail salon where customers book services at a branch 
 
 The scope also covers a public service catalog, authenticated customer history and a role-protected administrative dashboard.
 
-**Stack:** Next.js 16 + React 19 + TypeScript frontend; Node/Express 5 API; MySQL 8 + TypeORM; JWT/refresh sessions; Gmail OAuth2; GitHub Actions; Vercel/Railway deployment.
+**Stack:** Next.js 16 + React 19 + TypeScript frontend; Node/Express 5 API; MySQL 8 + TypeORM; JWT/refresh sessions; Gmail OAuth2; Vercel/Railway deployment.
 
 ## Concurrency-safe slot reservation
 
@@ -41,8 +41,6 @@ sequenceDiagram
 **Trade-off:** Reserving fine-grained slots adds rows and requires releasing/rebuilding reservations when appointments change. This is more deliberate than simply maintaining a boolean `available` flag. The database uniqueness guarantee matters more than stale availability shown to users.
 
 **Source:** [booking service](../src/modules/appointments/appointments.service.ts), [slot entity](../src/modules/appointments/staff-booking-slots.entity.ts), [booking docs](BOOKING.md).
-
-**Verification:** GitHub Actions provisions an isolated MySQL 8 database, applies the application's TypeORM migrations and runs integration tests against the actual booking service. The suite verifies 16 concurrent booking attempts, atomic group allocation, rollback of partial reservations and adjacent appointments. These tests establish correctness under the exercised contention scenarios. They do not measure production throughput or latency.
 
 ## Atomic group bookings
 
@@ -83,18 +81,17 @@ An email to configured ADMIN recipients is triggered **after** appointment trans
 
 **Source:** [notification service](../src/modules/appointments/booking-notification.service.ts).
 
-## Deployment and verification
+## Deployment
 
 - Live frontend: [Vercel](https://serpentenailroom.site/).
-- API status: [Railway health endpoint](https://api-production-e911.up.railway.app/health).
-- CI: backend typecheck, unit/regression tests, **MySQL integration tests**, compilation and dependency audit; frontend typecheck, build, CSP and dependency checks; Docker/VPS configuration validation.
-- Release pipeline: GitHub Actions with separately deployed Next.js frontend on Vercel and Express backend on Railway.
-- References: [CI workflow](../.github/workflows/security-hardening-ci.yml), [integration test source](../src/tests/booking-concurrency.integration.test.ts), [deployment guide](DEPLOYMENT.md) and [operations guide](TESTING-OPERATIONS.md).
+- API: [Railway health endpoint](https://api-production-e911.up.railway.app/health).
+- Deployments are managed through Vercel and Railway; the repository no longer contains automated testing workflows.
+- References: [deployment guide](DEPLOYMENT.md), [operations guide](OPERATIONS.md).
 
 ## Current scope and limitations
 
 The booking engine uses fixed business-hour rules rather than individual employee shift calendars. A payment gateway is not part of the application. Booking notifications are sent after the reservation commits, so Gmail delivery failures do not invalidate appointments; however, notification delivery is best-effort and does not yet use an outbox with persistent retries.
 
-The CI suite covers MySQL-level booking concurrency, authentication helpers, notification formatting and appointment filtering. Browser end-to-end coverage, sustained-load measurements and centralized production alerting are not part of the current automated checks.
+The repository contains no automated test suite. Centralized production alerting is not implemented.
 
 Further implementation details are available in the [booking specification](BOOKING.md), [authentication and security](AUTH-SECURITY.md) and [API reference](API.md).

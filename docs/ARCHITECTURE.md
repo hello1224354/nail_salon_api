@@ -9,8 +9,6 @@ flowchart LR
     Express --> Services[Domain services + validation]
     Services --> DB[(MySQL 8)]
     Services --> Gmail[Gmail API / OAuth2]
-    GitHub[GitHub Actions] -.-> Next
-    GitHub -.-> Express
 ```
 
 Frontend triển khai trên **Vercel**, backend trên **Railway**. Trình duyệt gọi endpoint cùng origin `/api/...`; Next.js rewrite request sang origin cấu hình bởi `NEXT_PUBLIC_API_BASE_URL`. Express cung cấp `GET /health` cùng các namespace `/api/{users,appointments,services,staffs,branches,offers,site-content}`.
