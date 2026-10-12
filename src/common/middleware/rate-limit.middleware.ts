@@ -118,9 +118,11 @@ export const mediaUploadRateLimiter = rateLimit({
     },
 });
 
+export const AVAILABILITY_REQUESTS_PER_MINUTE = 100;
+
 export const availabilityRateLimiter = rateLimit({
     windowMs: 60 * 1000,
-    limit: 30,
+    limit: AVAILABILITY_REQUESTS_PER_MINUTE,
     keyGenerator: (req) => req.user?.id ?? ipKeyGenerator(req.ip ?? ""),
     standardHeaders: true,
     legacyHeaders: false,
