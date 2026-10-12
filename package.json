@@ -25,7 +25,6 @@
     "migration:generate": "tsx ./node_modules/typeorm/cli.js migration:generate",
     "migration:run": "typeorm migration:run -d dist/config/database.js",
     "migration:show": "typeorm migration:show -d dist/config/database.js",
-    "typecheck": "tsc --noEmit",
-    "test:booking:integration": "tsx --test src/tests/booking-concurrency.integration.test.ts"
+    "typecheck": "tsc --noEmit"
   }
 }

@@ -34,7 +34,6 @@ The admin media library stores image data directly in the Railway MySQL database
 | POST | `/api/users/password/change` | Auth | Đổi mật khẩu, thu hồi phiên |
 | GET | `/api/users/me` | Auth | User hiện tại |
 | DELETE | `/api/users/me` | Auth | Xóa tài khoản hiện tại |
-| GET | `/api/users/admin-test` | Admin | Kiểm thử quyền admin |
 | GET | `/api/branches` | Public | Danh sách phân trang |
 | GET | `/api/branches/admin` | Admin | Danh sách cho dashboard |
 | GET | `/api/branches/:id` | Public | Chi tiết cơ sở |

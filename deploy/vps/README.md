@@ -84,14 +84,9 @@ Visit `https://YOUR_DOMAIN/` and `https://YOUR_DOMAIN/api/branches?page=1&limit=
 Caddy issues and renews TLS certificates when DNS is correct and ports 80/443
 are reachable. **Do not enter real credentials over plain HTTP.**
 
-Test end-to-end with deliberately created test data: signup Gmail OTP, login
-and session refresh, browsing services, slot availability, booking creation,
-admin login MFA, editing and cancellation, and simultaneous attempts to reserve
-the same staff timeslot.
-
 ### Upgrade
 
-Deploy only tested commits:
+Deploy reviewed commits:
 
 ```bash
 git pull --ff-only

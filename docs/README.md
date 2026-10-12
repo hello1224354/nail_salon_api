@@ -15,7 +15,7 @@ Tài liệu về kiến trúc, API, dữ liệu, bảo mật, vận hành và c�
 | [AUTH-SECURITY.md](AUTH-SECURITY.md) | OTP, JWT/refresh, trusted browser, audit, bảo mật |
 | [FRONTEND.md](FRONTEND.md) | Pages, components, admin/booking UX và proxy |
 | [DEPLOYMENT.md](DEPLOYMENT.md) | Railway + Vercel, VPS alternative, kiểm tra/rollback |
-| [TESTING-OPERATIONS.md](TESTING-OPERATIONS.md) | CI, E2E test cases, troubleshooting, vận hành |
+| [OPERATIONS.md](OPERATIONS.md) | Theo dõi production, xử lý sự cố, backup và phục hồi |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Quy trình thay đổi source/docs/PR |
 
 ## Điều hướng theo vai trò
@@ -23,7 +23,7 @@ Tài liệu về kiến trúc, API, dữ liệu, bảo mật, vận hành và c�
 - **Developer mới:** SETUP → ARCHITECTURE → API.
 - **Backend booking:** BOOKING → DATABASE → API.
 - **Frontend:** FRONTEND → API → AUTH-SECURITY.
-- **Maintainer/DevOps:** DEPLOYMENT → TESTING-OPERATIONS → CONTRIBUTING.
+- **Maintainer/DevOps:** DEPLOYMENT → OPERATIONS → CONTRIBUTING.
 
 ## Thuật ngữ
 
