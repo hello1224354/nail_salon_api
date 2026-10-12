@@ -118,6 +118,7 @@ try {
         }, attached.sessionId);
         if (run.exceptionDetails) throw new Error(JSON.stringify(run.exceptionDetails));
         const result = run.result.value;
+        console.log("CHECK modal " + width + "x" + height, result);
         assert.ok(result.topLayer, "Native modal must use the browser top layer");
         assert.ok(result.top >= -1 && result.bottom <= result.windowHeight + 1, "Modal exceeds visual viewport");
         assert.ok(result.buttonsVisible, "A booking action is outside the viewport");
