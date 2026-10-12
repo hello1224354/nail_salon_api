@@ -155,8 +155,13 @@ export function ServicesCatalogue() {
                                     ) : null}
                                 </div>
 
-                                <h2 className="mt-2 break-words font-serif text-[clamp(1.35rem,2.5vw,1.9rem)] leading-[1.3] tracking-normal [word-spacing:0.13em]">
-                                    {service.display_name || service.name}
+                                <h2
+                                    aria-label={service.display_name || service.name}
+                                    className="mt-2 flex min-w-0 flex-wrap items-baseline gap-x-[0.22em] gap-y-0 font-serif text-[clamp(1.35rem,2.5vw,1.9rem)] leading-[1.3] tracking-[-0.02em]"
+                                >
+                                    {(service.display_name || service.name).trim().split(/\\s+/u).map((word, wordIndex) => (
+                                        <span key={wordIndex} aria-hidden="true" className="whitespace-nowrap">{word}</span>
+                                    ))}
                                 </h2>
 
                                 {service.description ? (
