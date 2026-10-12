@@ -101,11 +101,14 @@ jobs:
       - run: node --experimental-strip-types --test scripts/test-session-recovery.mjs
       - run: node scripts/check-service-typography.mjs
       - run: node scripts/check-production-domain.mjs
+      - run: node scripts/check-no-viewport-position.mjs
       - run: npx tsc --noEmit
       - run: node --test scripts/check-responsive-layout.mjs
       - run: npm run build
       - name: Verify fluid layouts in Chrome at 360–1280px
         run: node scripts/check-responsive-browser.mjs
+      - name: Verify booking modal actions fit mobile viewports
+        run: node scripts/check-booking-modal-browser.mjs
       - name: Save responsive browser screenshots
         if: always()
         uses: actions/upload-artifact@v4

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { apiRequest, getApiErrorMessage, type AdminStaff } from "@/lib/api";
 import { getAuthUser, restoreSession } from "@/lib/auth";
 
@@ -12,6 +12,7 @@ export default function StaffManagementPage() {
     const [staff, setStaff] = useState<AdminStaff[]>([]);
     const [loading, setLoading] = useState(true);
     const [pendingDelete, setPendingDelete] = useState<AdminStaff | null>(null);
+    const deleteDialogRef = useRef<HTMLDialogElement>(null);
     const [deleting, setDeleting] = useState(false);
     const [error, setError] = useState("");
     const [notice, setNotice] = useState("");
@@ -42,6 +43,16 @@ export default function StaffManagementPage() {
         })();
         return () => { active = false; };
     }, [router]);
+
+    useEffect(() => {
+        if (!pendingDelete) return;
+        const dialog = deleteDialogRef.current;
+        if (!dialog) return;
+        dialog.showModal();
+        return () => {
+            if (dialog.open) dialog.close();
+        };
+    }, [pendingDelete]);
 
     async function confirmDelete() {
         if (!pendingDelete || deleting) return;
@@ -101,8 +112,16 @@ export default function StaffManagementPage() {
                 </div>
             </div>
             {pendingDelete ? (
-                <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/55 p-4" role="presentation">
-                    <div role="dialog" aria-modal="true" aria-labelledby="staff-delete-title" className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+                <dialog
+                    ref={deleteDialogRef}
+                    aria-labelledby="staff-delete-title"
+                    onCancel={(event) => {
+                        event.preventDefault();
+                        if (!deleting) setPendingDelete(null);
+                    }}
+                    className="site-modal w-[min(calc(100%-1.5rem),28rem)] max-h-[calc(100dvh-1.5rem)] overflow-y-auto rounded-2xl bg-white p-6 shadow-xl"
+                >
+                    <div>
                         <h2 id="staff-delete-title" className="font-serif text-2xl">Xác nhận xóa nhân viên</h2>
                         <p className="mt-4 text-sm leading-6">
                             Xóa vĩnh viễn <strong>{pendingDelete.full_name}</strong> ({pendingDelete.email})?
@@ -113,7 +132,7 @@ export default function StaffManagementPage() {
                             <button type="button" disabled={deleting} onClick={() => void confirmDelete()} className="rounded-full bg-red-800 px-5 py-2 text-sm text-white disabled:opacity-50">{deleting ? "Đang xóa…" : "Xóa nhân viên"}</button>
                         </div>
                     </div>
-                </div>
+                </dialog>
             ) : null}
         </main>
     );

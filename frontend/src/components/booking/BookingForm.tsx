@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import type { FormEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
     ApiError,
     apiRequest,
@@ -173,6 +174,7 @@ export function BookingForm() {
     const [submitting, setSubmitting] = useState(false);
     const [formError, setFormError] = useState("");
     const [createdAppointment, setCreatedAppointment] = useState<Appointment | null>(null);
+    const successDialogRef = useRef<HTMLDialogElement | null>(null);
     const [availabilityRefreshKey, setAvailabilityRefreshKey] = useState(0);
 
     const selectedBranch = branches.find((branch) => branch.id === selectedBranchId) ?? null;
@@ -374,19 +376,20 @@ export function BookingForm() {
 
     useEffect(() => {
         if (!createdAppointment) return;
+        const dialog = successDialogRef.current;
+        if (!dialog) return;
 
-        const previousOverflow = document.body.style.overflow;
-        document.body.style.overflow = "hidden";
+        const previouslyFocused = document.activeElement instanceof HTMLElement
+            ? document.activeElement
+            : null;
 
-        const handleKeyDown = (event: KeyboardEvent) => {
-            if (event.key === "Escape") closeSuccessModal();
-        };
-
-        window.addEventListener("keydown", handleKeyDown);
+        // Native modal top layer works independently of the animated page
+        // sections, sticky header and stacking contexts.
+        if (!dialog.open) dialog.showModal();
 
         return () => {
-            document.body.style.overflow = previousOverflow;
-            window.removeEventListener("keydown", handleKeyDown);
+            if (dialog.open) dialog.close();
+            previouslyFocused?.focus();
         };
     }, [createdAppointment]);
 
@@ -882,102 +885,102 @@ export function BookingForm() {
             </aside>
         </form>
 
-        {createdAppointment ? (
-            <div
-                className="booking-success-overlay fixed inset-0 z-[100] flex items-end justify-center bg-ink/60 px-0 sm:items-center sm:px-6"
-                role="presentation"
-                onMouseDown={(event) => {
-                    if (event.target === event.currentTarget) closeSuccessModal();
-                }}
-            >
-                <section
-                    role="dialog"
-                    aria-modal="true"
+        {createdAppointment && typeof document !== "undefined" ? createPortal(
+                <dialog
+                    ref={successDialogRef}
                     aria-labelledby="booking-success-title"
-                    className="booking-success-panel relative max-h-[calc(100dvh-24px)] w-full max-w-[560px] overflow-y-auto rounded-t-[28px] border border-white/40 bg-surface p-6 shadow-[0_-18px_70px_rgba(48,40,35,0.28)] sm:rounded-[28px] sm:p-8 sm:shadow-[0_28px_90px_rgba(48,40,35,0.28)]"
+                    aria-describedby="booking-success-status"
+                    onCancel={(event) => {
+                        event.preventDefault();
+                        closeSuccessModal();
+                    }}
+                    className="booking-success-dialog booking-success-panel min-h-0 flex-col overflow-hidden rounded-[24px] border border-white/40 bg-surface p-0 focus:outline-none sm:rounded-[28px]"
                 >
-                    <button
-                        type="button"
-                        aria-label="Đóng thông báo"
-                        onClick={closeSuccessModal}
-                        className="focus-ring absolute right-5 top-5 flex size-9 items-center justify-center rounded-full border border-line bg-cream text-muted transition-colors hover:border-accent hover:text-ink"
-                    >
-                        <svg viewBox="0 0 24 24" aria-hidden="true" className="block size-5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                            <path d="M4 4 20 20M20 4 4 20" />
-                        </svg>
-                    </button>
+                    <div className="relative shrink-0 px-5 pb-4 pt-5 sm:px-8 sm:pb-5 sm:pt-7">
+                        <button
+                            type="button"
+                            aria-label="Đóng thông báo"
+                            onClick={closeSuccessModal}
+                            className="focus-ring absolute right-5 top-5 flex size-9 items-center justify-center rounded-full border border-line bg-cream text-muted transition-colors hover:border-accent hover:text-ink sm:right-8 sm:top-7"
+                        >
+                            <svg viewBox="0 0 24 24" aria-hidden="true" className="block size-5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                                <path d="M4 4 20 20M20 4 4 20" />
+                            </svg>
+                        </button>
 
-                    <div className="grid size-12 place-items-center rounded-full bg-tint text-accent sm:size-14">
-                        <svg viewBox="0 0 24 24" aria-hidden="true" className="size-6 sm:size-7" fill="none" stroke="currentColor" strokeWidth="1.8">
-                            <path d="m5 12.5 4.2 4.2L19 7" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
+                        <div className="grid size-10 place-items-center rounded-full bg-tint text-accent sm:size-12">
+                            <svg viewBox="0 0 24 24" aria-hidden="true" className="size-5 sm:size-6" fill="none" stroke="currentColor" strokeWidth="1.8">
+                                <path d="m5 12.5 4.2 4.2L19 7" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                        </div>
+                        <p className="mt-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-accent sm:mt-4">Đặt lịch thành công</p>
+                        <h2 id="booking-success-title" className="mt-1.5 max-w-[28rem] font-serif text-[clamp(1.5rem,5vw,2.35rem)] leading-[1.12] tracking-[-0.02em]">
+                            Serpente đã nhận lịch của bạn
+                        </h2>
+                        <p id="booking-success-status" className="mt-3 inline-flex rounded-full border border-accent/35 bg-tint px-3 py-1.5 text-[11px] font-semibold text-accent">
+                            Chờ tiệm xác nhận
+                        </p>
                     </div>
 
-                    <p className="mt-5 text-[10px] font-semibold uppercase tracking-[0.18em] text-accent">Đặt lịch thành công</p>
-                    <h2 id="booking-success-title" className="mt-2 pr-10 font-serif text-[34px] leading-[1.05] tracking-[-0.025em] sm:text-[42px]">
-                        Serpente đã nhận lịch của bạn
-                    </h2>
-                    <div className="mt-4 inline-flex rounded-full border border-accent/35 bg-tint px-3 py-1.5 text-[11px] font-semibold text-accent">
-                        Chờ tiệm xác nhận
-                    </div>
+                    <div className="booking-success-details min-h-0 flex-1 overflow-y-auto overscroll-contain border-t border-line px-5 py-4 sm:px-8 sm:py-5">
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-4">
+                            <div className="min-w-0">
+                                <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-muted">Chi nhánh</p>
+                                <p className="mt-1 break-words text-sm font-semibold">{selectedBranch ? shortBranchName(selectedBranch.name) : "—"}</p>
+                            </div>
+                            <div className="min-w-0">
+                                <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-muted">Số người</p>
+                                <p className="mt-1 text-sm font-semibold">{createdAppointment.party_size} người</p>
+                            </div>
+                            <div className="col-span-2 min-w-0">
+                                <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-muted">Thời gian</p>
+                                <p className="mt-1 text-sm font-semibold">{formatLongDate(createdAppointment.start_time.slice(0, 10))}</p>
+                                <p className="mt-0.5 text-xs text-muted">
+                                    {formatSlotTime(createdAppointment.start_time)}–{formatSlotTime(createdAppointment.end_time)}
+                                </p>
+                            </div>
+                            <div className="col-span-2 min-w-0">
+                                <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-muted">Dịch vụ</p>
+                                <p className="mt-1 break-words text-sm leading-5">
+                                    {(createdServices.length > 0 ? createdServices.map((service) => service.service_name) : selectedServices.map((service) => service.name)).join(" · ")}
+                                </p>
+                            </div>
+                        </div>
 
-                    <div className="my-6 h-px bg-line" />
-
-                    <div className="grid gap-4 sm:grid-cols-2">
-                        <div>
-                            <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-muted">Chi nhánh</p>
-                            <p className="mt-1 text-sm font-semibold">{selectedBranch ? shortBranchName(selectedBranch.name) : "—"}</p>
-                        </div>
-                        <div>
-                            <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-muted">Thời gian</p>
-                            <p className="mt-1 text-sm font-semibold">{formatLongDate(createdAppointment.start_time.slice(0, 10))}</p>
-                            <p className="mt-0.5 text-xs text-muted">
-                                {formatSlotTime(createdAppointment.start_time)}–{formatSlotTime(createdAppointment.end_time)}
-                            </p>
-                        </div>
-                        <div>
-                            <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-muted">Số người</p>
-                            <p className="mt-1 text-sm font-semibold">{createdAppointment.party_size} người</p>
-                        </div>
-                        <div className="sm:col-span-2">
-                            <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-muted">Dịch vụ</p>
-                            <p className="mt-1 text-sm leading-6">
-                                {(createdServices.length > 0 ? createdServices.map((service) => service.service_name) : selectedServices.map((service) => service.name)).join(" · ")}
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className="mt-6 flex items-end justify-between gap-5 rounded-[18px] bg-cream p-4">
-                        <div>
-                            <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-muted">Mã lịch hẹn</p>
-                            <p className="mt-1 font-mono text-xs font-semibold tracking-[0.04em]">
-                                {(createdAppointment.booking_group_id ?? createdAppointment.id).slice(0, 8).toUpperCase()}
-                            </p>
-                        </div>
-                        <div className="text-right">
-                            <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-muted">Tổng giá tham khảo</p>
-                            <p className="mt-1 font-serif text-xl tabular-nums">{formatVnd(createdServices.length > 0 ? createdTotalPrice : totalPrice)} VND</p>
+                        <div className="mt-4 grid min-w-0 grid-cols-2 items-end gap-3 rounded-[16px] bg-cream p-3.5 sm:mt-5 sm:p-4">
+                            <div className="min-w-0">
+                                <p className="text-[9px] font-semibold uppercase tracking-[0.1em] text-muted">Mã lịch hẹn</p>
+                                <p className="mt-1 break-all font-mono text-xs font-semibold tracking-[0.04em]">
+                                    {(createdAppointment.booking_group_id ?? createdAppointment.id).slice(0, 8).toUpperCase()}
+                                </p>
+                            </div>
+                            <div className="min-w-0 text-right">
+                                <p className="text-[9px] font-semibold uppercase tracking-[0.1em] text-muted">Tổng giá tham khảo</p>
+                                <p className="mt-1 break-words font-serif text-[clamp(1rem,3.5vw,1.25rem)] tabular-nums">
+                                    {formatVnd(createdServices.length > 0 ? createdTotalPrice : totalPrice)} VND
+                                </p>
+                            </div>
                         </div>
                     </div>
 
-                    <div className="mt-6 grid gap-2 sm:grid-cols-2">
+                    <div className="booking-success-actions grid shrink-0 grid-cols-2 gap-2 border-t border-line bg-surface px-5 py-4 sm:px-8 sm:py-5">
                         <button
                             type="button"
                             onClick={closeSuccessModal}
-                            className="focus-ring rounded-full border border-line bg-surface px-5 py-3.5 text-xs font-semibold text-ink transition-colors hover:border-accent/50"
+                            className="focus-ring min-h-11 min-w-0 rounded-full border border-line bg-surface px-3 py-3 text-xs font-semibold text-ink transition-colors hover:border-accent/50"
                         >
                             Đóng
                         </button>
                         <button
                             type="button"
                             onClick={viewMyAppointments}
-                            className="focus-ring rounded-full bg-ink px-5 py-3.5 text-xs font-semibold text-white transition-opacity hover:opacity-90"
+                            className="focus-ring min-h-11 min-w-0 rounded-full bg-ink px-3 py-3 text-xs font-semibold text-white transition-opacity hover:opacity-90"
                         >
                             Xem lịch của tôi
                         </button>
                     </div>
-                </section>
-            </div>
+                </dialog>,
+            document.body,
         ) : null}
         </>
     );
