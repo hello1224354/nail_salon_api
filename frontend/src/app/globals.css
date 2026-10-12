@@ -48,8 +48,9 @@ body {
     font-kerning: normal;
 }
 
-/* Letter spacing is controlled by each heading; a global negative value
-   collapses word gaps in Vietnamese titles, regardless of Tailwind tracking utilities. */
+.font-serif {
+    letter-spacing: -0.022em;
+}
 
 .site-shell {
     /* Fluid gutters use the actual available width, not device-specific offsets. */

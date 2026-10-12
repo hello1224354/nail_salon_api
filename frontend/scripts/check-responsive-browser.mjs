@@ -100,6 +100,24 @@ const measure = `(() => {
     }
     container.appendChild(calendar);
 
+    // Recreate the actual service title markup: discrete words with real
+    // flex gaps, so tablet font kerning can never merge "tế" and "bào".
+    const serviceTitle = document.createElement("h2");
+    serviceTitle.className = "mt-2 flex min-w-0 flex-wrap items-baseline gap-x-[0.22em] gap-y-0 font-serif text-[clamp(1.35rem,2.5vw,1.9rem)] leading-[1.3] tracking-[-0.02em]";
+    serviceTitle.style.width = "min(100%, 21rem)";
+    for (const word of ["Tẩy", "tế", "bào", "chết"]) {
+        const item = document.createElement("span");
+        item.className = "whitespace-nowrap";
+        item.textContent = word;
+        serviceTitle.appendChild(item);
+    }
+    container.appendChild(serviceTitle);
+
+    const titleRects = [...serviceTitle.children].map((node) => node.getBoundingClientRect());
+    const wordGaps = titleRects.slice(1).map((rect, i) =>
+        Math.round(rect.top) === Math.round(titleRects[i].top) ? rect.left - titleRects[i].right : null
+    ).filter((gap) => gap !== null);
+
     const shellBox = shell.getBoundingClientRect();
     const cardRects = [...cards.children].map((node) => node.getBoundingClientRect());
     const dateRects = [...calendar.children].map((node) => node.getBoundingClientRect());
@@ -115,6 +133,9 @@ const measure = `(() => {
         smallestDate: Math.min(...dateRects.map((rect) => rect.width)),
         calendarColumns: dateRects.filter((rect) => Math.round(rect.top) === Math.round(dateRects[0].top)).length,
         gridDisplay: getComputedStyle(cards).display,
+        serviceTitleGap: Number.parseFloat(getComputedStyle(serviceTitle).columnGap),
+        titleWordsWithin: titleRects.every(within),
+        smallestServiceWordGap: Math.min(...wordGaps),
     });
 })()`;
 
@@ -153,6 +174,9 @@ try {
         assert.ok(metrics.datesWithin, `${width}px: date control overflow`);
         assert.ok(metrics.smallestDate >= 60, `${width}px: date cell is too narrow`);
         assert.equal(metrics.gridDisplay, "grid");
+        assert.ok(metrics.serviceTitleGap >= 4, `${width}px: CSS word gap missing`);
+        assert.ok(metrics.titleWordsWithin, `${width}px: service words overflow`);
+        assert.ok(metrics.smallestServiceWordGap >= 3, `${width}px: title words visually collide`);
         if (width <= 390) assert.equal(metrics.cardColumns, 1);
         if (width >= 768 && width <= 1024) assert.equal(metrics.cardColumns, 2);
         if (width >= 1280) assert.equal(metrics.cardColumns, 3);

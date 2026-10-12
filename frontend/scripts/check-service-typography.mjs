@@ -7,9 +7,13 @@ const services = read("../src/components/services/ServicesCatalogue.tsx");
 const realData = read("../../src/data/real-salon-data.ts");
 const booking = read("../src/components/booking/BookingForm.tsx");
 
-assert.doesNotMatch(css, /\.font-serif\s*\{\s*letter-spacing:\s*-/);
-assert.match(services, /\[word-spacing:0\.13em\]/);
-assert.match(services, /tracking-normal/);
+// The original display typography stays intact for every other component.
+assert.match(css, /\.font-serif\s*\{\s*letter-spacing:\s*-0\.022em;/);
+// Word spacing in Safari/iPad must be layout geometry, not glyph kerning.
+assert.match(services, /gap-x-\[0\.22em\]/);
+assert.match(services, /\.trim\(\)\.split\(\/\\s\+\/u\)/);
+assert.match(services, /aria-label=\{service\.display_name \|\| service\.name\}/);
+assert.match(services, /aria-hidden="true"/);
 assert.match(realData, /name: "Tẩy tế bào chết"/);
 assert.match(booking, /window\.setTimeout\(\(\) => \{\s*void loadAvailability\(\);\s*\}, 200\)/);
 
