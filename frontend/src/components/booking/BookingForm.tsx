@@ -359,9 +359,14 @@ export function BookingForm() {
                 if (!cancelled) setAvailabilityLoading(false);
             }
         }
-        void loadAvailability();
+        // One availability read after interactions settle. Clicking a different
+        // date or +/- rapidly should not create one server request per tap.
+        const debounceTimer = window.setTimeout(() => {
+            void loadAvailability();
+        }, 200);
         return () => {
             cancelled = true;
+            window.clearTimeout(debounceTimer);
             controller.abort();
             if (timeout !== undefined) clearTimeout(timeout);
         };
