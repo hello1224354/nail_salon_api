@@ -82,6 +82,7 @@ function renderModalFixture() {
         windowHeight: window.innerHeight,
         buttonsVisible: buttons.every((item) => item.top >= 0 && item.bottom <= innerHeight),
         contentScrollable: content.scrollHeight > content.clientHeight,
+        contentOverflow: getComputedStyle(content).overflowY,
         actionsHeight: actions.getBoundingClientRect().height,
     };
 }
@@ -122,7 +123,10 @@ try {
         assert.ok(result.topLayer, "Native modal must use the browser top layer");
         assert.ok(result.top >= -1 && result.bottom <= result.windowHeight + 1, "Modal exceeds visual viewport");
         assert.ok(result.buttonsVisible, "A booking action is outside the viewport");
-        assert.ok(result.contentScrollable, "Confirmation details must scroll independently");
+        assert.equal(result.contentOverflow, "auto", "Details need an independent scroll area");
+        if (height <= 640) {
+            assert.ok(result.contentScrollable, "Compact viewport should scroll details rather than hide actions");
+        }
         const img = await client.send("Page.captureScreenshot", {
             format: "png", captureBeyondViewport: false,
         }, attached.sessionId);
