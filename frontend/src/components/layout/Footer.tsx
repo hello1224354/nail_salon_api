@@ -18,7 +18,7 @@ export function Footer() {
         <footer className="bg-studio-dark text-white">
             <div className="site-shell py-12 lg:py-14">
                 <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-[1.25fr_0.65fr_1.1fr] lg:gap-16">
-                    <div className="min-w-0 md:col-span-2 lg:col-span-1 lg:flex lg:flex-col lg:justify-center">
+                    <div className="min-w-0 md:col-span-2 lg:col-span-1 lg:self-center">
                         <div className="flex items-center gap-4 sm:gap-5">
                             <Image
                                 src="/brand/serpente-logo.svg"
