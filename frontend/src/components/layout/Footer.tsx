@@ -18,20 +18,20 @@ export function Footer() {
         <footer className="bg-studio-dark text-white">
             <div className="site-shell py-12 lg:py-14">
                 <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-[1.25fr_0.65fr_1.1fr] lg:gap-16">
-                    <div className="md:col-span-2 lg:col-span-1">
-                        <div className="flex items-center gap-3">
+                    <div className="min-w-0 md:col-span-2 lg:col-span-1 lg:flex lg:flex-col lg:justify-center">
+                        <div className="flex items-center gap-4 sm:gap-5">
                             <Image
                                 src="/brand/serpente-logo.svg"
                                 alt=""
-                                width={32}
-                                height={32}
-                                className="size-8 shrink-0 object-contain"
+                                width={80}
+                                height={80}
+                                className="size-14 shrink-0 object-contain sm:size-16 xl:size-20"
                             />
-                            <span className="font-serif text-2xl">{content?.display_name || "Serpente Nail Room"}</span>
+                            <span className="min-w-0 font-serif text-3xl leading-[1.12] tracking-[-0.025em] sm:text-[2.125rem] lg:text-[clamp(2rem,2.4vw,3rem)]">{content?.display_name || "Serpente Nail Room"}</span>
                         </div>
                         {contentError && !contentLoading ? <p role="status" className="mt-2 text-xs text-[#f2bcb2]">{contentError}</p> : null}
 
-                        <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-xs">
+                        <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-3 text-sm leading-6 sm:text-base lg:mt-8">
                             {instagramUrl ? (
                                 <a href={instagramUrl} target="_blank" rel="noreferrer" className="hover:text-[#d8c2b5]">
                                     Instagram
