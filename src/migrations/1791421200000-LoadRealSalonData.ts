@@ -46,7 +46,7 @@ export class LoadRealSalonData1791421200000 implements MigrationInterface {
         const branch = REAL_SALON_DATA.branch;
 
             await queryRunner.query(
-                `INSERT IGNORE INTO `branches`
+                `INSERT IGNORE INTO \`branches\`
                     (\`id\`, \`name\`, \`address\`, \`phone\`, \`opening_hours\`)
                  VALUES (?, ?, ?, ?, ?)`,
                 [branch.id, branch.name, branch.address, branch.phone, branch.opening_hours]
@@ -54,7 +54,7 @@ export class LoadRealSalonData1791421200000 implements MigrationInterface {
 
             for (const service of REAL_SALON_DATA.services) {
                 await queryRunner.query(
-                    `INSERT IGNORE INTO `services`
+                    `INSERT IGNORE INTO \`services\`
                         (
                             \`id\`, \`branch_id\`, \`name\`, \`display_name\`,
                             \`category\`, \`subcategory\`, \`description\`,
@@ -82,7 +82,7 @@ export class LoadRealSalonData1791421200000 implements MigrationInterface {
             const profile = REAL_SALON_DATA.profile;
 
             await queryRunner.query(
-                `INSERT IGNORE INTO `salon_content`
+                `INSERT IGNORE INTO \`salon_content\`
                     (
                         \`id\`, \`name\`, \`display_name\`, \`instagram_handle\`,
                         \`google_maps_location\`, \`hotline\`, \`contact_email\`,
