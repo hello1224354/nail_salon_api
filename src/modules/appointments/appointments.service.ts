@@ -17,6 +17,7 @@ import { WalkInVisitService } from "../walk-ins/walk-in-visit-service.entity";
 import { randomUUID } from "crypto";
 import { notifyAdminsOfNewBooking } from "./booking-notification.service";
 import { Staff } from "../staffs/staffs.entity";
+import { Branch } from "../branches/branches.entity";
 import { isWithinStaffWorkingHours } from "../staffs/staff-working-hours";
 import { getVietnamMinuteOfDay } from "./booking-time";
 import { parseBranchOpeningHours } from "../branches/branch-opening-hours";
@@ -703,7 +704,10 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
             const endTime = new Date(startTime.getTime() + minutes * 60_000);
             const startMinute = getBusinessMinuteOfDay(startTime);
             const endMinute = getBusinessMinuteOfDay(endTime);
-            if (startMinute < BUSINESS_OPEN_MINUTE || endMinute > BUSINESS_CLOSE_MINUTE ||
+            const targetBranch = await manager.getRepository(Branch).findOneBy({ id: targetBranchId });
+            if (!targetBranch) throw new AppError("Branch not found", 404, "BRANCH_NOT_FOUND");
+            const branchHours = parseBranchOpeningHours(targetBranch.opening_hours);
+            if (startMinute < branchHours.openMinute || endMinute > branchHours.closeMinute ||
                 endTime.getTime() <= startTime.getTime()) {
                 throw new AppError("Appointment is outside business hours", 409, "OUTSIDE_BUSINESS_HOURS");
             }
