@@ -111,9 +111,6 @@ async function performRefresh() {
             typeof data.access_token !== "string" ||
             !data.user
         ) {
-            // Only a definitive invalid/revoked session expires client auth.
-            // 429, 5xx, unexpected server responses and refresh races are
-            // transient; never destroy a valid access token due to them.
             const code = result.body && "error" in result.body
                 ? result.body.error?.code
                 : undefined;
@@ -122,18 +119,20 @@ async function performRefresh() {
                 code === "REFRESH_TOKEN_REUSE" ||
                 code === "TOKEN_REVOKED"
             );
-            if (expired && refreshEpoch === sessionEpoch) clearSession();
-            return false;
+            if (expired) {
+                if (refreshEpoch === sessionEpoch) clearSession();
+                return false;
+            }
+            throw new Error("Không kết nối được phiên đăng nhập. Vui lòng thử lại.");
         }
 
         if (refreshEpoch !== sessionEpoch) return Boolean(accessToken && authUser);
 
         saveSession(data.access_token, data.user);
         return true;
-    } catch {
-        // Network loss is not logout. The existing access token may still
-        // work, and the refresh cookie may succeed once connectivity returns.
-        return false;
+    } catch (error) {
+        // Network/server errors must not redirect to login or clear cookies.
+        throw error;
     }
 }
 
