@@ -31,13 +31,6 @@ export function Footer() {
                         </div>
                         {contentError && !contentLoading ? <p role="status" className="mt-2 text-xs text-[#f2bcb2]">{contentError}</p> : null}
 
-                        <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-3 text-sm leading-6 sm:text-base lg:mt-8">
-                            {instagramUrl ? (
-                                <a href={instagramUrl} target="_blank" rel="noreferrer" className="hover:text-[#d8c2b5]">
-                                    Instagram
-                                </a>
-                            ) : null}
-                        </div>
                     </div>
 
                     <div>
@@ -94,13 +87,22 @@ export function Footer() {
                                 );
                             })}
 
-                            {content?.contact_email ? (
-                                <a
-                                    className="block w-fit text-sm text-white/90 hover:text-[#d8c2b5]"
-                                    href={`mailto:${content.contact_email}`}
-                                >
-                                    {content.contact_email}
-                                </a>
+                            {(content?.contact_email || instagramUrl) ? (
+                                <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm">
+                                    {content?.contact_email ? (
+                                        <a
+                                            className="w-fit text-white/90 hover:text-[#d8c2b5]"
+                                            href={`mailto:${content.contact_email}`}
+                                        >
+                                            {content.contact_email}
+                                        </a>
+                                    ) : null}
+                                    {instagramUrl ? (
+                                        <a href={instagramUrl} target="_blank" rel="noreferrer" className="w-fit text-white/90 hover:text-[#d8c2b5]">
+                                            Instagram
+                                        </a>
+                                    ) : null}
+                                </div>
                             ) : null}
                         </div>
                     </div>
