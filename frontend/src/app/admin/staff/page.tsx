@@ -25,6 +25,7 @@ export default function StaffManagementPage() {
     useEffect(() => {
         let active = true;
         void (async () => {
+            try {
             const restored = await restoreSession();
             const user = getAuthUser();
             if (!restored || !user || user.role.toLowerCase() !== "admin") {
@@ -39,6 +40,12 @@ export default function StaffManagementPage() {
                 if (active) setError(getApiErrorMessage(cause, "Không tải được nhân viên."));
             } finally {
                 if (active) setLoading(false);
+            }
+            } catch (cause) {
+                if (active) {
+                    setError(getApiErrorMessage(cause, "Chưa kiểm tra được phiên đăng nhập. Vui lòng tải lại trang."));
+                    setLoading(false);
+                }
             }
         })();
         return () => { active = false; };

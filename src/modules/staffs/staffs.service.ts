@@ -86,16 +86,18 @@ export const updateStaff = async (userId: string, data: UpdateStaffDto) => {
         const user = await users.findOne({ where: { id: userId, role: UserRole.STAFF }, lock: { mode: "pessimistic_write" } });
         if (!user) throw new AppError("Only staff accounts can be updated here", 403, "FORBIDDEN");
 
-        if (data.branch_id !== undefined) {
+        const nextBranchId = data.branch_id ?? staff.branch_id;
+        const workStart = data.work_start_time ?? staff.work_start_time;
+        const workEnd = data.work_end_time ?? staff.work_end_time;
+        assertValidWorkingHours(workStart, workEnd);
+        if (data.branch_id !== undefined && data.branch_id !== staff.branch_id) {
             const branch = await manager.getRepository(Branch).findOneBy({ id: data.branch_id });
             if (!branch) throw new AppError("Branch not found", 404, "BRANCH_NOT_FOUND");
-            staff.branch_id = data.branch_id;
         }
 
-        if (data.work_start_time !== undefined || data.work_end_time !== undefined) {
-            const workStart = data.work_start_time ?? staff.work_start_time;
-            const workEnd = data.work_end_time ?? staff.work_end_time;
-            assertValidWorkingHours(workStart, workEnd);
+        if (nextBranchId !== staff.branch_id ||
+            workStart !== staff.work_start_time ||
+            workEnd !== staff.work_end_time) {
             // A schedule change must not silently place an existing appointment outside the shift.
             const futureAppointments = await manager.getRepository(Appointment)
                 .createQueryBuilder("appointment")
@@ -105,15 +107,19 @@ export const updateStaff = async (userId: string, data: UpdateStaffDto) => {
                 .andWhere("appointment.end_time > :now", { now: new Date() })
                 .getMany();
             for (const appointment of futureAppointments) {
+                if (appointment.branch_id !== nextBranchId) {
+                    throw new AppError("Existing upcoming appointments belong to another branch", 409, "STAFF_BRANCH_CONFLICT");
+                }
                 const start = getVietnamMinuteOfDay(appointment.start_time);
                 const end = getVietnamMinuteOfDay(appointment.end_time);
                 if (!isWithinStaffWorkingHours({ work_start_time: workStart, work_end_time: workEnd }, start, end)) {
                     throw new AppError("Existing upcoming appointments fall outside the proposed working hours", 409, "STAFF_SCHEDULE_CONFLICT");
                 }
             }
-            staff.work_start_time = workStart;
-            staff.work_end_time = workEnd;
         }
+        staff.branch_id = nextBranchId;
+        staff.work_start_time = workStart;
+        staff.work_end_time = workEnd;
 
         const emailChanged = data.email !== undefined && data.email !== user.email;
         if (data.email && emailChanged) {

@@ -46,7 +46,7 @@ export function Header() {
         };
 
         syncAuth();
-        void restoreSession().then(syncAuth);
+        void restoreSession().then(syncAuth).catch(syncAuth);
 
         window.addEventListener(AUTH_CHANGED_EVENT, syncAuth);
 

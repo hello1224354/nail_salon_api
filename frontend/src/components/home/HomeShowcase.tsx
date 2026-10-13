@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
 import useEmblaCarousel from "embla-carousel-react";
 import Autoplay from "embla-carousel-autoplay";
-import { apiRequest, type CustomerReview, type InstagramTrendItem, type SalonContent } from "@/lib/api";
+import { type CustomerReview, type InstagramTrendItem } from "@/lib/api";
 import { getInstagramUrl, getMapsUrl } from "@/lib/studio-data";
 import { useBranch } from "@/components/branch/BranchProvider";
 
@@ -289,39 +289,14 @@ function ReviewsCarousel({ reviews }: { reviews: CustomerReview[] }) {
     );
 }
 
-export function HomeShowcase({ content }: { content: SalonContent | null }) {
-    const { selectedBranchId } = useBranch();
-    const [resolvedContent, setResolvedContent] = useState<SalonContent | null>(content);
-
-    useEffect(() => {
-        if (selectedBranchId === null) return;
-
-        let cancelled = false;
-
-        async function loadBranchContent() {
-            try {
-                const nextContent = await apiRequest<SalonContent>(
-                    `/api/site-content?branch_id=${selectedBranchId}`
-                );
-
-                if (!cancelled) setResolvedContent(nextContent);
-            } catch (error) {
-                console.error("Chưa tải được đánh giá theo chi nhánh", error);
-            }
-        }
-
-        void loadBranchContent();
-
-        return () => {
-            cancelled = true;
-        };
-    }, [selectedBranchId]);
+export function HomeShowcase() {
+    const { salonContent: resolvedContent, contentLoading, contentError } = useBranch();
 
     if (!resolvedContent) {
         return (
             <section className="border-t border-line">
                 <div className="site-shell py-14 lg:py-20">
-                    <p className="text-sm text-muted">Thông tin của Serpente đang được cập nhật.</p>
+                    <p className="text-sm text-muted">{contentLoading ? "Đang tải thông tin chi nhánh…" : contentError || "Thông tin của Serpente đang được cập nhật."}</p>
                 </div>
             </section>
         );

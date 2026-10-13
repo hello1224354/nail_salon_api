@@ -1,20 +1,21 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-
-/** The verified public Instagram handle in the salon's initial profile data. */
-const INSTAGRAM_MESSAGE_URL = "https://ig.me/m/serpente.nailroom";
+import { useBranch } from "@/components/branch/BranchProvider";
 
 export function InstagramContact() {
     const pathname = usePathname();
+    const { salonContent } = useBranch();
+    const handle = salonContent?.instagram_handle?.replace(/^@/, "").trim();
+    const messageUrl = handle ? `https://ig.me/m/${encodeURIComponent(handle)}` : null;
 
     // Keep the operational dashboard free of customer-facing contact controls.
-    if (pathname.startsWith("/admin")) return null;
+    if (pathname.startsWith("/admin") || !messageUrl) return null;
 
     return (
         <aside className="instagram-contact-dock" aria-label="Liên hệ Serpente">
             <a
-                href={INSTAGRAM_MESSAGE_URL}
+                href={messageUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Nhắn tin Instagram cho Serpente để gửi mẫu nail và hỏi giá (mở tab mới)"

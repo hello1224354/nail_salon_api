@@ -76,6 +76,8 @@ async function performRefresh() {
     const refreshEpoch = sessionEpoch;
 
     try {
+        // Serialize refresh cookie rotations across open tabs where Web Locks
+        // are supported. Each tab sees the latest Set-Cookie before rotating.
         let result = await requestRefreshOnce();
 
         if (refreshEpoch !== sessionEpoch) return Boolean(accessToken && authUser);
@@ -109,23 +111,44 @@ async function performRefresh() {
             typeof data.access_token !== "string" ||
             !data.user
         ) {
-            if (refreshEpoch === sessionEpoch) clearSession();
-            return false;
+            const code = result.body && "error" in result.body
+                ? result.body.error?.code
+                : undefined;
+            const expired = result.response.status === 401 && (
+                code === "INVALID_REFRESH_SESSION" ||
+                code === "REFRESH_TOKEN_REUSE" ||
+                code === "TOKEN_REVOKED"
+            );
+            if (expired) {
+                if (refreshEpoch === sessionEpoch) clearSession();
+                return false;
+            }
+            throw new Error("Không kết nối được phiên đăng nhập. Vui lòng thử lại.");
         }
 
         if (refreshEpoch !== sessionEpoch) return Boolean(accessToken && authUser);
 
         saveSession(data.access_token, data.user);
         return true;
-    } catch {
-        if (refreshEpoch === sessionEpoch) clearSession();
-        return false;
+    } catch (error) {
+        // Network/server errors must not redirect to login or clear cookies.
+        throw error;
     }
 }
 
 export async function refreshSession() {
     if (!refreshPromise) {
-        refreshPromise = performRefresh().finally(() => {
+        // Avoid two tabs rotating the same HttpOnly refresh cookie at once.
+        // Safari versions without Web Locks retain per-tab deduplication.
+        const lockedRefresh = async (): Promise<boolean> => {
+            if (typeof navigator !== "undefined" && navigator.locks) {
+                return await navigator.locks.request("serpente:refresh-session", async () => {
+                    return await performRefresh();
+                });
+            }
+            return await performRefresh();
+        };
+        refreshPromise = lockedRefresh().finally(() => {
             refreshPromise = null;
         });
     }

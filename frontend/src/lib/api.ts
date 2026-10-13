@@ -139,6 +139,9 @@ const errorMessagesByCode: Record<string, string> = {
     TOO_MANY_PENDING_APPOINTMENTS: "Bạn đã có quá nhiều lịch hẹn đang chờ xác nhận.",
     INVALID_APPOINTMENT_TIME: "Giờ bắt đầu phải nằm trên mốc 15 phút.",
     OUTSIDE_BUSINESS_HOURS: "Khung giờ đã chọn nằm ngoài giờ mở cửa của tiệm.",
+    BRANCH_HOURS_NOT_CONFIGURED: "Chi nhánh chưa cấu hình giờ mở cửa để nhận lịch trực tuyến.",
+    INVALID_BRANCH_HOURS: "Giờ mở cửa phải có dạng 09:00–20:30 và theo mốc 15 phút.",
+    STAFF_BRANCH_CONFLICT: "Nhân viên còn lịch hẹn tương lai ở chi nhánh cũ.",
     APPOINTMENT_CONFLICT: "Khung giờ này không còn khả dụng.",
     ACTUAL_PRICES_INCOMPLETE: "Mọi nhân viên trong nhóm phải nhập đủ giá thực tế trước khi hoàn thành.",
     APPOINTMENT_NOT_STARTED_YET: "Lịch hẹn chưa đến giờ bắt đầu. Vui lòng kiểm tra lại ngày và giờ đã hẹn.",
@@ -161,6 +164,34 @@ export function getApiErrorMessage(error: unknown, fallback: string) {
     }
 
     return fallback;
+}
+
+// Read all pages from the server instead of treating the first 100
+// records as a complete list. The API enforces a 100-row page ceiling.
+export async function fetchAllPages<T>(
+    path: string,
+    key: string,
+    init: RequestInit = {},
+): Promise<T[]> {
+    const items: T[] = [];
+    let page = 1;
+    for (;;) {
+        const [pathname, query = ""] = path.split("?");
+        const params = new URLSearchParams(query);
+        params.set("page", String(page));
+        params.set("limit", "100");
+        const result = await apiRequest<Record<string, unknown>>(
+            pathname + "?" + params.toString(), init,
+        );
+        const chunk = result[key];
+        const count = result.total_pages;
+        if (!Array.isArray(chunk) || typeof count !== "number" || count < 0) {
+            throw new Error("Invalid paginated response for " + key);
+        }
+        items.push(...chunk as T[]);
+        if (page >= count) return items;
+        page += 1;
+    }
 }
 
 export type Branch = {

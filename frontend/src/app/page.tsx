@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import { CurrentOffers, type Offer as OfferCard } from "@/components/home/CurrentOffers";
-import { HomeShowcase } from "@/components/home/HomeShowcase";
-import { apiRequest, type OfferList, type SalonContent } from "@/lib/api";
+import { type Offer as OfferCard } from "@/components/home/CurrentOffers";
+import { HomeSections } from "@/components/home/HomeSections";
+import { fetchAllPages, type Offer } from "@/lib/api";
 
 export const metadata: Metadata = {
     title: "Serpente Nail Room",
@@ -19,12 +19,11 @@ function formatOfferDate(date: string) {
 
 async function getCurrentOffers(): Promise<OfferCard[]> {
     try {
-        const data = await apiRequest<OfferList>(
-            "/api/offers?page=1&limit=100",
-            { cache: "no-store" }
+        const data = await fetchAllPages<Offer>(
+            "/api/offers", "offers", { cache: "no-store" }
         );
 
-        return data.offers.map((offer) => ({
+        return data.map((offer) => ({
             name: offer.name,
             details: offer.details,
             validDates: `Từ ${formatOfferDate(offer.start_date)} đến ${formatOfferDate(offer.end_date)}`,
@@ -36,32 +35,10 @@ async function getCurrentOffers(): Promise<OfferCard[]> {
     }
 }
 
-const CURRENT_BRANCH_ID = 1;
-
-async function getSalonContent(): Promise<SalonContent | null> {
-    try {
-        return await apiRequest<SalonContent>(
-            `/api/site-content?branch_id=${CURRENT_BRANCH_ID}`,
-            { cache: "no-store" }
-        );
-    } catch (error) {
-        console.error("Chưa tải được thông tin tiệm", error);
-        return null;
-    }
-}
-
 export default async function HomePage() {
-    const [offers, content] = await Promise.all([
-        getCurrentOffers(),
-        getSalonContent(),
-    ]);
+    const offers = await getCurrentOffers();
 
     return (
-        <>
-            <section className="site-shell py-10 sm:py-14 lg:py-16">
-                <CurrentOffers offers={offers} instagramHandle={content?.instagram_handle} />
-            </section>
-            <HomeShowcase content={content} />
-        </>
+        <HomeSections offers={offers} />
     );
 }

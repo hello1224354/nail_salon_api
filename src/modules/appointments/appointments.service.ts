@@ -17,16 +17,16 @@ import { WalkInVisitService } from "../walk-ins/walk-in-visit-service.entity";
 import { randomUUID } from "crypto";
 import { notifyAdminsOfNewBooking } from "./booking-notification.service";
 import { Staff } from "../staffs/staffs.entity";
+import { Branch } from "../branches/branches.entity";
 import { isWithinStaffWorkingHours } from "../staffs/staff-working-hours";
 import { getVietnamMinuteOfDay } from "./booking-time";
+import { parseBranchOpeningHours } from "../branches/branch-opening-hours";
 
 const appointmentRepo = AppDataSource.getRepository(Appointment);
 
 const CUSTOMER_MIN_BOOKING_LEAD_TIME_MS = 3 * 60 * 60 * 1000;
 const CUSTOMER_MAX_BOOKING_HORIZON_MS = 14 * 24 * 60 * 60 * 1000;
 const BUSINESS_TIMEZONE = "Asia/Ho_Chi_Minh";
-const BUSINESS_OPEN_MINUTE = 9 * 60;
-const BUSINESS_CLOSE_MINUTE = 20 * 60 + 30;
 const CUSTOMER_MAX_PENDING_APPOINTMENTS = 3;
 const BOOKING_SLOT_MS = 15 * 60 * 1000;
 
@@ -144,9 +144,12 @@ export const getAvailability = async (data: GetAvailabilityQueryDto) => {
 
     const {
         services,
+        branch,
         branchId,
         staffs,
     } = await resolveBookingResources(data.service_ids);
+
+    const hours = parseBranchOpeningHours(branch.opening_hours);
 
     let totalDurationMinutes = 0;
 
@@ -157,11 +160,11 @@ export const getAvailability = async (data: GetAvailabilityQueryDto) => {
     const durationMs = totalDurationMinutes * 60 * 1000;
 
     const businessOpenTime = new Date(
-        data.date.getTime() + BUSINESS_OPEN_MINUTE * 60 * 1000
+        data.date.getTime() + hours.openMinute * 60 * 1000
     );
 
     const businessCloseTime = new Date(
-        data.date.getTime() + BUSINESS_CLOSE_MINUTE * 60 * 1000
+        data.date.getTime() + hours.closeMinute * 60 * 1000
     );
 
     const now = Date.now();
@@ -255,6 +258,7 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
 
     const ownerId = actorId;
     const { services, branch, branchId, staffs } = await resolveBookingResources(data.service_ids);
+    const hours = parseBranchOpeningHours(branch.opening_hours);
     const candidateStaffs = staffs;
 
     let totalDurationMinutes = 0;
@@ -270,9 +274,9 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
     const businessStartMinute = getBusinessMinuteOfDay(data.start_time);
     const businessEndMinute = getBusinessMinuteOfDay(endTime);
 
-    if (businessStartMinute < BUSINESS_OPEN_MINUTE) throw new AppError(`Appointment must start at or after ${formatMinuteOfDay(BUSINESS_OPEN_MINUTE)}`, 400, "OUTSIDE_BUSINESS_HOURS");
+    if (businessStartMinute < hours.openMinute) throw new AppError(`Appointment must start at or after ${formatMinuteOfDay(hours.openMinute)}`, 400, "OUTSIDE_BUSINESS_HOURS");
 
-    if (businessEndMinute > BUSINESS_CLOSE_MINUTE) throw new AppError(`Appointment must end by ${formatMinuteOfDay(BUSINESS_CLOSE_MINUTE)}`, 400, "OUTSIDE_BUSINESS_HOURS");
+    if (businessEndMinute > hours.closeMinute) throw new AppError(`Appointment must end by ${formatMinuteOfDay(hours.closeMinute)}`, 400, "OUTSIDE_BUSINESS_HOURS");
 
     const created = await AppDataSource.transaction(async (manager) => {
         const transactionAppointmentRepo = manager.getRepository(Appointment);
@@ -700,7 +704,10 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
             const endTime = new Date(startTime.getTime() + minutes * 60_000);
             const startMinute = getBusinessMinuteOfDay(startTime);
             const endMinute = getBusinessMinuteOfDay(endTime);
-            if (startMinute < BUSINESS_OPEN_MINUTE || endMinute > BUSINESS_CLOSE_MINUTE ||
+            const targetBranch = await manager.getRepository(Branch).findOneBy({ id: targetBranchId });
+            if (!targetBranch) throw new AppError("Branch not found", 404, "BRANCH_NOT_FOUND");
+            const branchHours = parseBranchOpeningHours(targetBranch.opening_hours);
+            if (startMinute < branchHours.openMinute || endMinute > branchHours.closeMinute ||
                 endTime.getTime() <= startTime.getTime()) {
                 throw new AppError("Appointment is outside business hours", 409, "OUTSIDE_BUSINESS_HOURS");
             }

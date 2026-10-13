@@ -1,4 +1,5 @@
 import { AppError } from "../../common/errors";
+import { parseBranchOpeningHours } from "./branch-opening-hours";
 
 export interface CreateBranchDto {
     name: string;
@@ -57,6 +58,15 @@ export function parseGetBranchesQuery(query: unknown): GetBranchesQueryDto {
     };
 }
 
+function parseOptionalOpeningHours(value: unknown): string | null {
+    if (value === undefined || value === null || value === "") return null;
+    if (typeof value !== "string") {
+        throw new AppError("Opening hours must be text", 400, "INVALID_BRANCH_HOURS");
+    }
+    parseBranchOpeningHours(value);
+    return value.trim().replace(/[-—]/g, "–");
+}
+
 function parseOptionalContact(value: unknown, label: string): string | null {
     if (value === undefined || value === null || value === "") return null;
     if (typeof value !== "string" || value.trim().length > 255) {
@@ -78,7 +88,7 @@ export function parseCreateBranchDto(body: unknown): CreateBranchDto {
         name: data.name.trim(),
         address: data.address.trim(),
         phone: parseOptionalContact(data.phone, "Phone"),
-        opening_hours: parseOptionalContact(data.opening_hours, "Opening_hours"),
+        opening_hours: parseOptionalOpeningHours(data.opening_hours),
     };
 }
 
@@ -96,7 +106,7 @@ export function parseUpdateBranchDto(body: unknown): UpdateBranchDto {
     if (data.name !== undefined) result.name = (data.name as string).trim();
     if (data.address !== undefined) result.address = (data.address as string).trim();
     if (data.phone !== undefined) result.phone = parseOptionalContact(data.phone, "Phone");
-    if (data.opening_hours !== undefined) result.opening_hours = parseOptionalContact(data.opening_hours, "Opening_hours");
+    if (data.opening_hours !== undefined) result.opening_hours = parseOptionalOpeningHours(data.opening_hours);
 
     if (Object.keys(result).length === 0) throw new AppError("At least one field must be provided", 400, "VALIDATION_ERROR");
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { apiRequest, getApiErrorMessage, type Service, type ServiceList } from "@/lib/api";
+import { fetchAllPages, getApiErrorMessage, type Service } from "@/lib/api";
 import { decorateService, formatServicePrice } from "@/lib/studio-data";
 import { useBranch } from "@/components/branch/BranchProvider";
 
@@ -26,12 +26,12 @@ export function ServicesCatalogue() {
             setError("");
 
             try {
-                const data = await apiRequest<ServiceList>(
-                    `/api/services?branch_id=${selectedBranchId}&page=1&limit=100`
+                const data = await fetchAllPages<Service>(
+                    `/api/services?branch_id=${selectedBranchId}`, "services"
                 );
 
                 if (!cancelled) {
-                    setServices(data.services.map(decorateService));
+                    setServices(data.map(decorateService));
                     setActiveCategory("Tất cả");
                 }
             } catch (loadError) {
