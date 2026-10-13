@@ -12,6 +12,7 @@ type ObjectStorageConfig = {
     bucket: string;
     accessKey: string;
     secretKey: string;
+    urlStyle: "virtual" | "path";
 };
 
 function getConfig(): ObjectStorageConfig | null {
@@ -38,7 +39,13 @@ function getConfig(): ObjectStorageConfig | null {
         !/^[a-z0-9-]{2,32}$/.test(region)) {
         throw new Error("Invalid MEDIA_S3 endpoint, bucket or region");
     }
-    return { endpoint, region, bucket, accessKey, secretKey };
+    // Railway's bucket credentials advertise urlStyle="virtual".
+    // Keep path-style available for locally provisioned S3-compatible servers.
+    const urlStyle = process.env.MEDIA_S3_URL_STYLE ?? "virtual";
+    if (urlStyle !== "virtual" && urlStyle !== "path") {
+        throw new Error("MEDIA_S3_URL_STYLE must be virtual or path");
+    }
+    return { endpoint, region, bucket, accessKey, secretKey, urlStyle };
 }
 
 export function objectStorageConfigured(): boolean {
@@ -70,7 +77,12 @@ async function sendS3(
     if (!config) throw new AppError("Object storage is not configured", 503, "MEDIA_STORAGE_UNAVAILABLE");
 
     const uri = new URL(config.endpoint.toString());
-    uri.pathname = "/" + config.bucket + "/" + validObjectKey(key);
+    if (config.urlStyle === "virtual") {
+        uri.hostname = config.bucket + "." + uri.hostname;
+        uri.pathname = "/" + validObjectKey(key);
+    } else {
+        uri.pathname = "/" + config.bucket + "/" + validObjectKey(key);
+    }
     const payloadHash = sha256(bytes ?? "");
     const timestamp = new Date().toISOString().replace(/[:-]|\.\d{3}/g, "");
     const day = timestamp.slice(0, 8);

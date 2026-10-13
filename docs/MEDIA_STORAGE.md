@@ -24,8 +24,12 @@ to the bucket credentials when available. Do not commit credential values:
 - `MEDIA_S3_BUCKET`: bucket name
 - `MEDIA_S3_ACCESS_KEY_ID`: private credential
 - `MEDIA_S3_SECRET_ACCESS_KEY`: private credential
+- `MEDIA_S3_URL_STYLE`: `virtual` (default; Railway credential
+  `urlStyle=virtual`), or `path` for an alternative S3 provider
 
-All five must be present or all absent. With none configured the API keeps
+All five required credential fields must be present or all absent.
+Use `MEDIA_S3_REGION=auto` for Railway Storage Buckets. The bucket's
+physical provisioning region (e.g. sjc) is not the SigV4 signing region. With none configured the API keeps
 writing legacy MySQL BLOBs, so deployment is backwards compatible. With
 complete configuration all **new** uploads go directly to the private bucket;
 the database stores metadata and `object_key` only.
