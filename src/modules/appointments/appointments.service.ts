@@ -713,7 +713,10 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
                 endTime.getTime() <= startTime.getTime()) {
                 throw new AppError("Appointment is outside business hours", 409, "OUTSIDE_BUSINESS_HOURS");
             }
-            const staffCandidates = await staffService.getAllStaffs({ branch_id: targetBranchId });
+            const staffCandidates = (await staffService.getAllStaffs({ branch_id: targetBranchId }))
+                .filter(staff => chosenServices.every(service =>
+                    staff.capabilities?.some(capability => capability.service_id === service.service_id)
+                ));
             if (data.staff_id !== undefined && !staffCandidates.some(staff => staff.user_id === data.staff_id)) {
                 throw new AppError("Selected staff is not in this branch", 400, "BRANCH_MISMATCH");
             }
