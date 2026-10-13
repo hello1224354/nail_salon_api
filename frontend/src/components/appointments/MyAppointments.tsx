@@ -6,9 +6,9 @@ import { useEffect, useMemo, useState } from "react";
 import {
     ApiError,
     apiRequest,
+    fetchAllPages,
     getApiErrorMessage,
     type Appointment,
-    type AppointmentList,
 } from "@/lib/api";
 import { clearSession, restoreSession, type AuthUser } from "@/lib/auth";
 import { canUseCustomerFeatures as canBook } from "@/lib/roles";
@@ -57,7 +57,7 @@ function formatAppointmentTime(value: string) {
 async function fetchAppointmentContext() {
     return await Promise.all([
         apiRequest<AuthUser>("/api/users/me"),
-        apiRequest<AppointmentList>("/api/appointments?scope=mine&page=1&limit=100"),
+        fetchAllPages<Appointment>("/api/appointments?scope=mine", "appointments"),
     ]);
 }
 
@@ -100,7 +100,7 @@ export function MyAppointments() {
                     return;
                 }
 
-                setAppointments(appointmentData.appointments);
+                setAppointments(appointmentData);
             } catch (loadError) {
                 if (cancelled) return;
 
@@ -143,7 +143,7 @@ export function MyAppointments() {
                 return;
             }
 
-            setAppointments(appointmentData.appointments);
+            setAppointments(appointmentData);
         } catch (loadError) {
             if (loadError instanceof ApiError && loadError.status === 401) {
                 clearSession();
