@@ -1,6 +1,7 @@
 import { DataSource } from "typeorm";
 import { Service } from "../modules/services/service.entity";
 import { Staff } from "../modules/staffs/staffs.entity";
+import { StaffServiceCapability } from "../modules/staffs/staff-service-capability.entity";
 import { Appointment } from "../modules/appointments/appointments.entity";
 import { User } from "../modules/users/users.entity";
 import { env } from "./env";
@@ -36,6 +37,7 @@ export const AppDataSource = new DataSource({
     entities: [
         Service,
         Staff,
+        StaffServiceCapability,
         Appointment,
         AppointmentService,
         User,
