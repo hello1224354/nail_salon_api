@@ -37,8 +37,6 @@ export function Footer() {
                                     Instagram
                                 </a>
                             ) : null}
-                            {content?.facebook_name ? <span className="text-white/65">{content.facebook_name}</span> : null}
-                            {content?.tiktok_name ? <span className="text-white/65">{content.tiktok_name}</span> : null}
                         </div>
                     </div>
 
