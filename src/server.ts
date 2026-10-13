@@ -2,6 +2,7 @@ import "reflect-metadata";
 import { app } from "./app";
 import { AppDataSource } from "./config/database";
 import { env } from "./config/env";
+import { startBookingNotificationWorker } from "./modules/appointments/notification-outbox.service";
 
 async function startServer() {
     await AppDataSource.initialize();
@@ -16,11 +17,13 @@ async function startServer() {
         }
     }
 
+    const stopNotificationWorker = startBookingNotificationWorker();
     const server = app.listen(env.PORT, () => {
         console.log("Server is running on port: ", env.PORT);
     });
 
     const shutdown = async () => {
+        stopNotificationWorker();
         try {
             await new Promise<void>((resolve, reject) => {
                 server.close((error) => {
