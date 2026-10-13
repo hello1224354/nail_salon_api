@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { fetchAllPages, getApiErrorMessage, type Branch } from "@/lib/api";
+import { fetchAllPages, getApiErrorMessage, type Branch, type SalonContent, apiRequest } from "@/lib/api";
 
 const STORAGE_KEY = "serpente:selected-branch-id";
 
@@ -11,6 +11,9 @@ type BranchContextValue = {
     selectedBranch: Branch | null;
     loading: boolean;
     error: string;
+    salonContent: SalonContent | null;
+    contentLoading: boolean;
+    contentError: string;
     setSelectedBranchId: (branchId: number) => void;
 };
 
@@ -21,6 +24,9 @@ export function BranchProvider({ children }: { children: ReactNode }) {
     const [selectedBranchId, setSelectedBranchIdState] = useState<number | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [salonContent, setSalonContent] = useState<SalonContent | null>(null);
+    const [contentLoading, setContentLoading] = useState(false);
+    const [contentError, setContentError] = useState("");
 
     useEffect(() => {
         let cancelled = false;
@@ -58,6 +64,28 @@ export function BranchProvider({ children }: { children: ReactNode }) {
         };
     }, []);
 
+    useEffect(() => {
+        if (selectedBranchId === null) {
+            setSalonContent(null);
+            return;
+        }
+        let cancelled = false;
+        setContentLoading(true);
+        setContentError("");
+        setSalonContent(null);
+        void apiRequest<SalonContent>(`/api/site-content?branch_id=${selectedBranchId}`)
+            .then((nextContent) => {
+                if (!cancelled) setSalonContent(nextContent);
+            })
+            .catch((cause) => {
+                if (!cancelled) setContentError(getApiErrorMessage(cause, "Không tải được nội dung chi nhánh."));
+            })
+            .finally(() => {
+                if (!cancelled) setContentLoading(false);
+            });
+        return () => { cancelled = true; };
+    }, [selectedBranchId]);
+
     const setSelectedBranchId = (branchId: number) => {
         if (!branches.some((branch) => branch.id === branchId)) return;
 
@@ -78,6 +106,9 @@ export function BranchProvider({ children }: { children: ReactNode }) {
                 selectedBranch,
                 loading,
                 error,
+                salonContent,
+                contentLoading,
+                contentError,
                 setSelectedBranchId,
             }}
         >
