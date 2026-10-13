@@ -138,12 +138,17 @@ async function performRefresh() {
 
 export async function refreshSession() {
     if (!refreshPromise) {
-        const perform = () => performRefresh();
-        // Browser-managed lock works across tabs under the same origin.
-        // Keep the per-tab promise deduplication for browsers without locks.
-        refreshPromise = (typeof navigator !== "undefined" && navigator.locks
-            ? navigator.locks.request("serpente:refresh-session", perform)
-            : perform()).finally(() => {
+        // Avoid two tabs rotating the same HttpOnly refresh cookie at once.
+        // Safari versions without Web Locks retain per-tab deduplication.
+        const lockedRefresh = async (): Promise<boolean> => {
+            if (typeof navigator !== "undefined" && navigator.locks) {
+                return await navigator.locks.request("serpente:refresh-session", async () => {
+                    return await performRefresh();
+                });
+            }
+            return await performRefresh();
+        };
+        refreshPromise = lockedRefresh().finally(() => {
             refreshPromise = null;
         });
     }
