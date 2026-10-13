@@ -334,7 +334,11 @@ export const refreshSession = async (req: Request, res: Response) => {
             }
         });
     } catch (error) {
-        if (!(error instanceof AppError && error.code === "REFRESH_RACE")) {
+        // A temporary API, database or network error must not erase a
+        // persistent refresh cookie. Clear only a definitely invalid session.
+        if (error instanceof AppError && error.statusCode === 401 &&
+            (error.code === "INVALID_REFRESH_SESSION" ||
+                error.code === "REFRESH_TOKEN_REUSE")) {
             clearRefreshCookie(res);
         }
 
