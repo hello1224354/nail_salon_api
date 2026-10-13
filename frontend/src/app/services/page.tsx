@@ -21,12 +21,12 @@ export default function ServicesPage() {
 
             <section className="site-shell pb-14 lg:pb-20">
                 <div className="flex flex-col gap-6 rounded-[22px] bg-tint px-7 py-8 sm:flex-row sm:items-center sm:justify-between sm:px-10">
-                    <p className="font-serif text-[clamp(1.5rem,3vw,2.25rem)] tracking-[-0.02em]">Đã chọn được dịch vụ?</p>
+                    <p className="font-serif text-[clamp(1.5rem,3vw,2.25rem)] tracking-[-0.02em]">Bạn đã chọn được dịch vụ?</p>
                     <Link
                         href="/book"
                         className="focus-ring w-fit rounded-full bg-ink px-7 py-3 text-xs font-semibold text-white transition-transform hover:-translate-y-0.5"
                     >
-                        Chọn giờ đặt lịch
+                        Đặt lịch ngay!
                     </Link>
                 </div>
             </section>
