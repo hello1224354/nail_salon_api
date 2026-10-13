@@ -11,7 +11,7 @@
     --dark: #2d2723;
 
     --font-ui: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-    --font-display: "Noto Serif Display", "Palatino Linotype", "Book Antiqua", "Noto Serif", Palatino, serif;
+    --font-display: var(--font-display-loaded), Georgia, serif;
 }
 
 @theme inline {
@@ -48,10 +48,6 @@ body {
     font-kerning: normal;
 }
 
-.font-serif {
-    letter-spacing: -0.022em;
-}
-
 .site-shell {
     /* Fluid gutters use the actual available width, not device-specific offsets. */
     width: min(calc(100% - clamp(1.5rem, 5vw, 5rem)), 100rem);
@@ -74,18 +70,6 @@ body {
 
 .instagram-contact-dock > a {
     pointer-events: auto;
-}
-
-/* iPadOS Safari: the global serif negative tracking must not narrow the
-   perceived boundaries between independent service-name words. The flex gap
-   is an actual layout dimension and survives font fallback and text scaling. */
-.service-name {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    column-gap: 0.42em;
-    row-gap: 0.08em;
-    letter-spacing: normal;
 }
 
 /* The contact row has exactly two fields. Auto-fit plus a full-row item

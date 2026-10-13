@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { connection } from "next/server";
+import { Noto_Serif_Display } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
@@ -8,6 +9,15 @@ import { InstagramContact } from "@/components/layout/InstagramContact";
 import { RouteMotion } from "@/components/layout/RouteMotion";
 import { BranchProvider } from "@/components/branch/BranchProvider";
 import { SITE_ORIGIN } from "@/lib/site-url";
+
+// Bundle the same Vietnamese-capable display font for every browser.
+ // next/font self-hosts the generated font assets, avoiding OS-specific
+ // Palatino/Georgia fallback metrics on iPadOS.
+const displayFont = Noto_Serif_Display({
+    subsets: ["latin", "vietnamese"],
+    display: "swap",
+    variable: "--font-display-loaded",
+});
 
 export const metadata: Metadata = {
     metadataBase: new URL(SITE_ORIGIN),
@@ -42,7 +52,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
     await connection();
 
     return (
-        <html lang="vi" className="h-full antialiased">
+        <html lang="vi" className={`${displayFont.variable} h-full antialiased`}>
             <body className="flex min-h-screen flex-col bg-cream text-ink">
                 <BranchProvider>
                     <Header />
