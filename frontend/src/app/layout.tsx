@@ -4,6 +4,7 @@ import { connection } from "next/server";
 import "./globals.css";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import { InstagramContact } from "@/components/layout/InstagramContact";
 import { RouteMotion } from "@/components/layout/RouteMotion";
 import { BranchProvider } from "@/components/branch/BranchProvider";
 import { SITE_ORIGIN } from "@/lib/site-url";
@@ -45,10 +46,15 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
             <body className="flex min-h-screen flex-col bg-cream text-ink">
                 <BranchProvider>
                     <Header />
-                    <main className="flex-1">
-                        <RouteMotion>{children}</RouteMotion>
-                    </main>
-                    <Footer />
+                    <div className="relative grid flex-1">
+                        <div className="col-start-1 row-start-1 flex min-w-0 flex-col">
+                            <main className="flex-1">
+                                <RouteMotion>{children}</RouteMotion>
+                            </main>
+                            <Footer />
+                        </div>
+                        <InstagramContact />
+                    </div>
                 </BranchProvider>
             </body>
         </html>

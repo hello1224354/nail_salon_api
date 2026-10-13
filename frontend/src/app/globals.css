@@ -59,6 +59,23 @@ body {
     margin-inline: auto;
 }
 
+/* The Instagram action follows the viewport within the page grid.
+   Sticky positioning keeps it at the lower right without using a fixed overlay. */
+.instagram-contact-dock {
+    position: sticky;
+    top: max(0.75rem, calc(100dvh - 5rem - env(safe-area-inset-bottom, 0px)));
+    grid-area: 1 / 1;
+    align-self: start;
+    justify-self: end;
+    margin-inline-end: clamp(0.75rem, 2.5vw, 1.75rem);
+    pointer-events: none;
+    z-index: 40;
+}
+
+.instagram-contact-dock > a {
+    pointer-events: auto;
+}
+
 /* Let card count follow the container's available space, not a viewport breakpoint. */
 .fluid-card-grid {
     display: grid;
