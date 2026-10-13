@@ -980,7 +980,7 @@ export function AdminDashboard() {
                                 ).map((service) => (
                                     <label key={`${staffFormBranchId ?? editingStaff?.branch_id}-${service.id}`} className="flex items-start gap-2 text-xs leading-5">
                                         <input type="checkbox" name="service_ids" value={service.id}
-                                            defaultChecked={editingStaff?.branch_id === (staffFormBranchId ?? editingStaff?.branch_id) && editingStaff?.service_ids.includes(service.id)}
+                                            defaultChecked={editingStaff?.branch_id === (staffFormBranchId ?? editingStaff?.branch_id) && editingStaff?.service_ids?.includes(service.id)}
                                             className="mt-0.5 size-4 shrink-0 accent-[#9e7562]" />
                                         <span>{service.display_name || service.name}</span>
                                     </label>
