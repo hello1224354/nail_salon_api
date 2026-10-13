@@ -14,7 +14,7 @@ export default function BookPage() {
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">Đặt lịch tại Serpente</p>
             <h1 className="mt-3 font-serif text-[clamp(2.75rem,6vw,4.25rem)] tracking-[-0.035em]">Đặt lịch hẹn</h1>
             <p className="mt-3 text-sm leading-6 text-muted sm:text-base">
-                Chọn dịch vụ, số người và giờ phù hợp. Giá trên website là giá tham khảo và có thể cao hơn thực tế; nhân viên sẽ báo giá trước khi làm. Tiệm sẽ xác nhận lại lịch hẹn.
+                Giá dịch vụ trên website chỉ mang tính tham khảo và có thể thay đổi tùy theo mẫu móng. Nếu cần tư vấn hoặc báo giá chi tiết, bạn có thể liên hệ tiệm qua Instagram.
             </p>
 
             <div className="mt-9">

@@ -87,18 +87,6 @@ function buildTimeGroups(availableTimes: Iterable<string>): TimeGroup[] {
     }));
 }
 
-function formatDateRange(dates: BookingDate[]) {
-    const first = dates[0];
-    const last = dates.at(-1);
-    if (!first || !last) return "";
-
-    if (first.month === last.month && first.year === last.year) {
-        return `${Number(first.day)}–${Number(last.day)} tháng ${Number(last.month)} năm ${last.year}`;
-    }
-
-    return `${Number(first.day)}/${Number(first.month)}/${first.year} – ${Number(last.day)}/${Number(last.month)}/${last.year}`;
-}
-
 function formatLongDate(value: string) {
     if (!value) return "Chọn ngày";
     return new Intl.DateTimeFormat("vi-VN", {
@@ -523,7 +511,7 @@ export function BookingForm() {
         <form onSubmit={handleSubmit} className="grid min-w-0 gap-[clamp(1.25rem,3vw,2.5rem)] xl:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)] xl:items-start">
             <div className="min-w-0 rounded-[22px] border border-line bg-surface">
                 <section className="min-w-0 p-[clamp(1rem,2.5vw,2rem)]">
-                    <SectionHeading number="01" title="Chi nhánh" helper="Chọn nơi bạn muốn làm móng." />
+                    <SectionHeading number="01" title="Chi nhánh" />
                     <div className="mt-6 grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(min(100%,16rem),1fr))]">
                         {branches.length > 0 ? (
                             branches.map((branch) => {
@@ -614,11 +602,7 @@ export function BookingForm() {
                 <div className="mx-[clamp(1rem,2.5vw,2rem)] h-px bg-line" />
 
                 <section className="min-w-0 p-[clamp(1rem,2.5vw,2rem)]">
-                    <SectionHeading
-                        number="03"
-                        title="Số người"
-                        helper="Nếu đi nhiều người, hệ thống sẽ tìm đủ nhân viên rảnh trong cùng khung giờ và tự sắp xếp cho từng người."
-                    />
+                    <SectionHeading number="03" title="Số người" />
                     <div className="mt-6 min-w-0">
                         <div className="flex w-full flex-wrap items-center justify-between gap-4 rounded-[14px] border border-line bg-cream p-[clamp(0.75rem,2vw,1.125rem)]">
                             <div className="min-w-0 flex-[1_1_12rem]">
@@ -662,7 +646,7 @@ export function BookingForm() {
                 <div className="mx-[clamp(1rem,2.5vw,2rem)] h-px bg-line" />
 
                 <section className="min-w-0 p-[clamp(1rem,2.5vw,2rem)]">
-                    <SectionHeading number="04" title="Ngày" helper={`Có thể đặt lịch: ${formatDateRange(dates)}`} />
+                    <SectionHeading number="04" title="Ngày" helper="Đặt lịch trước tối thiểu 3 giờ và tối đa 14 ngày." />
                     <div className="mt-6 grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,4.25rem),1fr))] gap-2">
                         {dates.map((date) => {
                             const selected = date.value === selectedDate;
@@ -697,7 +681,7 @@ export function BookingForm() {
                     <div className="mt-6 min-w-0">
                         {selectedServiceIds.length === 0 ? (
                             <div className="rounded-[14px] border border-line bg-cream px-4 py-5 text-xs leading-5 text-muted">
-                                Chọn dịch vụ trước để xem giờ còn nhận lịch.
+                                Chọn dịch vụ trước để xem giờ còn trống.
                             </div>
                         ) : availabilityLoading ? (
                             <div className="space-y-3" aria-label="Đang tải khung giờ">
@@ -778,7 +762,7 @@ export function BookingForm() {
                         </div>
                         <label className="booking-contact-phone block min-w-0">
                             <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">
-                                Số điện thoại xác nhận lịch
+                                Số điện thoại liên lạc
                             </span>
                             <input
                                 type="tel"
