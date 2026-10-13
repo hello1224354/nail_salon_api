@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { apiRequest, getApiErrorMessage, type Branch, type BranchList } from "@/lib/api";
+import { fetchAllPages, getApiErrorMessage, type Branch } from "@/lib/api";
 
 const STORAGE_KEY = "serpente:selected-branch-id";
 
@@ -27,15 +27,15 @@ export function BranchProvider({ children }: { children: ReactNode }) {
 
         async function loadBranches() {
             try {
-                const data = await apiRequest<BranchList>("/api/branches?page=1&limit=100");
+                const loadedBranches = await fetchAllPages<Branch>("/api/branches", "branches");
 
                 if (cancelled) return;
 
-                setBranches(data.branches);
+                setBranches(loadedBranches);
 
                 const storedId = Number(window.localStorage.getItem(STORAGE_KEY));
-                const storedBranch = data.branches.find((branch) => branch.id === storedId);
-                const initialBranchId = storedBranch?.id ?? data.branches[0]?.id ?? null;
+                const storedBranch = loadedBranches.find((branch) => branch.id === storedId);
+                const initialBranchId = storedBranch?.id ?? loadedBranches[0]?.id ?? null;
 
                 setSelectedBranchIdState(initialBranchId);
 
