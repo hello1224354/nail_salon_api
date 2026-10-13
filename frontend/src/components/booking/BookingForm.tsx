@@ -7,14 +7,14 @@ import { createPortal } from "react-dom";
 import {
     ApiError,
     apiRequest,
+    fetchAllPages,
     getApiErrorMessage,
     type Appointment,
     type Availability,
     type Branch,
-    type BranchList,
-    type ServiceList,
 } from "@/lib/api";
 import { clearSession, restoreSession, type AuthUser } from "@/lib/auth";
+import { useBranch } from "@/components/branch/BranchProvider";
 import { canUseCustomerFeatures as canBook } from "@/lib/roles";
 import {
     decorateService,
@@ -156,8 +156,7 @@ export function BookingForm() {
     const router = useRouter();
     const dates = useMemo(() => getBusinessDates(), []);
     const [user, setUser] = useState<AuthUser | null>(null);
-    const [branches, setBranches] = useState<Branch[]>([]);
-    const [selectedBranchId, setSelectedBranchId] = useState<number | null>(null);
+    const { branches, selectedBranchId, setSelectedBranchId } = useBranch();
     const [services, setServices] = useState<StudioService[]>([]);
     const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
     const [partySize, setPartySize] = useState(1);
@@ -206,12 +205,12 @@ export function BookingForm() {
 
         const timeout = window.setTimeout(() => controller.abort(), 12_000);
         try {
-            const data = await apiRequest<ServiceList>(
-                `/api/services?branch_id=${branchId}&page=1&limit=100`,
+            const data = await fetchAllPages<StudioService>(
+                `/api/services?branch_id=${branchId}`, "services",
                 { signal: controller.signal }
             );
             if (servicesRequestId.current !== requestId) return;
-            setServices(data.services
+            setServices(data
                 .filter(service => service.booking_enabled && service.duration_minutes !== null)
                 .map(decorateService));
         } catch (error) {
@@ -238,31 +237,18 @@ export function BookingForm() {
                     return;
                 }
 
-                const [currentUser, branchData] = await Promise.all([
-                    apiRequest<AuthUser>("/api/users/me"),
-                    apiRequest<BranchList>("/api/branches?page=1&limit=100"),
-                ]);
+                const currentUser = await apiRequest<AuthUser>("/api/users/me");
 
                 if (cancelled) return;
 
                 if (!canBook(currentUser.role)) {
                     setFormError("Trang đặt lịch dành cho tài khoản CUSTOMER, STAFF hoặc ADMIN.");
                     setUser(currentUser);
-                    setBranches(branchData.branches);
                     return;
                 }
 
                 setUser(currentUser);
-                setBranches(branchData.branches);
-                const initialBranchId = branchData.branches[0]?.id ?? null;
-                setSelectedBranchId(initialBranchId);
-                if (initialBranchId !== null) {
-                    // Start the API call in the same bootstrap flow, not a second effect.
-                    void loadServicesForBranch(initialBranchId);
-                } else {
-                    setServices([]);
-                    setServicesLoading(false);
-                }
+
             } catch (loadError) {
                 if (cancelled) return;
 
@@ -286,6 +272,23 @@ export function BookingForm() {
             servicesAbortRef.current?.abort();
         };
     }, [router, loadServicesForBranch]);
+
+    // The shared branch selector is the single source of truth for booking,
+    // header, services and footer. A change resets only branch-specific data.
+    useEffect(() => {
+        if (!user || !canBook(user.role) || selectedBranchId === null) return;
+        setSelectedServiceIds([]);
+        setPartySize(1);
+        setMaxPartySize(null);
+        setAvailableSlots(new Map());
+        setSelectedTime("");
+        setFormError("");
+        void loadServicesForBranch(selectedBranchId);
+        return () => {
+            servicesRequestId.current += 1;
+            servicesAbortRef.current?.abort();
+        };
+    }, [user, selectedBranchId, loadServicesForBranch]);
 
     // The availability effect is the only owner of its loading state.
     // Refreshing the selected date still changes availabilityRefreshKey.
@@ -412,13 +415,7 @@ export function BookingForm() {
         if (branchId === selectedBranchId) return;
 
         setSelectedBranchId(branchId);
-        void loadServicesForBranch(branchId);
-        setSelectedServiceIds([]);
-        setPartySize(1);
-        setMaxPartySize(null);
-        setAvailableSlots(new Map());
-        setSelectedTime("");
-        setFormError("");
+
     };
 
     const toggleService = (id: string) => {
