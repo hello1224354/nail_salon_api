@@ -31,21 +31,24 @@ export class CorrectInstagramTrendItems1791441600000 implements MigrationInterfa
     name = "CorrectInstagramTrendItems1791441600000";
 
     public async up(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query("DELETE FROM `instagram_trend_items`");
-        await queryRunner.query("ALTER TABLE `instagram_trend_items` AUTO_INCREMENT = 1");
+        // Historical corrected defaults must not delete gallery assets added
+        // or edited by administrators in an existing environment.
 
         for (const item of correctedTrendRows) {
             await queryRunner.query(
                 `INSERT INTO \`instagram_trend_items\`
                     (\`salon_content_id\`, \`title\`, \`image_src\`, \`instagram_url\`, \`sort_order\`)
-                 VALUES (?, ?, ?, ?, ?)`,
-                [1, item.title, item.image_src, item.instagram_url, item.sort_order]
+                 SELECT ?, ?, ?, ?, ?
+                 WHERE NOT EXISTS (
+                     SELECT 1 FROM \`instagram_trend_items\`
+                     WHERE \`salon_content_id\` = ? AND \`sort_order\` = ?
+                 )`,
+                [1, item.title, item.image_src, item.instagram_url, item.sort_order, 1, item.sort_order]
             );
         }
     }
 
-    public async down(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query("DELETE FROM `instagram_trend_items`");
-        await queryRunner.query("ALTER TABLE `instagram_trend_items` AUTO_INCREMENT = 1");
+    public async down(_queryRunner: QueryRunner): Promise<void> {
+        throw new Error("Refusing destructive rollback of administrator-managed gallery data");
     }
 }
