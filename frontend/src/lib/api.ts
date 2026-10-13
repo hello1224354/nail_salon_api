@@ -163,6 +163,34 @@ export function getApiErrorMessage(error: unknown, fallback: string) {
     return fallback;
 }
 
+// Read all pages from the server instead of treating the first 100
+// records as a complete list. The API enforces a 100-row page ceiling.
+export async function fetchAllPages<T>(
+    path: string,
+    key: string,
+    init: RequestInit = {},
+): Promise<T[]> {
+    const items: T[] = [];
+    let page = 1;
+    for (;;) {
+        const [pathname, query = ""] = path.split("?");
+        const params = new URLSearchParams(query);
+        params.set("page", String(page));
+        params.set("limit", "100");
+        const result = await apiRequest<Record<string, unknown>>(
+            pathname + "?" + params.toString(), init,
+        );
+        const chunk = result[key];
+        const count = result.total_pages;
+        if (!Array.isArray(chunk) || typeof count !== "number" || count < 1) {
+            throw new Error("Invalid paginated response for " + key);
+        }
+        items.push(...chunk as T[]);
+        if (page >= count) return items;
+        page += 1;
+    }
+}
+
 export type Branch = {
     id: number;
     name: string;
