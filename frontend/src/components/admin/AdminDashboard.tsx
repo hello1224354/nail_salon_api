@@ -221,17 +221,21 @@ export function AdminDashboard() {
         let cancelled = false;
 
         async function bootstrapAdmin() {
-            const restored = await restoreSession();
-            const user = getAuthUser();
+            try {
+                const restored = await restoreSession();
+                const user = getAuthUser();
 
-            if (!restored || !user || user.role.toLowerCase() !== "admin") {
-                if (!cancelled) router.replace("/admin/login");
-                return;
-            }
+                if (!restored || !user || user.role.toLowerCase() !== "admin") {
+                    if (!cancelled) router.replace("/admin/login");
+                    return;
+                }
 
-            if (!cancelled) {
-                setAdmin(user);
-                setReady(true);
+                if (!cancelled) {
+                    setAdmin(user);
+                    setReady(true);
+                }
+            } catch {
+                if (!cancelled) setToast("Không thể kiểm tra phiên đăng nhập. Vui lòng tải lại trang khi mạng ổn định.");
             }
         }
 
