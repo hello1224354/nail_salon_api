@@ -1,41 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { apiRequest, type SalonContent } from "@/lib/api";
 import { getInstagramUrl, getMapsSearchUrl, localizeBranchName } from "@/lib/studio-data";
 import { useBranch } from "@/components/branch/BranchProvider";
 
 export function Footer() {
     const pathname = usePathname();
-    const [content, setContent] = useState<SalonContent | null>(null);
-    const { branches, selectedBranchId } = useBranch();
-
-    useEffect(() => {
-        if (selectedBranchId === null) return;
-
-        let cancelled = false;
-
-        async function loadFooterData() {
-            try {
-                const salonContent = await apiRequest<SalonContent>(
-                    `/api/site-content?branch_id=${selectedBranchId}`
-                );
-
-                if (!cancelled) setContent(salonContent);
-            } catch {
-                // Footer vẫn hiển thị thông tin chi nhánh từ BranchProvider nếu site content tạm thời lỗi.
-            }
-        }
-
-        void loadFooterData();
-
-        return () => {
-            cancelled = true;
-        };
-    }, [selectedBranchId]);
+    const { branches, salonContent: content, contentLoading, contentError } = useBranch();
 
     if (pathname.startsWith("/admin")) return null;
 
@@ -56,6 +29,7 @@ export function Footer() {
                             />
                             <span className="font-serif text-2xl">{content?.display_name || "Serpente Nail Room"}</span>
                         </div>
+                        {contentError && !contentLoading ? <p role="status" className="mt-2 text-xs text-[#f2bcb2]">{contentError}</p> : null}
                         <p className="mt-4 max-w-sm text-sm leading-6 text-[#cdbfb3]">
                             Chọn mẫu bạn thích, Serpente chăm chút từng chi tiết để bộ móng lên tay thật vừa ý.
                         </p>
