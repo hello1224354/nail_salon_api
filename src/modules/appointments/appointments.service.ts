@@ -121,9 +121,11 @@ async function resolveBookingResources(serviceIds: string[]) {
 
     if (!branch) throw new AppError("Branch not found", 404, "BRANCH_NOT_FOUND");
 
-    const staffs = await staffService.getAllStaffs({
+    const staffs = (await staffService.getAllStaffs({
         branch_id: branchId,
-    });
+    })).filter(staff => serviceIds.every(id =>
+        staff.capabilities?.some(capability => capability.service_id === id)
+    ));
 
     return {
         services,
