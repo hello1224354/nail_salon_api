@@ -76,6 +76,8 @@ async function performRefresh() {
     const refreshEpoch = sessionEpoch;
 
     try {
+        // Serialize refresh cookie rotations across open tabs where Web Locks
+        // are supported. Each tab sees the latest Set-Cookie before rotating.
         let result = await requestRefreshOnce();
 
         if (refreshEpoch !== sessionEpoch) return Boolean(accessToken && authUser);
@@ -109,7 +111,18 @@ async function performRefresh() {
             typeof data.access_token !== "string" ||
             !data.user
         ) {
-            if (refreshEpoch === sessionEpoch) clearSession();
+            // Only a definitive invalid/revoked session expires client auth.
+            // 429, 5xx, unexpected server responses and refresh races are
+            // transient; never destroy a valid access token due to them.
+            const code = result.body && "error" in result.body
+                ? result.body.error?.code
+                : undefined;
+            const expired = result.response.status === 401 && (
+                code === "INVALID_REFRESH_SESSION" ||
+                code === "REFRESH_TOKEN_REUSE" ||
+                code === "TOKEN_REVOKED"
+            );
+            if (expired && refreshEpoch === sessionEpoch) clearSession();
             return false;
         }
 
@@ -118,14 +131,20 @@ async function performRefresh() {
         saveSession(data.access_token, data.user);
         return true;
     } catch {
-        if (refreshEpoch === sessionEpoch) clearSession();
+        // Network loss is not logout. The existing access token may still
+        // work, and the refresh cookie may succeed once connectivity returns.
         return false;
     }
 }
 
 export async function refreshSession() {
     if (!refreshPromise) {
-        refreshPromise = performRefresh().finally(() => {
+        const perform = () => performRefresh();
+        // Browser-managed lock works across tabs under the same origin.
+        // Keep the per-tab promise deduplication for browsers without locks.
+        refreshPromise = (typeof navigator !== "undefined" && navigator.locks
+            ? navigator.locks.request("serpente:refresh-session", perform)
+            : perform()).finally(() => {
             refreshPromise = null;
         });
     }
