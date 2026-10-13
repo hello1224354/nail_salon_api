@@ -30,9 +30,6 @@ export function Footer() {
                             <span className="font-serif text-2xl">{content?.display_name || "Serpente Nail Room"}</span>
                         </div>
                         {contentError && !contentLoading ? <p role="status" className="mt-2 text-xs text-[#f2bcb2]">{contentError}</p> : null}
-                        <p className="mt-4 max-w-sm text-sm leading-6 text-[#cdbfb3]">
-                            Chọn mẫu bạn thích, Serpente chăm chút từng chi tiết để bộ móng lên tay thật vừa ý.
-                        </p>
 
                         <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-xs">
                             {instagramUrl ? (
@@ -113,7 +110,6 @@ export function Footer() {
 
                 <div className="mt-12 flex flex-col gap-2 border-t border-white/15 pt-5 text-[11px] text-[#bfb0a4] sm:flex-row sm:items-center sm:justify-between">
                     <span>© 2026 Serpente Nail Room</span>
-                    <span>Đặt lịch trực tuyến · Tiệm xác nhận lại trước giờ hẹn</span>
                 </div>
             </div>
         </footer>
