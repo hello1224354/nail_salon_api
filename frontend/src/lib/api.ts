@@ -185,7 +185,7 @@ export async function fetchAllPages<T>(
         );
         const chunk = result[key];
         const count = result.total_pages;
-        if (!Array.isArray(chunk) || typeof count !== "number" || count < 1) {
+        if (!Array.isArray(chunk) || typeof count !== "number" || count < 0) {
             throw new Error("Invalid paginated response for " + key);
         }
         items.push(...chunk as T[]);
