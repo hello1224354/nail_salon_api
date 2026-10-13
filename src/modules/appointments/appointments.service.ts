@@ -121,11 +121,9 @@ async function resolveBookingResources(serviceIds: string[]) {
 
     if (!branch) throw new AppError("Branch not found", 404, "BRANCH_NOT_FOUND");
 
-    const staffs = (await staffService.getAllStaffs({
+    const staffs = await staffService.getAllStaffs({
         branch_id: branchId,
-    })).filter(staff => serviceIds.every(id =>
-        staff.capabilities?.some(capability => capability.service_id === id)
-    ));
+    });
 
     return {
         services,
@@ -707,10 +705,7 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
                 endTime.getTime() <= startTime.getTime()) {
                 throw new AppError("Appointment is outside business hours", 409, "OUTSIDE_BUSINESS_HOURS");
             }
-            const staffCandidates = (await staffService.getAllStaffs({ branch_id: targetBranchId }))
-                .filter(staff => chosenServices.every(service =>
-                    staff.capabilities?.some(capability => capability.service_id === service.service_id)
-                ));
+            const staffCandidates = await staffService.getAllStaffs({ branch_id: targetBranchId });
             if (data.staff_id !== undefined && !staffCandidates.some(staff => staff.user_id === data.staff_id)) {
                 throw new AppError("Selected staff is not in this branch", 400, "BRANCH_MISMATCH");
             }

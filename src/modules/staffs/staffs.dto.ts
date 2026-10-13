@@ -10,7 +10,6 @@ export interface CreateStaffDto {
     branch_id: number;
     work_start_time: string;
     work_end_time: string;
-    service_ids: string[];
 }
 
 export interface UpdateStaffDto {
@@ -21,7 +20,6 @@ export interface UpdateStaffDto {
     password?: string;
     work_start_time?: string;
     work_end_time?: string;
-    service_ids?: string[];
 }
 
 export interface GetStaffsQueryDto {
@@ -51,14 +49,6 @@ export function parseGetStaffsQuery(query: unknown): GetStaffsQueryDto {
     };
 }
 
-function parseServiceIds(value: unknown): string[] {
-    if (!Array.isArray(value) || value.length === 0 || value.some(id => typeof id !== "string" || !/^[0-9a-f-]{36}$/i.test(id))) {
-        throw new AppError("Select at least one valid service for the staff member", 400, "STAFF_SERVICE_CAPABILITIES_REQUIRED");
-    }
-    const ids = [...new Set(value as string[])];
-    return ids;
-}
-
 export function parseCreateStaffDto(body: unknown): CreateStaffDto {
     if (body === null || typeof body !== "object" || Array.isArray(body)) throw new AppError("Request body must be an object", 400, "VALIDATION_ERROR");
 
@@ -86,7 +76,6 @@ export function parseCreateStaffDto(body: unknown): CreateStaffDto {
         email: userData.email,
         password: userData.password,
         branch_id: data.branch_id as number,
-        service_ids: parseServiceIds(data.service_ids),
     };
 }
 
@@ -100,7 +89,6 @@ export function parseUpdateStaffDto(body: unknown): UpdateStaffDto {
     const result: UpdateStaffDto = {};
 
     if (data.branch_id !== undefined) result.branch_id = data.branch_id as number;
-    if (data.service_ids !== undefined) result.service_ids = parseServiceIds(data.service_ids);
     if (data.work_start_time !== undefined) {
         if (typeof data.work_start_time !== "string") throw new AppError("Invalid work start time", 400, "INVALID_STAFF_WORK_HOURS");
         result.work_start_time = data.work_start_time;

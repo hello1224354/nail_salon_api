@@ -1,7 +1,6 @@
-import { Entity, PrimaryColumn, Column, CreateDateColumn, UpdateDateColumn, OneToOne, JoinColumn, ManyToOne, OneToMany } from "typeorm";
+import { Entity, PrimaryColumn, Column, CreateDateColumn, UpdateDateColumn, OneToOne, JoinColumn, ManyToOne } from "typeorm";
 import { User } from "../users/users.entity";
 import { Branch } from "../branches/branches.entity";
-import { StaffServiceCapability } from "./staff-service-capability.entity";
 
 @Entity("staffs")
 export class Staff {
@@ -18,9 +17,6 @@ export class Staff {
     @ManyToOne(() => Branch, (branch) => branch.staffs, { onDelete: "RESTRICT" })
     @JoinColumn({ name: "branch_id" })
     branch: Branch;
-
-    @OneToMany(() => StaffServiceCapability, capability => capability.staff)
-    capabilities: StaffServiceCapability[];
 
     @Column({ type: "varchar", length: 5, default: "09:00" })
     work_start_time: string;

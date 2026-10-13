@@ -142,9 +142,6 @@ const errorMessagesByCode: Record<string, string> = {
     BRANCH_HOURS_NOT_CONFIGURED: "Chi nhánh chưa cấu hình giờ mở cửa để nhận lịch trực tuyến.",
     INVALID_BRANCH_HOURS: "Giờ mở cửa phải có dạng 09:00–20:30 và theo mốc 15 phút.",
     STAFF_BRANCH_CONFLICT: "Nhân viên còn lịch hẹn tương lai ở chi nhánh cũ.",
-    STAFF_SKILL_CONFLICT: "Nhân viên còn lịch hẹn tương lai cần dịch vụ vừa bị bỏ.",
-    STAFF_SERVICE_CAPABILITIES_REQUIRED: "Cần chọn các dịch vụ nhân viên có thể thực hiện.",
-    STAFF_SERVICE_BRANCH_MISMATCH: "Dịch vụ của nhân viên phải thuộc đúng chi nhánh.",
     APPOINTMENT_CONFLICT: "Khung giờ này không còn khả dụng.",
     ACTUAL_PRICES_INCOMPLETE: "Mọi nhân viên trong nhóm phải nhập đủ giá thực tế trước khi hoàn thành.",
     APPOINTMENT_NOT_STARTED_YET: "Lịch hẹn chưa đến giờ bắt đầu. Vui lòng kiểm tra lại ngày và giờ đã hẹn.",
@@ -359,7 +356,6 @@ export type AdminStaff = {
     email: string | null;
     work_start_time: string;
     work_end_time: string;
-    service_ids: string[];
     created_at?: string;
     updated_at?: string;
 };
