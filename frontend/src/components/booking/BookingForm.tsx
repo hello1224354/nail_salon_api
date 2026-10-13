@@ -68,27 +68,24 @@ function getBusinessDates(): BookingDate[] {
     });
 }
 
-function buildTimeGroups(): TimeGroup[] {
+function buildTimeGroups(availableTimes: Iterable<string>): TimeGroup[] {
     const groups: TimeGroup[] = [
         { label: "Buổi sáng", times: [] },
         { label: "Buổi chiều", times: [] },
         { label: "Buổi tối", times: [] },
     ];
-
-    for (let minuteOfDay = 9 * 60; minuteOfDay < 20 * 60 + 30; minuteOfDay += 15) {
-        const hour = Math.floor(minuteOfDay / 60);
-        const minute = minuteOfDay % 60;
-        const label = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
-
-        if (hour < 12) groups[0].times.push(label);
-        else if (hour < 17) groups[1].times.push(label);
-        else groups[2].times.push(label);
+    for (const time of availableTimes) {
+        const hour = Number(time.slice(0, 2));
+        if (!Number.isInteger(hour)) continue;
+        if (hour < 12) groups[0].times.push(time);
+        else if (hour < 17) groups[1].times.push(time);
+        else groups[2].times.push(time);
     }
-
-    return groups;
+    return groups.filter(group => group.times.length > 0).map(group => ({
+        ...group,
+        times: group.times.sort((a, b) => a.localeCompare(b)),
+    }));
 }
-
-const timeGroups = buildTimeGroups();
 
 function formatDateRange(dates: BookingDate[]) {
     const first = dates[0];
@@ -177,6 +174,7 @@ export function BookingForm() {
     const [availabilityRefreshKey, setAvailabilityRefreshKey] = useState(0);
 
     const selectedBranch = branches.find((branch) => branch.id === selectedBranchId) ?? null;
+    const timeGroups = useMemo(() => buildTimeGroups(availableSlots.keys()), [availableSlots]);
     const selectedServices = useMemo(
         () => services.filter((service) => selectedServiceIds.includes(service.id)),
         [selectedServiceIds, services]
