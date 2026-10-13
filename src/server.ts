@@ -3,7 +3,6 @@ import { app } from "./app";
 import { AppDataSource } from "./config/database";
 import { env } from "./config/env";
 import { startBookingNotificationWorker } from "./modules/appointments/notification-outbox.service";
-import { startMediaObjectDeletionWorker } from "./modules/media/media-deletion-worker";
 
 async function startServer() {
     await AppDataSource.initialize();
@@ -19,14 +18,12 @@ async function startServer() {
     }
 
     const stopNotificationWorker = startBookingNotificationWorker();
-    const stopMediaWorker = startMediaObjectDeletionWorker();
     const server = app.listen(env.PORT, () => {
         console.log("Server is running on port: ", env.PORT);
     });
 
     const shutdown = async () => {
         stopNotificationWorker();
-        stopMediaWorker();
         try {
             await new Promise<void>((resolve, reject) => {
                 server.close((error) => {
