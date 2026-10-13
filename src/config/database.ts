@@ -21,6 +21,7 @@ import { SalonContent } from "../modules/site-content/salon-content.entity";
 import { InstagramTrendItem } from "../modules/site-content/instagram-trend-item.entity";
 import { CustomerReview } from "../modules/site-content/customer-review.entity";
 import { MediaFile } from "../modules/media/media-file.entity";
+import { MediaObjectDeletion } from "../modules/media/media-object-deletion.entity";
 import { WalkInVisit } from "../modules/walk-ins/walk-in-visit.entity";
 import { WalkInVisitService } from "../modules/walk-ins/walk-in-visit-service.entity";
 import { AppointmentActualPrice } from "../modules/appointments/appointment-actual-price.entity";
@@ -57,6 +58,7 @@ export const AppDataSource = new DataSource({
         InstagramTrendItem,
         CustomerReview,
         MediaFile,
+        MediaObjectDeletion,
         WalkInVisit,
         WalkInVisitService,
         AppointmentActualPrice,
