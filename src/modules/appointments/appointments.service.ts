@@ -15,7 +15,7 @@ import { AppointmentActualPrice } from "./appointment-actual-price.entity";
 import { WalkInVisit } from "../walk-ins/walk-in-visit.entity";
 import { WalkInVisitService } from "../walk-ins/walk-in-visit-service.entity";
 import { randomUUID } from "crypto";
-import { notifyAdminsOfNewBooking } from "./booking-notification.service";
+import { enqueueBookingEmails, drainBookingNotificationOutbox } from "./notification-outbox.service";
 import { Staff } from "../staffs/staffs.entity";
 import { Branch } from "../branches/branches.entity";
 import { isWithinStaffWorkingHours } from "../staffs/staff-working-hours";
@@ -121,9 +121,11 @@ async function resolveBookingResources(serviceIds: string[]) {
 
     if (!branch) throw new AppError("Branch not found", 404, "BRANCH_NOT_FOUND");
 
-    const staffs = await staffService.getAllStaffs({
+    const staffs = (await staffService.getAllStaffs({
         branch_id: branchId,
-    });
+    })).filter(staff => serviceIds.every(id =>
+        staff.capabilities?.some(capability => capability.service_id === id)
+    ));
 
     return {
         services,
@@ -398,38 +400,32 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
                 duration_minutes: service.duration_minutes!,
             })
         ));
-        return {
-            appointment,
-            assignedStaffNames: reservedStaffs.map(staff => staff.user.full_name),
-        };
-    });
-
-    // Notify only after the booking transaction commits. Email cannot invalidate a booking.
-    // Group bookings generate one email per ADMIN recipient, not one per staff assignment.
-    void notifyAdminsOfNewBooking({
-        bookingGroupId: created.appointment.booking_group_id!,
-        customerName: created.appointment.customer_full_name,
-        customerPhone: created.appointment.customer_phone,
-        customerEmail: created.appointment.customer_email,
-        branchName: created.appointment.branch_name,
-        branchAddress: created.appointment.branch_address,
-        startTime: created.appointment.start_time,
-        endTime: created.appointment.end_time,
-        partySize: created.appointment.party_size,
-        staffNames: created.assignedStaffNames,
-        services: services.map((service) => ({
-            name: service.name,
-            price: service.price,
-            durationMinutes: service.duration_minutes!,
-        })),
-    }).catch((error) => {
-        console.error("New booking admin notification failed", {
-            bookingGroupId: created.appointment.booking_group_id,
-            error,
+        // Insert into the outbox atomically with the appointment. A process
+        // crash after commit must not silently discard the notification.
+        await enqueueBookingEmails(manager, {
+            bookingGroupId: appointment.booking_group_id!,
+            customerName: appointment.customer_full_name,
+            customerPhone: appointment.customer_phone,
+            customerEmail: appointment.customer_email,
+            branchName: appointment.branch_name,
+            branchAddress: appointment.branch_address,
+            startTime: appointment.start_time,
+            endTime: appointment.end_time,
+            partySize: appointment.party_size,
+            staffNames: reservedStaffs.map(staff => staff.user.full_name),
+            services: services.map(service => ({
+                name: service.name,
+                price: service.price,
+                durationMinutes: service.duration_minutes!,
+            })),
         });
+        return appointment;
     });
 
-    return created.appointment;
+    void drainBookingNotificationOutbox().catch(error =>
+        console.error("Booking notification dispatch deferred", error)
+    );
+    return created;
 };
 
 // All timestamps are stored as UTC DATETIME. A Vietnam business day starts
@@ -711,7 +707,10 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
                 endTime.getTime() <= startTime.getTime()) {
                 throw new AppError("Appointment is outside business hours", 409, "OUTSIDE_BUSINESS_HOURS");
             }
-            const staffCandidates = await staffService.getAllStaffs({ branch_id: targetBranchId });
+            const staffCandidates = (await staffService.getAllStaffs({ branch_id: targetBranchId }))
+                .filter(staff => chosenServices.every(service =>
+                    staff.capabilities?.some(capability => capability.service_id === service.service_id)
+                ));
             if (data.staff_id !== undefined && !staffCandidates.some(staff => staff.user_id === data.staff_id)) {
                 throw new AppError("Selected staff is not in this branch", 400, "BRANCH_MISMATCH");
             }

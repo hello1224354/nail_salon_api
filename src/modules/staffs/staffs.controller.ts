@@ -18,6 +18,7 @@ function toPublicStaff(staff: Awaited<ReturnType<typeof staffService.getStaff>>)
         email: staff.user.email,
         work_start_time: staff.work_start_time,
         work_end_time: staff.work_end_time,
+        service_ids: staff.capabilities?.map(capability => capability.service_id) ?? [],
     };
 }
 
@@ -31,6 +32,7 @@ function toAdminStaff(staff: NonNullable<Awaited<ReturnType<typeof staffService.
         email: staff.user.email,
         work_start_time: staff.work_start_time,
         work_end_time: staff.work_end_time,
+        service_ids: staff.capabilities?.map(capability => capability.service_id) ?? [],
         created_at: staff.created_at,
         updated_at: staff.updated_at,
     };

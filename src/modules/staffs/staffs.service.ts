@@ -1,9 +1,11 @@
 import { AppDataSource } from "../../config/database";
 import bcrypt from "bcryptjs";
-import { IsNull } from "typeorm";
+import { In, IsNull } from "typeorm";
 import { getVietnamMinuteOfDay } from "../appointments/booking-time";
 import { RefreshSession } from "../users/refresh-session.entity";
 import { Staff } from "./staffs.entity";
+import { StaffServiceCapability } from "./staff-service-capability.entity";
+import { Service } from "../services/service.entity";
 import { CreateStaffDto, GetStaffsQueryDto, UpdateStaffDto } from "./staffs.dto";
 import * as userService from "../users/users.service";
 import { User, UserRole } from "../users/users.entity";
@@ -23,7 +25,7 @@ export const getAllStaffs = async (query: GetStaffsQueryDto) => {
             branch_id: query.branch_id,
             user: { role: UserRole.STAFF },
         },
-        relations: { user: true },
+        relations: { user: true, capabilities: true },
         order: { created_at: "ASC" },
     });
 };
@@ -36,7 +38,7 @@ export const getAllStaffsForAdmin = async (query: GetStaffsQueryDto) => {
             branch_id: query.branch_id,
             user: { role: UserRole.STAFF },
         },
-        relations: { user: true, branch: true },
+        relations: { user: true, branch: true, capabilities: true },
         order: { created_at: "ASC" },
     });
 };
@@ -44,7 +46,7 @@ export const getAllStaffsForAdmin = async (query: GetStaffsQueryDto) => {
 export const getStaff = async (userId: string) => {
     return await staffRepo.findOne({
         where: { user_id: userId },
-        relations: { user: true, branch: true },
+        relations: { user: true, branch: true, capabilities: true },
     });
 };
 
@@ -73,7 +75,17 @@ export const createStaff = async (data: CreateStaffDto) => {
             work_end_time: data.work_end_time,
         });
 
-        return await repo.save(newStaff);
+        const saved = await repo.save(newStaff);
+        const catalog = await manager.getRepository(Service).find({
+            where: { id: In(data.service_ids), branch_id: data.branch_id },
+        });
+        if (catalog.length !== data.service_ids.length) {
+            throw new AppError("Staff services must belong to the chosen branch", 400, "STAFF_SERVICE_BRANCH_MISMATCH");
+        }
+        await manager.getRepository(StaffServiceCapability).insert(
+            data.service_ids.map(serviceId => ({ staff_id: saved.user_id, service_id: serviceId }))
+        );
+        return saved;
     });
 };
 
@@ -135,6 +147,38 @@ export const updateStaff = async (userId: string, data: UpdateStaffDto) => {
         if (data.full_name !== undefined) user.full_name = data.full_name;
         if (data.password !== undefined) {
             user.password_hash = await bcrypt.hash(data.password, 12);
+        }
+
+        if (data.service_ids !== undefined || nextBranchId !== staff.branch_id) {
+            if (data.service_ids === undefined) {
+                throw new AppError("Select services when transferring a staff member", 400, "STAFF_SERVICE_CAPABILITIES_REQUIRED");
+            }
+            const newCatalog = await manager.getRepository(Service).find({
+                where: { id: In(data.service_ids), branch_id: nextBranchId },
+            });
+            if (newCatalog.length !== data.service_ids.length) {
+                throw new AppError("Staff services must belong to the selected branch", 400, "STAFF_SERVICE_BRANCH_MISMATCH");
+            }
+            const existing = await manager.getRepository(StaffServiceCapability).find({
+                where: { staff_id: userId },
+            });
+            const removed = existing.map(item => item.service_id).filter(id => !data.service_ids!.includes(id));
+            if (removed.length > 0) {
+                const conflicts = await manager.getRepository(Appointment)
+                    .createQueryBuilder("appointment")
+                    .innerJoin("appointment.staff_assignments", "assigned", "assigned.staff_id = :userId", { userId })
+                    .innerJoin("appointment.appointment_services", "line", "line.service_id IN (:...removed)", { removed })
+                    .where("appointment.merged_into_id IS NULL")
+                    .andWhere("appointment.status IN (:...statuses)", { statuses: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED] })
+                    .andWhere("appointment.end_time > :now", { now: new Date() })
+                    .getCount();
+                if (conflicts > 0) {
+                    throw new AppError("Upcoming appointments require a service this staff member would lose", 409, "STAFF_SKILL_CONFLICT");
+                }
+            }
+            const capabilityRepo = manager.getRepository(StaffServiceCapability);
+            await capabilityRepo.delete({ staff_id: userId });
+            await capabilityRepo.insert(data.service_ids.map(id => ({ staff_id: userId, service_id: id })));
         }
 
         if (emailChanged || data.password !== undefined) {
