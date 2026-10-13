@@ -41,33 +41,12 @@ export class LoadRealSalonData1791421200000 implements MigrationInterface {
             ) ENGINE=InnoDB
         `);
 
-        await queryRunner.query("SET FOREIGN_KEY_CHECKS = 0");
-
-        try {
-            for (const table of [
-                "staff_booking_slots",
-                "appointment_services",
-                "appointments",
-                "password_reset_challenges",
-                "login_mfa_challenges",
-                "refresh_sessions",
-                "audit_logs",
-                "staffs",
-                "users",
-                "offers",
-                "services",
-                "branches",
-                "salon_content",
-            ]) {
-                await queryRunner.query(`DELETE FROM \`${table}\``);
-            }
-
-            await queryRunner.query("ALTER TABLE `branches` AUTO_INCREMENT = 1");
-
-            const branch = REAL_SALON_DATA.branch;
+        // Seed data additively. Never erase existing users, appointments,
+        // payments, staff, audit logs or personalized salon content.
+        const branch = REAL_SALON_DATA.branch;
 
             await queryRunner.query(
-                `INSERT INTO \`branches\`
+                `INSERT IGNORE INTO `branches`
                     (\`id\`, \`name\`, \`address\`, \`phone\`, \`opening_hours\`)
                  VALUES (?, ?, ?, ?, ?)`,
                 [branch.id, branch.name, branch.address, branch.phone, branch.opening_hours]
@@ -75,7 +54,7 @@ export class LoadRealSalonData1791421200000 implements MigrationInterface {
 
             for (const service of REAL_SALON_DATA.services) {
                 await queryRunner.query(
-                    `INSERT INTO \`services\`
+                    `INSERT IGNORE INTO `services`
                         (
                             \`id\`, \`branch_id\`, \`name\`, \`display_name\`,
                             \`category\`, \`subcategory\`, \`description\`,
@@ -103,7 +82,7 @@ export class LoadRealSalonData1791421200000 implements MigrationInterface {
             const profile = REAL_SALON_DATA.profile;
 
             await queryRunner.query(
-                `INSERT INTO \`salon_content\`
+                `INSERT IGNORE INTO `salon_content`
                     (
                         \`id\`, \`name\`, \`display_name\`, \`instagram_handle\`,
                         \`google_maps_location\`, \`hotline\`, \`contact_email\`,
@@ -131,34 +110,12 @@ export class LoadRealSalonData1791421200000 implements MigrationInterface {
                     JSON.stringify(REAL_SALON_DATA.customer_reviews),
                 ]
             );
-        } finally {
-            await queryRunner.query("SET FOREIGN_KEY_CHECKS = 1");
-        }
+
     }
 
-    public async down(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query("SET FOREIGN_KEY_CHECKS = 0");
-
-        try {
-            await queryRunner.query("DELETE FROM `salon_content`");
-            await queryRunner.query("DELETE FROM `services`");
-            await queryRunner.query("DELETE FROM `branches`");
-        } finally {
-            await queryRunner.query("SET FOREIGN_KEY_CHECKS = 1");
-        }
-
-        await queryRunner.query("DROP TABLE `salon_content`");
-
-        await queryRunner.query(`ALTER TABLE \`services\` MODIFY \`duration_minutes\` int NOT NULL`);
-        await queryRunner.query(`ALTER TABLE \`services\` DROP COLUMN \`booking_enabled\``);
-        await queryRunner.query(`ALTER TABLE \`services\` DROP COLUMN \`price_max\``);
-        await queryRunner.query(`ALTER TABLE \`services\` DROP COLUMN \`price_min\``);
-        await queryRunner.query(`ALTER TABLE \`services\` DROP COLUMN \`description\``);
-        await queryRunner.query(`ALTER TABLE \`services\` DROP COLUMN \`subcategory\``);
-        await queryRunner.query(`ALTER TABLE \`services\` DROP COLUMN \`category\``);
-        await queryRunner.query(`ALTER TABLE \`services\` DROP COLUMN \`display_name\``);
-
-        await queryRunner.query(`ALTER TABLE \`branches\` DROP COLUMN \`opening_hours\``);
-        await queryRunner.query(`ALTER TABLE \`branches\` DROP COLUMN \`phone\``);
+    public async down(_queryRunner: QueryRunner): Promise<void> {
+        // Removing historical seed records is destructive after users have
+        // customized them. Requires an explicit backup/manual recovery plan.
+        throw new Error("Irreversible data seed: refusing destructive rollback");
     }
 }
