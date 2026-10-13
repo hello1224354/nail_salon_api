@@ -11,7 +11,7 @@
     --dark: #2d2723;
 
     --font-ui: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-    --font-display: var(--font-display-loaded), Georgia, serif;
+    --font-display: var(--font-display-loaded), Arial, sans-serif;
 }
 
 @theme inline {

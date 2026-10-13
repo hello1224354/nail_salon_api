@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { connection } from "next/server";
-import { Noto_Serif_Display } from "next/font/google";
+import { Noto_Sans } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
@@ -10,10 +10,9 @@ import { RouteMotion } from "@/components/layout/RouteMotion";
 import { BranchProvider } from "@/components/branch/BranchProvider";
 import { SITE_ORIGIN } from "@/lib/site-url";
 
-// Bundle the same Vietnamese-capable display font for every browser.
- // next/font self-hosts the generated font assets, avoiding OS-specific
- // Palatino/Georgia fallback metrics on iPadOS.
-const displayFont = Noto_Serif_Display({
+// Self-host one Vietnamese-capable display font on every device.
+// This ensures consistent typography without device-specific fallback metrics.
+const displayFont = Noto_Sans({
     subsets: ["latin", "vietnamese"],
     display: "swap",
     variable: "--font-display-loaded",
