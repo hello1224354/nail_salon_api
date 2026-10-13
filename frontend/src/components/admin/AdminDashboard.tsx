@@ -204,7 +204,6 @@ export function AdminDashboard() {
     const [editingBranch, setEditingBranch] = useState<Branch | null>(null);
     const [editingService, setEditingService] = useState<Service | null>(null);
     const [editingStaff, setEditingStaff] = useState<AdminStaff | null>(null);
-    const [staffFormBranchId, setStaffFormBranchId] = useState<number | null>(null);
     const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
     const [editingOffer, setEditingOffer] = useState<Offer | null>(null);
     const [offerImage, setOfferImage] = useState("");
@@ -524,7 +523,6 @@ export function AdminDashboard() {
             branch_id: Number(form.get("branch_id")),
             work_start_time: String(form.get("work_start_time") || ""),
             work_end_time: String(form.get("work_end_time") || ""),
-            service_ids: form.getAll("service_ids").map(String),
             ...(editingStaff ? (password ? { password } : {}) : { password }),
         };
 
@@ -785,8 +783,8 @@ export function AdminDashboard() {
                                     <StaffPanel
                                         staff={data.staff}
                                         branches={data.branches}
-                                        onAdd={() => { setEditingStaff(null); setStaffFormBranchId(null); setModal("staff"); }}
-                                        onEdit={(person) => { setEditingStaff(person); setStaffFormBranchId(person.branch_id); setModal("staff"); }}
+                                        onAdd={() => { setEditingStaff(null); setModal("staff"); }}
+                                        onEdit={(person) => { setEditingStaff(person); setModal("staff"); }}
                                         onDelete={deleteStaff}
                                         submitting={submitting}
                                     />
@@ -952,7 +950,7 @@ export function AdminDashboard() {
                             <input name="full_name" defaultValue={editingStaff?.full_name ?? ""} className={inputClass} required maxLength={255} />
                         </Field>
                         <Field label="Chi nhánh">
-                            <select name="branch_id" className={selectClass} required defaultValue={editingStaff?.branch_id ?? ""} onChange={(event) => setStaffFormBranchId(Number(event.target.value))}>
+                            <select name="branch_id" className={selectClass} required defaultValue={editingStaff?.branch_id ?? ""}>
                                 <option value="" disabled>Chọn chi nhánh</option>
                                 {data.branches.map((branch) => (
                                     <option key={branch.id} value={branch.id}>{shortBranchName(branch.name)}</option>
@@ -971,26 +969,7 @@ export function AdminDashboard() {
                         <Field label="Kết thúc làm việc">
                             <input name="work_end_time" type="time" min="09:15" max="20:30" step={900} defaultValue={editingStaff?.work_end_time ?? "20:30"} className={inputClass} required />
                         </Field>
-                        <div className="md:col-span-2">
-                            <p className="mb-2 text-xs font-semibold">Dịch vụ nhân viên có thể thực hiện</p>
-                            <div className="grid max-h-52 gap-2 overflow-y-auto rounded-xl border border-line bg-cream p-3 sm:grid-cols-2">
-                                {data.services.filter((service) =>
-                                    service.branch_id === (staffFormBranchId ?? editingStaff?.branch_id)
-                                    && service.booking_enabled
-                                ).map((service) => (
-                                    <label key={`${staffFormBranchId ?? editingStaff?.branch_id}-${service.id}`} className="flex items-start gap-2 text-xs leading-5">
-                                        <input type="checkbox" name="service_ids" value={service.id}
-                                            defaultChecked={editingStaff?.branch_id === (staffFormBranchId ?? editingStaff?.branch_id) && editingStaff?.service_ids?.includes(service.id)}
-                                            className="mt-0.5 size-4 shrink-0 accent-[#9e7562]" />
-                                        <span>{service.display_name || service.name}</span>
-                                    </label>
-                                ))}
-                            </div>
-                            <p className="mt-2 text-[11px] leading-5 text-muted">
-                                Chọn ít nhất một dịch vụ. Khách chỉ thấy giờ trống khi nhân viên đủ kỹ năng cho tất cả dịch vụ đã chọn.
-                            </p>
-                        </div>
-                                                <Field label={editingStaff ? "Mật khẩu mới (bỏ trống nếu giữ nguyên)" : "Mật khẩu khởi tạo"} span>
+                        <Field label={editingStaff ? "Mật khẩu mới (bỏ trống nếu giữ nguyên)" : "Mật khẩu khởi tạo"} span>
                             <input name="password" type="password" autoComplete="new-password" minLength={8} className={inputClass} required={!editingStaff} />
                         </Field>
                         <div className="flex justify-end gap-3 md:col-span-2">
