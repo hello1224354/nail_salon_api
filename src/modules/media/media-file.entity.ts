@@ -21,7 +21,11 @@ export class MediaFile {
     @CreateDateColumn({ type: "datetime", precision: 6 })
     created_at: Date;
 
-    // Avoid fetching image bytes for paginated admin metadata lists.
-    @Column({ type: "mediumblob", select: false })
-    image_data: Buffer;
+    // Legacy BLOB remains while staged object migration runs. New uploads
+    // store only an object key when private S3 storage is configured.
+    @Column({ type: "mediumblob", select: false, nullable: true })
+    image_data: Buffer | null;
+
+    @Column({ type: "varchar", length: 255, nullable: true })
+    object_key: string | null;
 }
