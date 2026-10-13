@@ -157,7 +157,7 @@ export function ServicesCatalogue() {
 
                                 <h2
                                     aria-label={service.display_name || service.name}
-                                    className="mt-2 flex min-w-0 flex-wrap items-baseline gap-x-[0.22em] gap-y-0 font-serif text-[clamp(1.35rem,2.5vw,1.9rem)] leading-[1.3] tracking-[-0.02em]"
+                                    className="service-name mt-2 min-w-0 font-serif text-[clamp(1.35rem,2.5vw,1.9rem)] leading-[1.3]"
                                 >
                                     {(service.display_name || service.name).trim().split(/\s+/u).map((word, wordIndex) => (
                                         <span key={wordIndex} aria-hidden="true" className="whitespace-nowrap">{word}</span>

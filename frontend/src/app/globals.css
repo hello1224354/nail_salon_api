@@ -76,6 +76,44 @@ body {
     pointer-events: auto;
 }
 
+/* iPadOS Safari: the global serif negative tracking must not narrow the
+   perceived boundaries between independent service-name words. The flex gap
+   is an actual layout dimension and survives font fallback and text scaling. */
+.service-name {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: 0.42em;
+    row-gap: 0.08em;
+    letter-spacing: normal;
+}
+
+/* The contact row has exactly two fields. Auto-fit plus a full-row item
+   retained an unused implicit/explicit track on wide tablet layouts. */
+.booking-contact-section {
+    container: booking-contact / inline-size;
+}
+
+.booking-contact-fields {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+}
+
+.booking-contact-phone {
+    min-width: 0;
+}
+
+@container booking-contact (min-width: 34rem) {
+    .booking-contact-fields {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .booking-contact-phone {
+        grid-column: 1 / -1;
+    }
+}
+
 /* Let card count follow the container's available space, not a viewport breakpoint. */
 .fluid-card-grid {
     display: grid;

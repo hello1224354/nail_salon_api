@@ -767,12 +767,12 @@ export function BookingForm() {
 
                 <div className="mx-[clamp(1rem,2.5vw,2rem)] h-px bg-line" />
 
-                <section className="min-w-0 p-[clamp(1rem,2.5vw,2rem)]">
+                <section className="booking-contact-section min-w-0 p-[clamp(1rem,2.5vw,2rem)]">
                     <SectionHeading
                         number="06"
                         title="Thông tin liên hệ"
                     />
-                    <div className="mt-6 grid min-w-0 gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,15rem),1fr))]">
+                    <div className="booking-contact-fields mt-6">
                         <div className="min-w-0 rounded-[12px] border border-line bg-cream px-4 py-3">
                             <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">Họ và tên</p>
                             <p className="mt-1 text-sm font-semibold">{user?.full_name || "—"}</p>
@@ -781,7 +781,7 @@ export function BookingForm() {
                             <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">Email tài khoản</p>
                             <p className="mt-1 break-all text-sm font-semibold">{user?.email || "—"}</p>
                         </div>
-                        <label className="block min-w-0 [grid-column:1/-1]">
+                        <label className="booking-contact-phone block min-w-0">
                             <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">
                                 Số điện thoại xác nhận lịch
                             </span>
