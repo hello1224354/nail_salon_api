@@ -162,9 +162,9 @@ export function BookingForm() {
     const [availabilityRefreshKey, setAvailabilityRefreshKey] = useState(0);
 
     const selectedBranch = branches.find((branch) => branch.id === selectedBranchId) ?? null;
-    const createdBranch = createdAppointment?.branch?.name
-        ? shortBranchName(createdAppointment.branch.name)
-        : (branches.find((branch) => branch.id === createdAppointment?.branch_id) ?? selectedBranch)?.name;
+    const createdBranchName = createdAppointment?.branch?.name
+        || branches.find((branch) => branch.id === createdAppointment?.branch_id)?.name
+        || selectedBranch?.name;
 
     const timeGroups = useMemo(() => buildTimeGroups(availableSlots.keys()), [availableSlots]);
     const selectedServices = useMemo(
@@ -909,7 +909,7 @@ export function BookingForm() {
                         <div className="grid grid-cols-2 gap-x-4 gap-y-4">
                             <div className="min-w-0">
                                 <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-muted">Chi nhánh</p>
-                                <p className="mt-1 break-words text-sm font-semibold">{createdBranch ? shortBranchName(createdBranch) : "Đang cập nhật"}</p>
+                                <p className="mt-1 break-words text-sm font-semibold">{createdBranchName ? shortBranchName(createdBranchName) : "Đang cập nhật"}</p>
                             </div>
                             <div className="min-w-0">
                                 <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-muted">Số người</p>
