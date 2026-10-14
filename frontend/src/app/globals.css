@@ -96,6 +96,27 @@ body {
     gap: clamp(0.875rem, 1.75vw, 1.25rem);
 }
 
+/* Card density follows available content width rather than a device model. */
+.detail-carousel-viewport {
+    container-type: inline-size;
+}
+
+.detail-carousel-slide {
+    flex-basis: 100%;
+}
+
+@container (min-width: 42rem) {
+    .detail-carousel-slide {
+        flex-basis: 50%;
+    }
+}
+
+@container (min-width: 66rem) {
+    .detail-carousel-slide {
+        flex-basis: 33.333333%;
+    }
+}
+
 .fluid-section-title {
     font-size: clamp(1.9rem, 3.6vw, 3.125rem);
     line-height: 1.14;
