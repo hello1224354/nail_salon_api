@@ -27,7 +27,7 @@ import {
 import { AppError } from "../../common/errors";
 import { clearRefreshCookie, readRefreshCookie, setRefreshCookie } from "./session-cookie";
 import { clearTrustedLoginCookie, readTrustedLoginCookie, setTrustedLoginCookie } from "./trusted-login-device.cookie";
-import { isTrustedLoginDevice, issueTrustedLoginDevice } from "./trusted-login-device.service";
+import { getTrustedLoginDeviceExpiry, isTrustedLoginDevice, issueTrustedLoginDevice, renewTrustedLoginDevice } from "./trusted-login-device.service";
 
 const ACCOUNT_LOGIN_WINDOW_MS = 30 * 60 * 1000;
 const ACCOUNT_LOGIN_FAILURE_LIMIT = 10;
@@ -150,9 +150,10 @@ export const loginUser = async (req: Request, res: Response) => {
         const user = await userService.loginUser(credentials);
 
         const usesOtp = user.role === UserRole.ADMIN || user.role === UserRole.CUSTOMER;
+        const trustedProof = usesOtp ? readTrustedLoginCookie(req, user.id) : null;
         const trusted = usesOtp && await isTrustedLoginDevice(
             user,
-            readTrustedLoginCookie(req, user.id),
+            trustedProof,
             context.fingerprint.userAgentHash,
         );
 
@@ -208,9 +209,17 @@ export const loginUser = async (req: Request, res: Response) => {
             });
         }
 
+        // A valid trusted browser should remain trusted after a password login.
+        // Its lifetime is independent of the new refresh session's expiry.
+        const renewedTrustExpiry = trusted && trustedProof
+            ? await renewTrustedLoginDevice(user, trustedProof, context.fingerprint.userAgentHash)
+            : null;
         const session = await authSessionService.createLoginSession(user, context.fingerprint, credentials.remember_me);
 
         setRefreshCookie(res, session.refreshToken, session.refreshExpiresAt, session.persistent);
+        if (renewedTrustExpiry && trustedProof) {
+            setTrustedLoginCookie(res, user.id, trustedProof, renewedTrustExpiry);
+        }
         res.setHeader("Cache-Control", "no-store");
 
         await createAuditLog({
@@ -260,15 +269,16 @@ export const verifyLoginMfa = async (req: Request, res: Response) => {
         }
 
         const session = await authSessionService.createLoginSession(user, context.fingerprint, verified.persistent);
+        const trustedDeviceExpiresAt = getTrustedLoginDeviceExpiry();
         const browserProof = await issueTrustedLoginDevice(
             user,
             context.fingerprint.userAgentHash,
             readTrustedLoginCookie(req, user.id),
-            session.refreshExpiresAt,
+            trustedDeviceExpiresAt,
         );
 
         setRefreshCookie(res, session.refreshToken, session.refreshExpiresAt, session.persistent);
-        setTrustedLoginCookie(res, user.id, browserProof, session.refreshExpiresAt);
+        setTrustedLoginCookie(res, user.id, browserProof, trustedDeviceExpiresAt);
         res.setHeader("Cache-Control", "no-store");
 
         await createAuditLog({
