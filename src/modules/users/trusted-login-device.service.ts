@@ -51,7 +51,7 @@ export async function renewTrustedLoginDevice(
             user_id: user.id,
             token_version: user.token_version,
             role: user.role,
-            user_agent_hash: userAgentHash,
+            user_agent_hash: userAgentHash === null ? IsNull() : userAgentHash,
             revoked_at: IsNull(),
             expires_at: MoreThan(now),
         },
