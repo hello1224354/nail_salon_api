@@ -1,11 +1,19 @@
 import { createHash, randomBytes } from "crypto";
-import { IsNull } from "typeorm";
+import { IsNull, MoreThan } from "typeorm";
 import { AppDataSource } from "../../config/database";
 import { TrustedLoginDevice } from "./trusted-login-device.entity";
 import { User } from "./users.entity";
 import { matchesTrustedLoginDevice } from "./trusted-login-device.logic";
 
 const repo = AppDataSource.getRepository(TrustedLoginDevice);
+
+// Device trust is independent of the shorter refresh-session lifetime.
+// A trusted browser still needs the user's password for a new login.
+const TRUSTED_LOGIN_DAYS = 30;
+
+export function getTrustedLoginDeviceExpiry(now = new Date()): Date {
+    return new Date(now.getTime() + TRUSTED_LOGIN_DAYS * 24 * 60 * 60 * 1000);
+}
 
 function hashToken(value: string) {
     return createHash("sha256").update(value).digest("hex");
@@ -21,6 +29,36 @@ export async function isTrustedLoginDevice(
     const record = await repo.findOneBy({ token_hash: hashToken(proof) });
 
     return matchesTrustedLoginDevice(record, user, userAgentHash, Date.now());
+}
+
+/**
+ * Extend an existing trusted browser when its owner logs in successfully
+ * with a password. Never renew missing, revoked, expired or mismatched proofs.
+ * Reuse the current proof so concurrent logins cannot invalidate each other.
+ */
+export async function renewTrustedLoginDevice(
+    user: User,
+    proof: string,
+    userAgentHash: string | null,
+): Promise<Date | null> {
+    if (!/^[A-Za-z0-9_-]{43}$/.test(proof)) return null;
+
+    const now = new Date();
+    const expiresAt = getTrustedLoginDeviceExpiry(now);
+    const result = await repo.update(
+        {
+            token_hash: hashToken(proof),
+            user_id: user.id,
+            token_version: user.token_version,
+            role: user.role,
+            user_agent_hash: userAgentHash,
+            revoked_at: IsNull(),
+            expires_at: MoreThan(now),
+        },
+        { expires_at: expiresAt },
+    );
+
+    return result.affected === 1 ? expiresAt : null;
 }
 
 /** Call only after an email OTP is verified AND an authenticated session exists. */
