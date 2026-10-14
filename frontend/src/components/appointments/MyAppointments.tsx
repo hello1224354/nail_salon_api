@@ -289,11 +289,6 @@ export function MyAppointments() {
                                             {formatAppointmentTime(appointment.start_time)}–{formatAppointmentTime(appointment.end_time)}
                                         </p>
                                         <p className="mt-2 text-xs text-muted">{appointment.branch?.name ? localizeBranchName(appointment.branch.name) : `Chi nhánh #${appointment.branch_id}`}</p>
-                                        <p className="mt-1 text-xs text-muted">
-                                            Nhân viên: {appointment.assigned_staff?.length
-                                                ? appointment.assigned_staff.map(person => person.full_name).join(", ")
-                                                : (appointment.staff?.full_name || "Đang cập nhật")}
-                                        </p>
                                     </div>
 
                                     <div className="mt-5">
@@ -301,9 +296,9 @@ export function MyAppointments() {
                                         {services.length > 0 ? (
                                             <div className="mt-2 space-y-2">
                                                 {services.map((service) => (
-                                                    <div key={`${appointment.id}-${service.service_id}`} className="flex items-start justify-between gap-4 text-xs">
+                                                    <div key={`${appointment.id}-${service.service_id}`} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-xs">
                                                         <span className="leading-5">{service.service_name}</span>
-                                                        <span className="shrink-0 font-semibold tabular-nums">Tham khảo: {formatVnd(service.price)} VND</span>
+                                                        <span className="font-semibold tabular-nums">Giá tham khảo: {formatVnd(service.price)} VND</span>
                                                     </div>
                                                 ))}
                                             </div>
@@ -312,13 +307,11 @@ export function MyAppointments() {
                                         )}
                                     </div>
 
-                                    <p role="note" className="mt-4 rounded-lg bg-[#f9ede4] p-3 text-xs leading-5 text-[#623f33]">Giá trên lịch hẹn là giá tham khảo. Giá thực tế có thể cao hơn; nhân viên sẽ thông báo trước khi thực hiện.</p>
                                     {actual.length > 0 ? (
                                         <div className="mt-3 rounded-lg border border-line bg-white p-3 text-xs">
                                             <p className="font-semibold">Giá thực tế nhân viên đã nhập</p>
                                             {actual.map(item => <p key={item.staff_id + ":" + item.service_id} className="mt-1">
-                                                {(appointment.assigned_staff ?? []).find(p => p.id === item.staff_id)?.full_name ?? "Nhân viên"}
-                                                {" · "}{services.find(s => s.service_id === item.service_id)?.service_name ?? "Dịch vụ"}
+                                                {services.find(s => s.service_id === item.service_id)?.service_name ?? "Dịch vụ"}
                                                 {": "}<strong>{formatVnd(item.actual_price)} VND</strong>
                                             </p>)}
                                             <p className="mt-2 font-semibold">{allPriced ? "Tổng giá thực tế: " + formatVnd(totalActual) + " VND" : "Đang chờ các nhân viên cập nhật đủ giá thực tế."}</p>

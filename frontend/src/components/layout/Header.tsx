@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { AUTH_CHANGED_EVENT, getAuthUser, logoutSession, restoreSession, type AuthUser } from "@/lib/auth";
 import { useBranch } from "@/components/branch/BranchProvider";
 import { shortBranchName } from "@/lib/studio-data";
@@ -13,6 +13,125 @@ const navigation = [
     { href: "/services", label: "Bảng giá" },
     { href: "/book", label: "Đặt lịch" },
 ];
+
+
+type BranchChoice = { id: number; name: string };
+
+function BranchPicker({
+    branches,
+    selectedBranchId,
+    onSelect,
+    disabled,
+    mobile = false,
+}: {
+    branches: BranchChoice[];
+    selectedBranchId: number | null;
+    onSelect: (id: number) => void;
+    disabled: boolean;
+    mobile?: boolean;
+}) {
+    const [open, setOpen] = useState(false);
+    const rootRef = useRef<HTMLDivElement>(null);
+    const triggerRef = useRef<HTMLButtonElement>(null);
+    const selected = branches.find((branch) => branch.id === selectedBranchId);
+
+    useEffect(() => {
+        if (!open) return;
+        const dismiss = (event: PointerEvent) => {
+            if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+        };
+        const escape = (event: globalThis.KeyboardEvent) => {
+            if (event.key === "Escape") {
+                setOpen(false);
+                triggerRef.current?.focus();
+            }
+        };
+        document.addEventListener("pointerdown", dismiss);
+        document.addEventListener("keydown", escape);
+        return () => {
+            document.removeEventListener("pointerdown", dismiss);
+            document.removeEventListener("keydown", escape);
+        };
+    }, [open]);
+
+    useEffect(() => {
+        if (!open) return;
+        const frame = window.requestAnimationFrame(() => {
+            const options = rootRef.current?.querySelectorAll<HTMLButtonElement>('[role="option"]');
+            const index = Math.max(0, branches.findIndex((branch) => branch.id === selectedBranchId));
+            options?.[index]?.focus();
+        });
+        return () => window.cancelAnimationFrame(frame);
+    }, [open, branches, selectedBranchId]);
+
+    const moveFocus = (event: KeyboardEvent<HTMLDivElement>) => {
+        const options = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="option"]'));
+        if (!options.length) return;
+        const current = options.indexOf(document.activeElement as HTMLButtonElement);
+        let next = current;
+        if (event.key === "ArrowDown") next = (current + 1) % options.length;
+        else if (event.key === "ArrowUp") next = (current - 1 + options.length) % options.length;
+        else if (event.key === "Home") next = 0;
+        else if (event.key === "End") next = options.length - 1;
+        else return;
+        event.preventDefault();
+        options[next]?.focus();
+    };
+
+    return (
+        <div ref={rootRef} className={mobile ? "relative w-full" : "relative h-9 w-[112px] shrink-0"}>
+            <button
+                ref={triggerRef}
+                type="button"
+                disabled={disabled}
+                aria-label="Chọn chi nhánh"
+                aria-haspopup="listbox"
+                aria-expanded={open}
+                onClick={() => setOpen((value) => !value)}
+                onKeyDown={(event) => {
+                    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+                        event.preventDefault();
+                        setOpen(true);
+                    }
+                }}
+                className={mobile
+                    ? "focus-ring flex min-h-11 w-full items-center justify-between gap-2 rounded-full border border-line bg-cream px-4 text-xs font-semibold text-ink disabled:opacity-50"
+                    : "focus-ring flex h-full w-full items-center justify-center gap-1.5 rounded-full border border-line bg-surface px-2 text-xs font-semibold text-ink disabled:opacity-50"}
+            >
+                <span className="min-w-0 truncate">{selected ? shortBranchName(selected.name) : "Chi nhánh"}</span>
+                <svg aria-hidden="true" viewBox="0 0 12 12" className="size-3 shrink-0">
+                    <path d="M2.25 4.25 6 8l3.75-3.75" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+            </button>
+            {open && branches.length > 0 ? (
+                <div
+                    role="listbox"
+                    aria-label="Danh sách chi nhánh"
+                    onKeyDown={moveFocus}
+                    className="absolute inset-x-0 top-full z-[70] mt-2 max-h-[min(16rem,50dvh)] min-w-0 overflow-y-auto overscroll-contain rounded-xl border border-line bg-surface p-1 shadow-[0_16px_40px_rgba(48,40,35,0.18)]"
+                >
+                    {branches.map((branch) => (
+                        <button
+                            key={branch.id}
+                            type="button"
+                            role="option"
+                            aria-selected={branch.id === selectedBranchId}
+                            tabIndex={-1}
+                            onClick={() => {
+                                onSelect(branch.id);
+                                setOpen(false);
+                                triggerRef.current?.focus();
+                            }}
+                            className={`focus-ring block min-h-10 w-full rounded-lg px-2 py-2 text-left text-xs font-medium leading-5 [overflow-wrap:anywhere] hover:bg-tint ${branch.id === selectedBranchId ? "bg-tint text-accent" : "text-ink"}`}
+                        >
+                            {shortBranchName(branch.name)}
+                        </button>
+                    ))}
+                </div>
+            ) : null}
+        </div>
+    );
+}
 
 function Logo() {
     return (
@@ -36,7 +155,7 @@ export function Header() {
     const [mobileOpen, setMobileOpen] = useState(false);
     const [accountOpen, setAccountOpen] = useState(false);
     const [authUser, setAuthUser] = useState<AuthUser | null>(null);
-    const { branches, selectedBranch, selectedBranchId, setSelectedBranchId, loading: branchesLoading } = useBranch();
+    const { branches, selectedBranchId, setSelectedBranchId, loading: branchesLoading } = useBranch();
 
     useEffect(() => {
         let cancelled = false;
@@ -104,30 +223,12 @@ export function Header() {
                 </nav>
 
                 <div className="col-start-3 row-start-1 hidden translate-x-2 items-center justify-self-end gap-2 xl:flex">
-                    <div className="relative h-9 w-[112px] shrink-0 rounded-full border border-line bg-surface focus-within:ring-2 focus-within:ring-accent/50">
-                        <span className="pointer-events-none absolute inset-0 flex items-center justify-center gap-1.5 text-xs font-semibold text-ink">
-                            <span className="max-w-[78px] truncate">
-                                {selectedBranch ? shortBranchName(selectedBranch.name) : "Chi nhánh"}
-                            </span>
-                            <svg aria-hidden="true" viewBox="0 0 12 12" className="size-3 shrink-0">
-                                <path d="M2.25 4.25 6 8l3.75-3.75" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
-                        </span>
-                        <select
-                            value={selectedBranchId ?? ""}
-                            onChange={(event) => setSelectedBranchId(Number(event.target.value))}
-                            disabled={branchesLoading || branches.length === 0}
-                            aria-label="Chọn chi nhánh"
-                            className="absolute inset-0 h-full w-full cursor-pointer appearance-none rounded-full opacity-0 disabled:cursor-not-allowed"
-                        >
-                            {branches.length === 0 ? <option value="">Chưa có chi nhánh</option> : null}
-                            {branches.map((branch) => (
-                                <option key={branch.id} value={branch.id}>
-                                    {shortBranchName(branch.name)}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
+                    <BranchPicker
+                        branches={branches}
+                        selectedBranchId={selectedBranchId}
+                        onSelect={setSelectedBranchId}
+                        disabled={branchesLoading || branches.length === 0}
+                    />
 
                     {authUser ? (
                         <>
@@ -249,28 +350,14 @@ export function Header() {
                         })}
 
                         <div className="mt-3 rounded-2xl border border-line bg-surface p-3">
-                            <label htmlFor="mobile-branch-select" className="mb-2 block px-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-accent">
-                                Chi nhánh
-                            </label>
-                            <div className="relative">
-                                <select
-                                    id="mobile-branch-select"
-                                    value={selectedBranchId ?? ""}
-                                    onChange={(event) => setSelectedBranchId(Number(event.target.value))}
-                                    disabled={branchesLoading || branches.length === 0}
-                                    className="focus-ring h-11 w-full appearance-none rounded-full border border-line bg-cream pl-4 pr-12 text-xs font-semibold text-ink outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                                >
-                                    {branches.length === 0 ? <option value="">Chưa có chi nhánh</option> : null}
-                                    {branches.map((branch) => (
-                                        <option key={branch.id} value={branch.id}>
-                                            {shortBranchName(branch.name)}
-                                        </option>
-                                    ))}
-                                </select>
-                                <svg aria-hidden="true" viewBox="0 0 12 12" className="pointer-events-none absolute right-5 top-1/2 size-3 -translate-y-1/2 text-ink">
-                                    <path d="M2.25 4.25 6 8l3.75-3.75" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />
-                                </svg>
-                            </div>
+                            <p className="mb-2 block px-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-accent">Chi nhánh</p>
+                            <BranchPicker
+                                mobile
+                                branches={branches}
+                                selectedBranchId={selectedBranchId}
+                                onSelect={setSelectedBranchId}
+                                disabled={branchesLoading || branches.length === 0}
+                            />
                         </div>
 
                         {authUser ? (

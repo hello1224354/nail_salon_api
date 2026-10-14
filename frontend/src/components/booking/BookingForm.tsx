@@ -162,6 +162,10 @@ export function BookingForm() {
     const [availabilityRefreshKey, setAvailabilityRefreshKey] = useState(0);
 
     const selectedBranch = branches.find((branch) => branch.id === selectedBranchId) ?? null;
+    const createdBranchName = createdAppointment?.branch?.name
+        || branches.find((branch) => branch.id === createdAppointment?.branch_id)?.name
+        || selectedBranch?.name;
+
     const timeGroups = useMemo(() => buildTimeGroups(availableSlots.keys()), [availableSlots]);
     const selectedServices = useMemo(
         () => services.filter((service) => selectedServiceIds.includes(service.id)),
@@ -587,7 +591,7 @@ export function BookingForm() {
                                             <span className={`block break-words text-sm ${selected ? "font-semibold" : "font-medium"}`}>{service.name}</span>
                                             <span className="mt-0.5 block text-[10px] text-muted">{service.duration_minutes} phút</span>
                                         </span>
-                                        <span className="col-start-2 min-w-0 text-xs font-semibold tabular-nums">Tham khảo: {formatServicePrice(service)}</span>
+                                        <span className="col-start-2 min-w-0 text-xs font-semibold tabular-nums">Giá tham khảo: {formatServicePrice(service)}</span>
                                     </label>
                                 );
                             })
@@ -801,7 +805,7 @@ export function BookingForm() {
                                     selectedServices.map((service) => (
                                         <div key={service.id} className="flex items-start justify-between gap-4 text-xs">
                                             <span>{service.name}</span>
-                                            <span className="shrink-0 font-semibold tabular-nums">Tham khảo: {formatServicePrice(service)}</span>
+                                            <span className="shrink-0 font-semibold tabular-nums">Giá tham khảo: {formatServicePrice(service)}</span>
                                         </div>
                                     ))
                                 ) : (
@@ -901,11 +905,11 @@ export function BookingForm() {
                         </p>
                     </div>
 
-                    <div className="booking-success-details min-h-0 flex-1 overflow-y-auto overscroll-contain border-t border-line px-5 py-4 sm:px-8 sm:py-5">
+                    <div className="booking-success-details min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-contain border-t border-line px-5 py-4 sm:px-8 sm:py-5">
                         <div className="grid grid-cols-2 gap-x-4 gap-y-4">
                             <div className="min-w-0">
                                 <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-muted">Chi nhánh</p>
-                                <p className="mt-1 break-words text-sm font-semibold">{selectedBranch ? shortBranchName(selectedBranch.name) : "—"}</p>
+                                <p className="mt-1 break-words text-sm font-semibold">{createdBranchName ? shortBranchName(createdBranchName) : "Đang cập nhật"}</p>
                             </div>
                             <div className="min-w-0">
                                 <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-muted">Số người</p>
