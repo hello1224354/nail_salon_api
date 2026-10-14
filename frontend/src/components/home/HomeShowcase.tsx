@@ -293,25 +293,56 @@ function ReviewsCarousel({ reviews }: { reviews: CustomerReview[] }) {
 type StudioDetail = { eyebrow: string; title: string; body: string };
 
 function DetailsCarousel({ details }: { details: StudioDetail[] }) {
-    const carousel = useAutoCarousel(details.length, 6200);
-    const [scrollable, setScrollable] = useState(false);
+    // A static row needs no scrolling controls. Embla supplies a single snap when
+    // all the cards fit the available container width; narrower layouts have more.
+    const [autoplay] = useState(() =>
+        Autoplay({
+            delay: 6200,
+            playOnInit: false,
+            stopOnInteraction: false,
+            stopOnMouseEnter: true,
+        })
+    );
+    const [emblaRef, emblaApi] = useEmblaCarousel(
+        { loop: false, align: "start", containScroll: "trimSnaps", slidesToScroll: 1 },
+        [autoplay]
+    );
+    const [selectedIndex, setSelectedIndex] = useState(0);
+    const [snapCount, setSnapCount] = useState(1);
+    const [canScrollPrev, setCanScrollPrev] = useState(false);
+    const [canScrollNext, setCanScrollNext] = useState(false);
 
     useEffect(() => {
-        const api = carousel.emblaApi;
-        if (!api) return;
-        const sync = () => setScrollable(api.canScrollNext() || api.canScrollPrev());
-        sync();
-        api.on("reInit", sync);
-        api.on("select", sync);
-        return () => {
-            api.off("reInit", sync);
-            api.off("select", sync);
+        if (!emblaApi) return;
+
+        const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+        const sync = () => {
+            const count = emblaApi.scrollSnapList().length;
+            setSnapCount(count);
+            setSelectedIndex(emblaApi.selectedScrollSnap());
+            setCanScrollPrev(emblaApi.canScrollPrev());
+            setCanScrollNext(emblaApi.canScrollNext());
+
+            // Avoid autoplay when the whole row already fits or motion is reduced.
+            if (count <= 1 || reducedMotion.matches) autoplay.stop();
+            else autoplay.play();
         };
-    }, [carousel.emblaApi]);
+
+        sync();
+        emblaApi.on("select", sync);
+        emblaApi.on("reInit", sync);
+        reducedMotion.addEventListener("change", sync);
+        return () => {
+            emblaApi.off("select", sync);
+            emblaApi.off("reInit", sync);
+            reducedMotion.removeEventListener("change", sync);
+            autoplay.stop();
+        };
+    }, [autoplay, emblaApi]);
 
     return (
-        <div className="relative mt-8">
-            <div ref={carousel.emblaRef} className="detail-carousel-viewport overflow-hidden">
+        <div className="mt-8">
+            <div ref={emblaRef} className="detail-carousel-viewport overflow-hidden">
                 <div className="-ml-4 flex">
                     {details.map((item) => (
                         <div key={item.title} className="detail-carousel-slide flex min-w-0 shrink-0 grow-0 pl-4">
@@ -324,19 +355,39 @@ function DetailsCarousel({ details }: { details: StudioDetail[] }) {
                     ))}
                 </div>
             </div>
-            {scrollable ? (
-                <>
-                    <CarouselArrows
-                        label="Thông tin về tiệm"
-                        onPrevious={() => carousel.emblaApi?.scrollPrev()}
-                        onNext={() => carousel.emblaApi?.scrollNext()}
-                    />
-                    <CarouselDots
-                        count={carousel.emblaApi?.scrollSnapList().length ?? details.length}
-                        selectedIndex={carousel.selectedIndex}
-                        onSelect={(index) => carousel.emblaApi?.scrollTo(index)}
-                    />
-                </>
+            {snapCount > 1 ? (
+                <div className="mt-5 flex items-center justify-center gap-4">
+                    <button
+                        type="button"
+                        aria-label="Thông tin về tiệm trước"
+                        disabled={!canScrollPrev}
+                        onClick={() => emblaApi?.scrollPrev()}
+                        className="focus-ring flex size-11 shrink-0 items-center justify-center rounded-full border border-line bg-surface text-ink transition-colors hover:bg-tint disabled:cursor-not-allowed disabled:opacity-35"
+                    >
+                        <ArrowIcon direction="left" />
+                    </button>
+                    <div className="flex items-center justify-center gap-2" role="group" aria-label="Chọn thẻ thông tin">
+                        {Array.from({ length: snapCount }, (_, index) => (
+                            <button
+                                key={index}
+                                type="button"
+                                aria-label={`Xem nhóm thông tin ${index + 1}`}
+                                aria-current={index === selectedIndex ? "true" : undefined}
+                                onClick={() => emblaApi?.scrollTo(index)}
+                                className={`focus-ring rounded-full transition-all duration-300 ${index === selectedIndex ? "h-1.5 w-6 bg-accent" : "size-1.5 bg-accent/30 hover:bg-accent/60"}`}
+                            />
+                        ))}
+                    </div>
+                    <button
+                        type="button"
+                        aria-label="Thông tin về tiệm tiếp theo"
+                        disabled={!canScrollNext}
+                        onClick={() => emblaApi?.scrollNext()}
+                        className="focus-ring flex size-11 shrink-0 items-center justify-center rounded-full border border-line bg-surface text-ink transition-colors hover:bg-tint disabled:cursor-not-allowed disabled:opacity-35"
+                    >
+                        <ArrowIcon direction="right" />
+                    </button>
+                </div>
             ) : null}
         </div>
     );
