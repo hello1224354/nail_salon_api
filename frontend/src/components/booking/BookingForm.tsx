@@ -877,9 +877,9 @@ export function BookingForm() {
                         event.preventDefault();
                         closeSuccessModal();
                     }}
-                    className="booking-success-dialog booking-success-panel min-h-0 flex-col overflow-hidden rounded-[24px] border border-white/40 bg-surface p-0 focus:outline-none sm:rounded-[28px]"
+                    className="booking-success-dialog booking-success-panel rounded-[24px] border border-white/40 bg-surface p-0 focus:outline-none sm:rounded-[28px]"
                 >
-                    <div className="relative shrink-0 px-5 pb-4 pt-5 sm:px-8 sm:pb-5 sm:pt-7">
+                    <div className="relative px-5 pb-4 pt-5 sm:px-8 sm:pb-5 sm:pt-7">
                         <button
                             type="button"
                             aria-label="Đóng thông báo"
@@ -905,7 +905,7 @@ export function BookingForm() {
                         </p>
                     </div>
 
-                    <div className="booking-success-details min-h-0 touch-pan-y overflow-y-auto overscroll-contain border-t border-line px-5 py-4 sm:px-8 sm:py-5">
+                    <div className="booking-success-details border-t border-line px-5 py-4 sm:px-8 sm:py-5">
                         <div className="grid grid-cols-2 gap-x-4 gap-y-4">
                             <div className="min-w-0">
                                 <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-muted">Chi nhánh</p>
@@ -946,7 +946,7 @@ export function BookingForm() {
                         </div>
                     </div>
 
-                    <div className="booking-success-actions grid shrink-0 grid-cols-2 gap-2 border-t border-line bg-surface px-5 py-4 sm:px-8 sm:py-5">
+                    <div className="booking-success-actions grid grid-cols-2 gap-2 border-t border-line bg-surface px-5 py-4 sm:px-8 sm:py-5">
                         <button
                             type="button"
                             onClick={closeSuccessModal}
