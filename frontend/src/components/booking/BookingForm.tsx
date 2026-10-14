@@ -905,7 +905,7 @@ export function BookingForm() {
                         </p>
                     </div>
 
-                    <div className="booking-success-details min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-contain border-t border-line px-5 py-4 sm:px-8 sm:py-5">
+                    <div className="booking-success-details min-h-0 touch-pan-y overflow-y-auto overscroll-contain border-t border-line px-5 py-4 sm:px-8 sm:py-5">
                         <div className="grid grid-cols-2 gap-x-4 gap-y-4">
                             <div className="min-w-0">
                                 <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-muted">Chi nhánh</p>
