@@ -19,8 +19,47 @@ function getGmailConfig() {
     };
 }
 
+function getResendConfig() {
+    if (!env.RESEND_API_KEY) return null;
+
+    // Do not silently fall back to Gmail if a Resend key was configured
+    // without a verified sender address.
+    if (!env.RESEND_FROM_EMAIL) {
+        throw new AppError("Email delivery is not configured", 503, "EMAIL_NOT_CONFIGURED");
+    }
+
+    return { apiKey: env.RESEND_API_KEY, fromEmail: env.RESEND_FROM_EMAIL };
+}
+
 export function isEmailDeliveryConfigured() {
-    return getGmailConfig() !== null;
+    return getResendConfig() !== null || getGmailConfig() !== null;
+}
+
+async function sendViaResend(
+    config: NonNullable<ReturnType<typeof getResendConfig>>,
+    to: string,
+    subject: string,
+    body: string,
+) {
+    const response = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${config.apiKey}`,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            from: `Serpente Nail Room <${config.fromEmail}>`,
+            to: [to],
+            subject,
+            text: body,
+        }),
+    });
+
+    if (!response.ok) {
+        // Never log API credentials, recipient details, or OTP contents.
+        console.error("Resend email send failed", { status: response.status });
+        throw new AppError("Email delivery is temporarily unavailable", 503, "EMAIL_DELIVERY_FAILED");
+    }
 }
 
 async function getGmailAccessToken() {
@@ -64,6 +103,16 @@ function encodeSubject(subject: string) {
 }
 
 export async function sendPlainTextEmail(to: string, subject: string, body: string) {
+    // Transactional email uses a server-side API key, so OTP/password reset
+    // delivery no longer depends on the lifecycle of Google OAuth grants.
+    const resendConfig = getResendConfig();
+    if (resendConfig) {
+        await sendViaResend(resendConfig, to, subject, body);
+        return;
+    }
+
+    // Keep existing Gmail behavior until Resend is configured and the sender
+    // domain has been verified; do not silently bypass email verification.
     const config = getGmailConfig();
     if (!config) throw new AppError("Email delivery is not configured", 503, "EMAIL_NOT_CONFIGURED");
 
