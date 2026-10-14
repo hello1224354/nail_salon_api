@@ -2,79 +2,110 @@
 
 import { useEffect, useRef, useState } from "react";
 
-// Isolated PR-only responsive inspection. Each same-origin iframe has its own
-// CSS viewport and native top-layer <dialog>, no booking data or API requests.
+// PR-only inspector. Uses actual server-rendered preview dialog and its CSS.
+// srcDoc stays same-origin but avoids X-Frame-Options: DENY on normal page URLs.
 const DEVICES = [
   { key: "mobile", title: "Mobile portrait", width: 390, height: 844 },
   { key: "tablet", title: "Tablet portrait", width: 820, height: 1180 },
   { key: "desktop", title: "Desktop", width: 1440, height: 900 },
 ] as const;
 
-function inspectFrame(iframe: HTMLIFrameElement | null): string {
-  if (!iframe) return "Loading iframe...";
+function inspectFrame(frame: HTMLIFrameElement | null): string {
+  if (!frame) return "Waiting for iframe...";
   try {
-    const view = iframe.contentWindow;
-    const doc = iframe.contentDocument;
+    const view = frame.contentWindow;
+    const doc = frame.contentDocument;
     const dialog = doc?.querySelector<HTMLDialogElement>(".booking-success-dialog");
-    if (!view || !dialog || !dialog.open) return "Waiting for the real booking success dialog to open...";
+    if (!view || !dialog) return "Waiting for preview markup/styles...";
+    if (!dialog.open) dialog.showModal();
 
     const header = dialog.children.item(0) as HTMLElement | null;
     const details = dialog.querySelector<HTMLElement>(".booking-success-details");
     const actions = dialog.querySelector<HTMLElement>(".booking-success-actions");
     const summary = details?.lastElementChild as HTMLElement | null;
-    if (!header || !details || !actions || !summary) return "Missing modal section";
+    if (!header || !details || !actions || !summary) return "Missing dialog section";
 
+    const fmt = (n: number) => n.toFixed(1);
     const d = dialog.getBoundingClientRect();
     const h = header.getBoundingClientRect();
     const s = details.getBoundingClientRect();
     const a = actions.getBoundingClientRect();
     const last = summary.getBoundingClientRect();
-    const cs = view.getComputedStyle(dialog);
-    const detailStyle = view.getComputedStyle(details);
-
-    const fmt = (n: number) => n.toFixed(1);
-    const beforeActions = a.top - last.bottom;
-    const unaccounted = d.height - (h.height + s.height + a.height);
-    const contentOverflow = dialog.scrollHeight > dialog.clientHeight + 1;
-
+    const css = view.getComputedStyle(dialog);
+    const detailCss = view.getComputedStyle(details);
+    const sum = h.height + s.height + a.height;
     return [
-      `viewport=${view.innerWidth}x${view.innerHeight}; visualViewportHeight=${view.visualViewport?.height ?? "n/a"}`,
-      `dialog: top=${fmt(d.top)} h=${fmt(d.height)} maxH=${cs.maxHeight} heightCSS=${cs.height} display=${cs.display} overflowY=${cs.overflowY} clientH=${dialog.clientHeight} scrollH=${dialog.scrollHeight}`,
-      `header: top=${fmt(h.top)} h=${fmt(h.height)}`,
-      `details: top=${fmt(s.top)} h=${fmt(s.height)} paddingBottom=${detailStyle.paddingBottom}`,
-      `last-summary-card-bottom=${fmt(last.bottom)}`,
-      `actions: top=${fmt(a.top)} h=${fmt(a.height)}`,
+      `viewport=${view.innerWidth}x${view.innerHeight} visual=${view.visualViewport?.height ?? "n/a"}`,
+      `dialog: top=${fmt(d.top)} height=${fmt(d.height)} maxH=${css.maxHeight} heightCSS=${css.height} display=${css.display} overflowY=${css.overflowY} clientHeight=${dialog.clientHeight} scrollHeight=${dialog.scrollHeight}`,
+      `header: top=${fmt(h.top)} height=${fmt(h.height)}`,
+      `details: top=${fmt(s.top)} height=${fmt(s.height)} paddingBottom=${detailCss.paddingBottom}`,
+      `last-summary-bottom=${fmt(last.bottom)}`,
+      `actions: top=${fmt(a.top)} height=${fmt(a.height)}`,
       `GAP_between_details_and_actions=${fmt(a.top - s.bottom)}px`,
-      `GAP_from_last_card_to_actions=${fmt(beforeActions)}px (includes normal details padding)`,
-      `UNACCOUNTED_DIALOG_HEIGHT=${fmt(unaccounted)}px (allow for 2px border)`,
-      `CONTENT_OVERFLOW=${contentOverflow}`,
+      `GAP_from_last_card_to_actions=${fmt(a.top - last.bottom)}px (includes regular padding)`,
+      `UNACCOUNTED_DIALOG_HEIGHT=${fmt(d.height - sum)}px (includes border)`,
+      `CONTENT_OVERFLOW=${dialog.scrollHeight > dialog.clientHeight + 1}`,
+      `HORIZONTAL_OVERFLOW=${doc.documentElement.scrollWidth > view.innerWidth + 1}`,
     ].join("\n");
   } catch (error) {
-    return `Frame inspection blocked: ${String(error)}`;
+    return `Frame error: ${String(error)}`;
   }
 }
 
 export default function BookingLayoutMatrix() {
-  const frames = useRef<Record<string, HTMLIFrameElement | null>>({});
+  const [frameMarkup, setFrameMarkup] = useState("");
+  const [sourceStatus, setSourceStatus] = useState("Loading genuine preview dialog...");
   const [measurements, setMeasurements] = useState<Record<string, string>>({});
+  const frames = useRef<Record<string, HTMLIFrameElement | null>>({});
 
   useEffect(() => {
-    const measureAll = () => {
+    let active = true;
+    const loadSource = async () => {
+      try {
+        const response = await fetch("/booking-success-preview", { cache: "no-store" });
+        if (!response.ok) throw new Error(`Preview HTML HTTP ${response.status}`);
+        const html = await response.text();
+        const parsed = new DOMParser().parseFromString(html, "text/html");
+        const dialog = parsed.querySelector("dialog.booking-success-dialog");
+        if (!dialog) throw new Error("Booking success dialog missing from SSR HTML");
+        const sheets = Array.from(parsed.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]'))
+          .map((link) => link.href || link.getAttribute("href") || "")
+          .filter((href) => href.startsWith("/") || href.startsWith(window.location.origin))
+          .map((href) => `<link rel="stylesheet" href="${href.replaceAll('"', "&quot;")}" />`).join("\n");
+        if (!sheets) throw new Error("CSS stylesheet links missing from preview HTML");
+
+        // Raw SSR dialog markup has only static sample values. No scripts or API calls.
+        const source = `<!doctype html><html lang="vi"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><base href="${window.location.origin}/"/>${sheets}</head><body style="margin:0;background:#f5f2ee">${dialog.outerHTML}</body></html>`;
+        if (active) {
+          setFrameMarkup(source);
+          setSourceStatus("Actual SSR dialog + actual Next.js CSS loaded in srcDoc frames (no iframe page navigation)");
+        }
+      } catch (error) {
+        if (active) setSourceStatus(`Preview setup failed: ${String(error)}`);
+      }
+    };
+    void loadSource();
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!frameMarkup) return;
+    const measure = () => {
       const next = Object.fromEntries(DEVICES.map((device) =>
         [device.key, inspectFrame(frames.current[device.key])]));
       setMeasurements((prev) =>
         DEVICES.every((device) => prev[device.key] === next[device.key]) ? prev : next);
     };
-    const poll = window.setInterval(measureAll, 500);
-    measureAll();
+    const poll = window.setInterval(measure, 650);
+    measure();
     return () => window.clearInterval(poll);
-  }, []);
+  }, [frameMarkup]);
 
   return (
-    <main style={{ padding: 24, fontFamily: "sans-serif", background: "#f4f1ed", color: "#2b2521" }}>
+    <main style={{ padding: 24, fontFamily: "sans-serif", color: "#2b2521", background: "#f4f1ed" }}>
       <h1 style={{ fontSize: 24, fontWeight: 700 }}>Booking modal responsive viewport matrix</h1>
-      <p>No real bookings, API calls or customer information. Real popup markup; CSS viewports isolated in iframes.</p>
-      <p>Mobile 390×844 · Tablet 820×1180 · Desktop 1440×900. These are viewport simulations in a browser, not physical devices.</p>
+      <p>No real bookings, email, or API mutations. Actual SSR dialog markup and styles; 3 independent simulated CSS viewports.</p>
+      <p id="source-status">{sourceStatus}</p>
       {DEVICES.map((device) => (
         <section key={device.key} data-device={device.key} style={{ marginTop: 32 }}>
           <h2 style={{ fontSize: 20, fontWeight: 700 }}>{device.title} — {device.width}×{device.height}</h2>
@@ -82,14 +113,14 @@ export default function BookingLayoutMatrix() {
             {measurements[device.key] ?? "Measuring..."}
           </pre>
           <div style={{ maxWidth: "100%", overflowX: "auto", border: "1px solid #d6c9be", background: "#fff" }}>
-            <iframe
-              ref={(el) => { frames.current[device.key] = el; }}
+            {frameMarkup ? <iframe
+              ref={(element) => { frames.current[device.key] = element; }}
               title={device.title}
-              src="/booking-success-preview"
+              srcDoc={frameMarkup}
               width={device.width}
               height={device.height}
               style={{ display: "block", width: device.width, height: device.height, border: 0 }}
-            />
+            /> : null}
           </div>
         </section>
       ))}
