@@ -3,33 +3,29 @@
 .booking-success-dialog {
   width: min(calc(100% - 1.5rem), 35rem);
   max-width: 35rem;
-  /* Follow the actual content height. Only cap the dialog when the viewport
-     is too short; its details pane will then become scrollable. */
-  height: auto;
+  /* Content controls height; viewport height is only the upper bound.
+     The entire dialog scrolls if necessary, not an independently sized pane. */
+  height: fit-content;
   max-height: calc(100dvh - 1.5rem);
   margin: auto;
   padding: 0;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
   border-radius: clamp(1rem, 3vw, 1.75rem);
   box-shadow: 0 28px 90px rgba(48, 40, 35, 0.28);
 }
 
 .booking-success-dialog[open] {
-  display: flex;
+  /* Block flow prevents flex children from stretching to the height cap. */
+  display: block;
 }
 
 .booking-success-dialog::backdrop {
   background: rgba(45, 39, 35, 0.65);
   backdrop-filter: blur(2px);
-}
-
-.booking-success-details {
-  /* Natural content size at rest; shrink and scroll only when max-height hits. */
-  flex: 0 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin;
 }
 
 .booking-success-actions {
