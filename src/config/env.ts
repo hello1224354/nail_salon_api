@@ -90,5 +90,8 @@ export const env = {
     GMAIL_CLIENT_SECRET: asOptionalString("GMAIL_CLIENT_SECRET"),
     GMAIL_REFRESH_TOKEN: asOptionalString("GMAIL_REFRESH_TOKEN"),
     GMAIL_FROM_EMAIL: asOptionalString("GMAIL_FROM_EMAIL"),
+    // Preferred transactional email provider. No Google OAuth refresh token.
+    RESEND_API_KEY: asOptionalString("RESEND_API_KEY"),
+    RESEND_FROM_EMAIL: asOptionalString("RESEND_FROM_EMAIL"),
     GOOGLE_MAPS_URL: asOptionalString("GOOGLE_MAPS_URL"),
 };
