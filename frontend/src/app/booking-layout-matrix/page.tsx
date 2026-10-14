@@ -16,7 +16,7 @@ function inspectFrame(frame: HTMLIFrameElement | null): string {
     const view = frame.contentWindow;
     const doc = frame.contentDocument;
     const dialog = doc?.querySelector<HTMLDialogElement>(".booking-success-dialog");
-    if (!view || !dialog) return "Waiting for preview markup/styles...";
+    if (!view || !doc || !dialog) return "Waiting for preview markup/styles...";
     if (!dialog.open) dialog.showModal();
 
     const header = dialog.children.item(0) as HTMLElement | null;
