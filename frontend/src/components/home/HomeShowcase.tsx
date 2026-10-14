@@ -289,6 +289,59 @@ function ReviewsCarousel({ reviews }: { reviews: CustomerReview[] }) {
     );
 }
 
+
+type StudioDetail = { eyebrow: string; title: string; body: string };
+
+function DetailsCarousel({ details }: { details: StudioDetail[] }) {
+    const carousel = useAutoCarousel(details.length, 6200);
+    const [scrollable, setScrollable] = useState(false);
+
+    useEffect(() => {
+        const api = carousel.emblaApi;
+        if (!api) return;
+        const sync = () => setScrollable(api.canScrollNext() || api.canScrollPrev());
+        sync();
+        api.on("reInit", sync);
+        api.on("select", sync);
+        return () => {
+            api.off("reInit", sync);
+            api.off("select", sync);
+        };
+    }, [carousel.emblaApi]);
+
+    return (
+        <div className="relative mt-8">
+            <div ref={carousel.emblaRef} className="detail-carousel-viewport overflow-hidden">
+                <div className="-ml-4 flex">
+                    {details.map((item) => (
+                        <div key={item.title} className="detail-carousel-slide flex min-w-0 shrink-0 grow-0 pl-4">
+                            <article className="flex h-full w-full min-w-0 flex-col rounded-[22px] border border-line bg-surface p-[clamp(1rem,2.4vw,1.75rem)]">
+                                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-accent">{item.eyebrow}</p>
+                                <h3 className="fluid-card-title mt-4 font-serif">{item.title}</h3>
+                                <p className="mt-3 break-words text-sm leading-6 text-muted">{item.body}</p>
+                            </article>
+                        </div>
+                    ))}
+                </div>
+            </div>
+            {scrollable ? (
+                <>
+                    <CarouselArrows
+                        label="Thông tin về tiệm"
+                        onPrevious={() => carousel.emblaApi?.scrollPrev()}
+                        onNext={() => carousel.emblaApi?.scrollNext()}
+                    />
+                    <CarouselDots
+                        count={carousel.emblaApi?.scrollSnapList().length ?? details.length}
+                        selectedIndex={carousel.selectedIndex}
+                        onSelect={(index) => carousel.emblaApi?.scrollTo(index)}
+                    />
+                </>
+            ) : null}
+        </div>
+    );
+}
+
 export function HomeShowcase() {
     const { salonContent: resolvedContent, contentLoading, contentError } = useBranch();
 
@@ -375,15 +428,7 @@ export function HomeShowcase() {
                             </h2>
                         </div>
 
-                        <div className="fluid-card-grid mt-8">
-                            {details.map((item) => (
-                                <article key={item.title} className="min-w-0 rounded-[22px] border border-line bg-surface p-[clamp(1rem,2.4vw,1.75rem)]">
-                                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-accent">{item.eyebrow}</p>
-                                    <h3 className="fluid-card-title mt-4 font-serif">{item.title}</h3>
-                                    <p className="mt-3 break-words text-sm leading-6 text-muted">{item.body}</p>
-                                </article>
-                            ))}
-                        </div>
+                        <DetailsCarousel details={details} />
                     </div>
                 </section>
             ) : null}
