@@ -38,7 +38,10 @@ Backend `src/server.ts` gọi `AppDataSource.showMigrations()` ở production v�
 - `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` trỏ đúng DB và quyền tối thiểu.
 - `JWT_SECRET` dài/ngẫu nhiên; không tái sử dụng giữa staging/production.
 - `CORS_ORIGIN=https://serpentenailroom.site` cho website production; Origin check yêu cầu khớp chính xác cho refresh/logout. Không thay bằng URL deployment tạm hoặc domain cũ.
-- `GMAIL_*` đủ bốn biến, Gmail OAuth sender còn hiệu lực.
+- Gửi OTP/khôi phục mật khẩu: **ưu tiên Resend** khi có `RESEND_API_KEY` và `RESEND_FROM_EMAIL` (địa chỉ thuộc domain đã được Resend xác minh). Resend dùng API key phía server, không phụ thuộc Google OAuth refresh token hết hạn/thu hồi.
+- Chỉ khi **chưa** cấu hình `RESEND_API_KEY`, code mới dùng Gmail OAuth cũ (`GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN`, `GMAIL_FROM_EMAIL`). Nếu đặt Resend key nhưng thiếu sender, API sẽ báo thiếu cấu hình; không tự động gửi bằng Gmail.
+- Chuyển production sang Resend: (1) tạo tài khoản tại https://resend.com; (2) thêm và xác minh domain `serpentenailroom.site`, cấu hình bản ghi DNS đúng theo dashboard Resend, **không xóa MX nhận thư hoặc ghi đè SPF hiện có**; (3) tạo API key chỉ có quyền gửi; (4) đặt `RESEND_API_KEY` và `RESEND_FROM_EMAIL=no-reply@serpentenailroom.site` trong Railway service `api` production; (5) deploy lại service theo cấu hình Railway. Không thêm API key vào Git.
+- Resend loại bỏ rủi ro hết hạn 7 ngày do Google OAuth app ở chế độ Testing nhưng **không** bảo đảm 100% email luôn gửi được: API key có thể bị revoke, DNS bị sửa, provider gặp sự cố, hoặc tài khoản vượt giới hạn gửi. Theo dõi lỗi `Resend email send failed` trong runtime logs và dashboard nhà cung cấp.
 - Ảnh upload được lưu trong bảng `media_files` dưới dạng MEDIUMBLOB trong MySQL Railway. Không yêu cầu R2 hay secret bổ sung. Khi chạy migration, cần backup database trước. Hướng dẫn: [MEDIA-STORAGE](MEDIA-STORAGE.md).
 - `NEXT_PUBLIC_API_BASE_URL` cấu hình tại Vercel trước build.
 - Cookie production dùng `Secure`, cần HTTPS. Không test login thực qua HTTP.

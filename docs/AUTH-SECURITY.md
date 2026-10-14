@@ -54,9 +54,11 @@ Mã OTP được sinh và xác minh ở backend, không hard-code trong ứng d�
 - Audit log: login failures, MFA, security events; thành công với POST/PUT/DELETE có audit mutation best-effort. Lưu identifier/IP/UA dạng hash khi sử dụng trong security context.
 - Password lưu `password_hash` (bcryptjs trong users service); token_version phục vụ thu hồi JWT cũ.
 
-## Cấu hình Gmail
+## Cấu hình email OTP
 
-Gửi mail qua Gmail OAuth2: `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN`, `GMAIL_FROM_EMAIL`. Cấu hình thiếu → không tự bỏ qua OTP. Cần kiểm tra quyền gửi của refresh token, hạn quyền và quotas. Không đưa giá trị biến thật vào `.env.example`.
+Ưu tiên dịch vụ email giao dịch Resend (`RESEND_API_KEY`, `RESEND_FROM_EMAIL` từ domain đã xác minh), không phụ thuộc thời hạn OAuth của Google. Khi chưa cấu hình Resend, backend giữ đường Gmail OAuth2 cũ qua `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN`, `GMAIL_FROM_EMAIL`. Không có nhà cung cấp hợp lệ → trả lỗi, **không** tự bỏ qua OTP.
+
+Chỉ lưu API key và refresh token trong secrets manager/biến môi trường phía backend, không đưa vào Git hoặc `.env.example`. Xem [DEPLOYMENT](DEPLOYMENT.md) để cấu hình DNS và chuyển provider.
 
 ## Các điều cần kiểm tra khi troubleshooting
 
