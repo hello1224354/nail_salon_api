@@ -17,8 +17,8 @@ export function Footer() {
     return (
         <footer className="bg-studio-dark text-white">
             <div className="site-shell py-12 lg:py-14">
-                <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-[1.25fr_0.65fr_1.1fr] lg:gap-16">
-                    <div className="min-w-0 md:col-span-2 lg:col-span-1 lg:self-center">
+                <div className="grid gap-10 md:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)] xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.65fr)_minmax(0,1.15fr)] xl:gap-12">
+                    <div className="min-w-0 md:col-start-1 md:row-span-2 md:self-center xl:row-span-1">
                         <div className="flex items-center gap-4 sm:gap-5">
                             <Image
                                 src="/brand/serpente-logo.svg"
@@ -33,7 +33,7 @@ export function Footer() {
 
                     </div>
 
-                    <div>
+                    <div className="min-w-0 md:col-start-2 xl:col-start-auto">
                         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#bba18e]">
                             Khám phá
                         </p>
@@ -45,7 +45,7 @@ export function Footer() {
                         </nav>
                     </div>
 
-                    <div>
+                    <div className="min-w-0 md:col-start-2 xl:col-start-auto">
                         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#bba18e]">
                             Liên hệ
                         </p>
