@@ -3,6 +3,9 @@
 .booking-success-dialog {
   width: min(calc(100% - 1.5rem), 35rem);
   max-width: 35rem;
+  /* Give the scrollable details a real flex height instead of letting iPadOS
+     shrink them to a single row inside the native dialog. */
+  height: min(43rem, calc(100dvh - 1.5rem));
   max-height: calc(100dvh - 1.5rem);
   margin: auto;
   padding: 0;
@@ -21,9 +24,28 @@
 }
 
 .booking-success-details {
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
 }
 
 .booking-success-actions {
   padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+/* Keep the summary readable when the available viewport height is small. */
+@media (max-height: 36rem) {
+  .booking-success-dialog > :first-child {
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+  }
+
+  .booking-success-dialog #booking-success-title {
+    font-size: clamp(1.25rem, 3vw, 1.7rem);
+  }
+
+  .booking-success-dialog .booking-success-actions {
+    padding-top: 0.75rem;
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
 }
