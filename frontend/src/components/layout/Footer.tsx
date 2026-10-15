@@ -2,19 +2,80 @@
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import { useState, type MouseEvent } from "react";
 import { getInstagramUrl, getMapsSearchUrl, localizeBranchName } from "@/lib/studio-data";
 import { useBranch } from "@/components/branch/BranchProvider";
 
 const headingClass = "text-[11px] font-semibold uppercase tracking-[0.18em] text-[#bba18e]";
 const linkClass = "w-fit max-w-full [overflow-wrap:anywhere] text-white/80 transition-colors hover:text-[#d8c2b5]";
+const copyClass = "focus-ring rounded-sm text-[11px] text-white/55 underline decoration-white/35 underline-offset-4 transition-colors hover:text-white";
+
+// On tablets and phones, use native mail and dial apps rather than a web-only service.
+function prefersNativeContactApps() {
+    const userAgent = navigator.userAgent;
+    return /Android|iPhone|iPad|iPod|Mobile|Tablet|Silk|Kindle/i.test(userAgent)
+        || (/Macintosh/i.test(userAgent) && navigator.maxTouchPoints > 1)
+        || (window.matchMedia("(pointer: coarse)").matches && window.matchMedia("(hover: none)").matches);
+}
+
+async function copyContactText(value: string) {
+    try {
+        if (navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(value);
+            return true;
+        }
+    } catch {
+        // Clipboard permission may be unavailable; try the selection fallback.
+    }
+
+    const input = document.createElement("textarea");
+    input.value = value;
+    input.setAttribute("readonly", "");
+    input.style.position = "fixed";
+    input.style.left = "-9999px";
+    document.body.appendChild(input);
+    try {
+        input.select();
+        return document.execCommand("copy");
+    } catch {
+        return false;
+    } finally {
+        input.remove();
+    }
+}
 
 export function Footer() {
     const pathname = usePathname();
     const { branches, salonContent: content, contentLoading, contentError } = useBranch();
+    const [contactFeedback, setContactFeedback] = useState("");
+
+    const copyContact = async (value: string, description: string) => {
+        const copied = await copyContactText(value);
+        setContactFeedback(copied
+            ? `Đã sao chép ${description}.`
+            : `Không thể tự sao chép. ${description}: ${value}`);
+    };
+
+    const openEmail = (event: MouseEvent<HTMLAnchorElement>, address: string) => {
+        if (prefersNativeContactApps()) return;
+        event.preventDefault();
+        window.open(
+            `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(address)}`,
+            "_blank",
+            "noopener,noreferrer"
+        );
+    };
+
+    const openPhone = (event: MouseEvent<HTMLAnchorElement>, number: string, description: string) => {
+        if (prefersNativeContactApps()) return;
+        event.preventDefault();
+        void copyContact(number, description);
+    };
 
     if (pathname.startsWith("/admin")) return null;
 
     const instagramUrl = getInstagramUrl(content?.instagram_handle);
+    const contactEmail = content?.contact_email?.trim();
 
     return (
         <footer className="bg-studio-dark text-white">
@@ -84,14 +145,44 @@ export function Footer() {
                                         {branches.length > 1 ? (
                                             <p className="text-xs text-white/60">{localizeBranchName(branch.name)}</p>
                                         ) : null}
-                                        <a className={linkClass} href={phoneHref}>Hotline</a>
+                                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                                            <a
+                                                className={linkClass}
+                                                href={phoneHref}
+                                                onClick={(event) => openPhone(event, branch.phone!, `số điện thoại ${localizeBranchName(branch.name)}`)}
+                                            >
+                                                Hotline
+                                            </a>
+                                            <button
+                                                type="button"
+                                                className={copyClass}
+                                                aria-label={`Sao chép số điện thoại ${localizeBranchName(branch.name)}`}
+                                                onClick={() => void copyContact(branch.phone!, `số điện thoại ${localizeBranchName(branch.name)}`)}
+                                            >
+                                                Sao chép
+                                            </button>
+                                        </div>
                                     </div>
                                 ) : null;
                             })}
-                            {content?.contact_email ? (
-                                <a className={linkClass} href={`mailto:${content.contact_email}`}>
-                                    Email
-                                </a>
+                            {contactEmail ? (
+                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                                    <a
+                                        className={linkClass}
+                                        href={`mailto:${contactEmail}`}
+                                        onClick={(event) => openEmail(event, contactEmail)}
+                                    >
+                                        Email
+                                    </a>
+                                    <button
+                                        type="button"
+                                        className={copyClass}
+                                        aria-label="Sao chép địa chỉ email"
+                                        onClick={() => void copyContact(contactEmail, "địa chỉ email")}
+                                    >
+                                        Sao chép
+                                    </button>
+                                </div>
                             ) : null}
                             {instagramUrl ? (
                                 <a className={linkClass} href={instagramUrl} target="_blank" rel="noreferrer">
@@ -99,6 +190,11 @@ export function Footer() {
                                 </a>
                             ) : null}
                         </div>
+                        {contactFeedback ? (
+                            <p role="status" aria-live="polite" className="mt-3 text-xs text-white/75 [overflow-wrap:anywhere]">
+                                {contactFeedback}
+                            </p>
+                        ) : null}
                     </section>
                 </div>
 
