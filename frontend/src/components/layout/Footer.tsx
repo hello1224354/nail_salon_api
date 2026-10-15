@@ -2,13 +2,46 @@
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { useState, type MouseEvent } from "react";
+import { useEffect, useRef, useState, type MouseEvent } from "react";
 import { getInstagramUrl, getMapsSearchUrl, localizeBranchName } from "@/lib/studio-data";
 import { useBranch } from "@/components/branch/BranchProvider";
 
 const headingClass = "text-[11px] font-semibold uppercase tracking-[0.18em] text-[#bba18e]";
 const linkClass = "w-fit max-w-full [overflow-wrap:anywhere] text-white/80 transition-colors hover:text-[#d8c2b5]";
-const copyClass = "focus-ring rounded-sm text-[11px] text-white/55 underline decoration-white/35 underline-offset-4 transition-colors hover:text-white";
+const copyClass = "focus-ring inline-flex size-9 shrink-0 items-center justify-center rounded-sm text-white/65 transition-colors hover:text-white";
+
+function CopyContactButton({
+    copied,
+    label,
+    onCopy,
+}: {
+    copied: boolean;
+    label: string;
+    onCopy: () => void;
+}) {
+    const description = `${copied ? "Đã sao chép" : "Sao chép"} ${label}`;
+
+    return (
+        <button
+            type="button"
+            className={copyClass}
+            aria-label={description}
+            title={description}
+            onClick={onCopy}
+        >
+            {copied ? (
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="size-[18px]">
+                    <path d="m20 6-11 11-5-5" />
+                </svg>
+            ) : (
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="size-[18px]">
+                    <rect x="8" y="8" width="13" height="13" rx="2" />
+                    <path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3" />
+                </svg>
+            )}
+        </button>
+    );
+}
 
 // On tablets and phones, use native mail and dial apps rather than a web-only service.
 function prefersNativeContactApps() {
@@ -47,13 +80,32 @@ async function copyContactText(value: string) {
 export function Footer() {
     const pathname = usePathname();
     const { branches, salonContent: content, contentLoading, contentError } = useBranch();
-    const [contactFeedback, setContactFeedback] = useState("");
+    const [copiedContacts, setCopiedContacts] = useState<Record<string, boolean>>({});
+    const copyResetTimers = useRef<Record<string, number>>({});
 
-    const copyContact = async (value: string, description: string) => {
+    useEffect(() => {
+        const timers = copyResetTimers.current;
+        return () => {
+            Object.values(timers).forEach((timer) => window.clearTimeout(timer));
+        };
+    }, []);
+
+    const copyContact = async (value: string, key: string) => {
         const copied = await copyContactText(value);
-        setContactFeedback(copied
-            ? `Đã sao chép ${description}.`
-            : `Không thể tự sao chép. ${description}: ${value}`);
+        const previousTimer = copyResetTimers.current[key];
+        if (previousTimer !== undefined) {
+            window.clearTimeout(previousTimer);
+            delete copyResetTimers.current[key];
+        }
+
+        setCopiedContacts((previous) => ({ ...previous, [key]: copied }));
+
+        if (copied) {
+            copyResetTimers.current[key] = window.setTimeout(() => {
+                setCopiedContacts((previous) => ({ ...previous, [key]: false }));
+                delete copyResetTimers.current[key];
+            }, 2000);
+        }
     };
 
     const openEmail = (event: MouseEvent<HTMLAnchorElement>, address: string) => {
@@ -66,10 +118,10 @@ export function Footer() {
         );
     };
 
-    const openPhone = (event: MouseEvent<HTMLAnchorElement>, number: string, description: string) => {
+    const openPhone = (event: MouseEvent<HTMLAnchorElement>, number: string, key: string) => {
         if (prefersNativeContactApps()) return;
         event.preventDefault();
-        void copyContact(number, description);
+        void copyContact(number, key);
     };
 
     if (pathname.startsWith("/admin")) return null;
@@ -140,6 +192,8 @@ export function Footer() {
                                     ? `tel:${branch.phone.replace(/[^+\d]/g, "")}`
                                     : null;
 
+                                const phoneKey = `phone:${branch.id}`;
+
                                 return branch.phone && phoneHref ? (
                                     <div key={branch.id} className="min-w-0">
                                         {branches.length > 1 ? (
@@ -149,18 +203,15 @@ export function Footer() {
                                             <a
                                                 className={linkClass}
                                                 href={phoneHref}
-                                                onClick={(event) => openPhone(event, branch.phone!, `số điện thoại ${localizeBranchName(branch.name)}`)}
+                                                onClick={(event) => openPhone(event, branch.phone!, phoneKey)}
                                             >
                                                 Hotline
                                             </a>
-                                            <button
-                                                type="button"
-                                                className={copyClass}
-                                                aria-label={`Sao chép số điện thoại ${localizeBranchName(branch.name)}`}
-                                                onClick={() => void copyContact(branch.phone!, `số điện thoại ${localizeBranchName(branch.name)}`)}
-                                            >
-                                                Sao chép
-                                            </button>
+                                            <CopyContactButton
+                                                copied={Boolean(copiedContacts[phoneKey])}
+                                                label={`số điện thoại ${localizeBranchName(branch.name)}`}
+                                                onCopy={() => void copyContact(branch.phone!, phoneKey)}
+                                            />
                                         </div>
                                     </div>
                                 ) : null;
@@ -174,14 +225,11 @@ export function Footer() {
                                     >
                                         Email
                                     </a>
-                                    <button
-                                        type="button"
-                                        className={copyClass}
-                                        aria-label="Sao chép địa chỉ email"
-                                        onClick={() => void copyContact(contactEmail, "địa chỉ email")}
-                                    >
-                                        Sao chép
-                                    </button>
+                                    <CopyContactButton
+                                        copied={Boolean(copiedContacts.email)}
+                                        label="địa chỉ email"
+                                        onCopy={() => void copyContact(contactEmail, "email")}
+                                    />
                                 </div>
                             ) : null}
                             {instagramUrl ? (
@@ -190,11 +238,6 @@ export function Footer() {
                                 </a>
                             ) : null}
                         </div>
-                        {contactFeedback ? (
-                            <p role="status" aria-live="polite" className="mt-3 text-xs text-white/75 [overflow-wrap:anywhere]">
-                                {contactFeedback}
-                            </p>
-                        ) : null}
                     </section>
                 </div>
 
