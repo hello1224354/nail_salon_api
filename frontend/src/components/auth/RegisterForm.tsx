@@ -185,7 +185,7 @@ export function RegisterForm() {
                 {codeSent ? (
                     <div className="sm:col-span-2">
                         <div className="rounded-[12px] border border-line bg-tint/45 px-4 py-3 text-xs leading-5 text-muted">
-                            Mã OTP 6 số đã được gửi tới{" "}
+                            Nếu email có thể đăng ký, mã OTP 6 số sẽ được gửi tới{" "}
                             <span className="font-semibold text-ink">{maskedEmail}</span>. Mã có hiệu lực trong 5 phút.
                         </div>
 
