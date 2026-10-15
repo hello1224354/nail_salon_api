@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { getInstagramUrl, getMapsSearchUrl, localizeBranchName } from "@/lib/studio-data";
@@ -17,23 +16,8 @@ export function Footer() {
     return (
         <footer className="bg-studio-dark text-white">
             <div className="site-shell py-12 lg:py-14">
-                <div className="grid gap-10 md:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)] xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.65fr)_minmax(0,1.15fr)] xl:gap-12">
-                    <div className="min-w-0 md:col-start-1 md:row-span-2 md:self-center xl:row-span-1">
-                        <div className="flex items-center gap-4 sm:gap-5">
-                            <Image
-                                src="/brand/serpente-logo.svg"
-                                alt=""
-                                width={80}
-                                height={80}
-                                className="size-14 shrink-0 object-contain sm:size-16 xl:size-20"
-                            />
-                            <span className="min-w-0 font-serif text-3xl leading-[1.12] tracking-[-0.025em] sm:text-[2.125rem] lg:text-[clamp(2rem,2.4vw,3rem)]">{content?.display_name || "Serpente Nail Room"}</span>
-                        </div>
-                        {contentError && !contentLoading ? <p role="status" className="mt-2 text-xs text-[#f2bcb2]">{contentError}</p> : null}
-
-                    </div>
-
-                    <div className="min-w-0 md:col-start-2 xl:col-start-auto">
+                <div className="grid gap-10 md:grid-cols-[minmax(0,0.65fr)_minmax(0,1.35fr)] xl:gap-12">
+                    <div className="min-w-0">
                         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#bba18e]">
                             Khám phá
                         </p>
@@ -45,10 +29,11 @@ export function Footer() {
                         </nav>
                     </div>
 
-                    <div className="min-w-0 md:col-start-2 xl:col-start-auto">
+                    <div className="min-w-0">
                         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#bba18e]">
                             Liên hệ
                         </p>
+                        {contentError && !contentLoading ? <p role="status" className="mt-2 text-xs text-[#f2bcb2]">{contentError}</p> : null}
                         <div className="mt-4 space-y-5">
                             {branches.map((branch) => {
                                 const branchMapsUrl = getMapsSearchUrl(branch.address);
