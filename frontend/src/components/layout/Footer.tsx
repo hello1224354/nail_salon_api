@@ -16,7 +16,7 @@ export function Footer() {
 
     return (
         <footer className="bg-studio-dark text-white">
-            <div className="site-shell py-12 lg:py-14">
+            <div className="site-shell py-12 pb-[calc(3rem+env(safe-area-inset-bottom,0px))] lg:py-14 lg:pb-[calc(3.5rem+env(safe-area-inset-bottom,0px))]">
                 <div className="grid gap-10 md:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)] xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.65fr)_minmax(0,1.15fr)] xl:gap-12">
                     <div className="min-w-0 md:col-start-1 md:row-span-2 md:self-center xl:row-span-1">
                         <div className="flex items-center gap-4 sm:gap-5">
