@@ -226,10 +226,11 @@ function DetailsCarousel({ details }: { details: StudioDetail[] }) {
             playOnInit: false,
             stopOnInteraction: false,
             stopOnMouseEnter: true,
+            stopOnLastSnap: false,
         })
     );
     const [emblaRef, emblaApi] = useEmblaCarousel(
-        { loop: false, align: "start", containScroll: "trimSnaps", slidesToScroll: 1 },
+        { loop: details.length > 1, align: "start", containScroll: "trimSnaps", slidesToScroll: 1 },
         [autoplay]
     );
     const [selectedIndex, setSelectedIndex] = useState(0);
