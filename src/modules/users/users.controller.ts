@@ -35,6 +35,8 @@ const IP_LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const IP_LOGIN_FAILURE_LIMIT = 5;
 const MFA_SEND_WINDOW_MS = 15 * 60 * 1000;
 const MFA_SEND_LIMIT = 5;
+const REGISTRATION_CODE_MIN_RESPONSE_MS = 1_500;
+const REGISTRATION_CODE_JITTER_MS = 250;
 const PASSWORD_RESET_MIN_RESPONSE_MS = 1_500;
 const PASSWORD_RESET_JITTER_MS = 250;
 
@@ -81,15 +83,25 @@ function requestSecurityContext(req: Request, res: Response) {
 }
 
 export const requestRegistrationCode = async (req: Request, res: Response) => {
+    const startedAt = Date.now();
     const data = parseRegistrationVerificationRequestDto(req.body);
-    const verification = await registrationVerificationService.requestRegistrationVerification(data.email);
+
+    // Registered and unregistered addresses must receive the same public
+    // status, payload shape, and approximate response timing.
+    await registrationVerificationService.requestRegistrationVerification(data.email);
+    await waitForMinimumDuration(
+        startedAt,
+        REGISTRATION_CODE_MIN_RESPONSE_MS,
+        REGISTRATION_CODE_JITTER_MS
+    );
+    res.setHeader("Cache-Control", "no-store");
 
     return res.status(202).json({
         success: {
-            message: "Registration verification code sent",
+            message: "If this email can be registered, a verification code will be sent.",
             data: {
-                masked_email: verification.maskedEmail,
-                expires_at: verification.expiresAt,
+                masked_email: loginMfaService.maskEmail(data.email),
+                expires_at: new Date(startedAt + 5 * 60 * 1000),
             },
         },
     });
@@ -149,7 +161,7 @@ export const loginUser = async (req: Request, res: Response) => {
     try {
         const user = await userService.loginUser(credentials);
 
-        const usesOtp = user.role === UserRole.ADMIN || user.role === UserRole.CUSTOMER;
+        const usesOtp = user.role === UserRole.ADMIN || user.role === UserRole.CUSTOMER || user.role === UserRole.STAFF;
         const trustedProof = usesOtp ? readTrustedLoginCookie(req, user.id) : null;
         const trusted = usesOtp && await isTrustedLoginDevice(
             user,
@@ -264,7 +276,7 @@ export const verifyLoginMfa = async (req: Request, res: Response) => {
         const verified = await loginMfaService.verifyLoginMfaChallenge(data.challenge_id, data.code);
         const { user } = verified;
 
-        if (user.role !== UserRole.ADMIN && user.role !== UserRole.CUSTOMER) {
+        if (user.role !== UserRole.ADMIN && user.role !== UserRole.CUSTOMER && user.role !== UserRole.STAFF) {
             throw new AppError("Invalid or expired MFA code", 401, "INVALID_MFA_CODE");
         }
 

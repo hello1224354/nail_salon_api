@@ -7,7 +7,6 @@ import { RegistrationEmailChallenge } from "./registration-email-challenge.entit
 import { User, UserRole } from "./users.entity";
 import type { RegisterUserDto } from "./users.dto";
 import * as userService from "./users.service";
-import { maskEmail } from "./login-mfa.service";
 import { sendPlainTextEmail } from "./email.service";
 
 const challengeRepo = AppDataSource.getRepository(RegistrationEmailChallenge);
@@ -37,11 +36,9 @@ export async function requestRegistrationVerification(email: string) {
         });
 
         if (existing) {
-            throw new AppError(
-                "Unable to create account with the supplied information",
-                409,
-                "REGISTRATION_UNAVAILABLE"
-            );
+            // Never disclose whether an address is already registered.
+            // In particular, do not create or send another OTP for it.
+            return null;
         }
 
         await registrationRepo.update(
@@ -65,6 +62,8 @@ export async function requestRegistrationVerification(email: string) {
         return { challenge, code };
     });
 
+    if (!issued) return;
+
     try {
         await sendPlainTextEmail(
             email,
@@ -77,17 +76,15 @@ export async function requestRegistrationVerification(email: string) {
             ].join("\n")
         );
     } catch (error) {
+        // A provider failure must not distinguish unregistered addresses
+        // from registered ones via the public HTTP status. Invalidate the
+        // unsent code; the client can request another one.
         await challengeRepo.update(
             { id: issued.challenge.id },
             { consumed_at: new Date() }
         );
-        throw error;
+        console.error("Registration verification email delivery failed", error);
     }
-
-    return {
-        maskedEmail: maskEmail(email),
-        expiresAt: issued.challenge.expires_at,
-    };
 }
 
 export async function registerVerifiedUser(data: RegisterUserDto, code: string) {
