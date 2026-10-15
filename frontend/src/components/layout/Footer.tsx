@@ -76,7 +76,7 @@ export function Footer() {
                         <div className="mt-5 flex flex-col items-start gap-3 text-sm leading-6">
                             {branches.map((branch) => {
                                 const phoneHref = branch.phone
-                                    ? `tel:${branch.phone.replace(/[^+\\d]/g, "")}`
+                                    ? `tel:${branch.phone.replace(/[^+\d]/g, "")}`
                                     : null;
 
                                 return branch.phone && phoneHref ? (
