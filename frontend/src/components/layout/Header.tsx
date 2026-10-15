@@ -200,7 +200,7 @@ export function Header() {
 
     return (
         <header className="sticky top-0 z-50 border-b border-line bg-cream/95 shadow-[0_1px_0_rgba(48,40,35,0.02)] backdrop-blur-md">
-            <div className="site-shell grid h-[76px] grid-cols-[1fr_auto_1fr] items-center">
+            <div className="site-shell grid h-[76px] grid-cols-[minmax(0,1fr)_auto] items-center xl:grid-cols-[1fr_auto_1fr]">
                 <Link href="/" aria-label="Trang chủ Serpente Nail Room" className="focus-ring col-start-1 row-start-1 justify-self-start rounded-md" onClick={() => setMobileOpen(false)}>
                     <Logo />
                 </Link>
@@ -318,7 +318,7 @@ export function Header() {
 
                 <button
                     type="button"
-                    className="focus-ring col-start-3 row-start-1 flex size-10 items-center justify-center justify-self-end rounded-full border border-line bg-surface xl:hidden"
+                    className="focus-ring col-start-2 row-start-1 flex size-10 items-center justify-center justify-self-end rounded-full border border-line bg-surface xl:hidden"
                     aria-label={mobileOpen ? "Đóng menu" : "Mở menu"}
                     aria-expanded={mobileOpen}
                     onClick={() => setMobileOpen((value) => !value)}
