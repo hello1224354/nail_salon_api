@@ -16,7 +16,7 @@ export function Footer() {
     return (
         <footer className="bg-studio-dark text-white">
             <div className="site-shell py-12 sm:py-14 lg:py-16">
-                <div className="mx-auto grid w-full gap-x-10 gap-y-10 md:w-[90%] md:grid-cols-[minmax(0,0.35fr)_minmax(0,0.65fr)] lg:gap-x-14 xl:w-[78%]">
+                <div className="mx-auto grid w-full gap-x-8 gap-y-10 md:w-[90%] md:grid-cols-[minmax(0,0.35fr)_minmax(0,0.65fr)] lg:w-[80%] xl:w-[65%] 2xl:w-[52%]">
                     <div className="min-w-0">
                         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#bba18e]">
                             Khám phá
@@ -103,9 +103,8 @@ export function Footer() {
                     </div>
                 </div>
 
-                <div className="mx-auto mt-12 flex w-full items-center justify-between gap-4 border-t border-white/15 pt-5 text-[11px] text-[#bfb0a4] md:w-[90%] xl:w-[78%]">
+                <div className="mx-auto mt-12 w-full border-t border-white/15 pt-5 text-[11px] text-[#bfb0a4] md:w-[90%] lg:w-[80%] xl:w-[65%] 2xl:w-[52%]">
                     <span>© 2026 Serpente Nail Room</span>
-                    <span className="text-right uppercase tracking-[0.14em]">Nail Studio</span>
                 </div>
             </div>
         </footer>
