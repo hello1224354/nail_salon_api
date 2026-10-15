@@ -62,67 +62,6 @@ function useAutoCarousel(itemCount: number, delay: number) {
     return { emblaRef, emblaApi, selectedIndex };
 }
 
-function ArrowIcon({ direction }: { direction: "left" | "right" }) {
-    return (
-        <svg
-            aria-hidden="true"
-            viewBox="0 0 24 24"
-            className="size-7 shrink-0"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.8"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-        >
-            {direction === "left" ? (
-                <>
-                    <path d="M14.5 5 7.5 12l7 7" />
-                    <path d="M8 12h9" />
-                </>
-            ) : (
-                <>
-                    <path d="m9.5 5 7 7-7 7" />
-                    <path d="M16 12H7" />
-                </>
-            )}
-        </svg>
-    );
-}
-
-function CarouselArrows({
-    onPrevious,
-    onNext,
-    label,
-}: {
-    onPrevious: () => void;
-    onNext: () => void;
-    label: string;
-}) {
-    const buttonClass =
-        "focus-ring pointer-events-auto flex size-11 items-center justify-center rounded-full border border-line bg-surface/95 font-semibold text-ink shadow-[0_10px_30px_rgba(48,40,35,0.12)] backdrop-blur-sm transition hover:bg-tint";
-
-    return (
-        <div className="pointer-events-none absolute inset-x-3 top-1/2 z-20 hidden -translate-y-1/2 items-center justify-between lg:flex">
-            <button
-                type="button"
-                aria-label={`${label} trước`}
-                className={buttonClass}
-                onClick={onPrevious}
-            >
-                <ArrowIcon direction="left" />
-            </button>
-            <button
-                type="button"
-                aria-label={`${label} tiếp theo`}
-                className={buttonClass}
-                onClick={onNext}
-            >
-                <ArrowIcon direction="right" />
-            </button>
-        </div>
-    );
-}
-
 function CarouselDots({
     count,
     selectedIndex,
@@ -135,7 +74,7 @@ function CarouselDots({
     if (count <= 1) return null;
 
     return (
-        <div className="mt-5 flex items-center justify-center gap-2" aria-label="Chọn nội dung">
+        <div className="mt-5 flex items-center justify-center gap-2.5" aria-label="Chọn nội dung">
             {Array.from({ length: count }, (_, index) => (
                 <button
                     key={index}
@@ -144,7 +83,7 @@ function CarouselDots({
                     aria-current={index === selectedIndex ? "true" : undefined}
                     onClick={() => onSelect(index)}
                     className={`focus-ring rounded-full transition-all duration-300 ${
-                        index === selectedIndex ? "h-1.5 w-6 bg-accent" : "size-1.5 bg-accent/30 hover:bg-accent/60"
+                        index === selectedIndex ? "h-2 w-7 bg-accent" : "size-2 bg-accent/30 hover:bg-accent/60"
                     }`}
                 />
             ))}
@@ -216,13 +155,6 @@ function HotTrendCarousel({ items }: { items: InstagramTrendItem[] }) {
                     ))}
                 </div>
             </div>
-            {items.length > 1 ? (
-                <CarouselArrows
-                    label="Mẫu hot trend"
-                    onPrevious={() => carousel.emblaApi?.scrollPrev()}
-                    onNext={() => carousel.emblaApi?.scrollNext()}
-                />
-            ) : null}
             <CarouselDots
                 count={items.length}
                 selectedIndex={carousel.selectedIndex}
@@ -273,13 +205,6 @@ function ReviewsCarousel({ reviews }: { reviews: CustomerReview[] }) {
                     ))}
                 </div>
             </div>
-            {reviews.length > 1 ? (
-                <CarouselArrows
-                    label="Đánh giá"
-                    onPrevious={() => carousel.emblaApi?.scrollPrev()}
-                    onNext={() => carousel.emblaApi?.scrollNext()}
-                />
-            ) : null}
             <CarouselDots
                 count={reviews.length}
                 selectedIndex={carousel.selectedIndex}
@@ -309,8 +234,6 @@ function DetailsCarousel({ details }: { details: StudioDetail[] }) {
     );
     const [selectedIndex, setSelectedIndex] = useState(0);
     const [snapCount, setSnapCount] = useState(1);
-    const [canScrollPrev, setCanScrollPrev] = useState(false);
-    const [canScrollNext, setCanScrollNext] = useState(false);
 
     useEffect(() => {
         if (!emblaApi) return;
@@ -320,8 +243,6 @@ function DetailsCarousel({ details }: { details: StudioDetail[] }) {
             const count = emblaApi.scrollSnapList().length;
             setSnapCount(count);
             setSelectedIndex(emblaApi.selectedScrollSnap());
-            setCanScrollPrev(emblaApi.canScrollPrev());
-            setCanScrollNext(emblaApi.canScrollNext());
 
             // Avoid autoplay when the whole row already fits or motion is reduced.
             if (count <= 1 || reducedMotion.matches) autoplay.stop();
@@ -355,40 +276,11 @@ function DetailsCarousel({ details }: { details: StudioDetail[] }) {
                     ))}
                 </div>
             </div>
-            {snapCount > 1 ? (
-                <div className="mt-5 flex items-center justify-center gap-4">
-                    <button
-                        type="button"
-                        aria-label="Thông tin về tiệm trước"
-                        disabled={!canScrollPrev}
-                        onClick={() => emblaApi?.scrollPrev()}
-                        className="focus-ring flex size-11 shrink-0 items-center justify-center rounded-full border border-line bg-surface text-ink transition-colors hover:bg-tint disabled:cursor-not-allowed disabled:opacity-35"
-                    >
-                        <ArrowIcon direction="left" />
-                    </button>
-                    <div className="flex items-center justify-center gap-2" role="group" aria-label="Chọn thẻ thông tin">
-                        {Array.from({ length: snapCount }, (_, index) => (
-                            <button
-                                key={index}
-                                type="button"
-                                aria-label={`Xem nhóm thông tin ${index + 1}`}
-                                aria-current={index === selectedIndex ? "true" : undefined}
-                                onClick={() => emblaApi?.scrollTo(index)}
-                                className={`focus-ring rounded-full transition-all duration-300 ${index === selectedIndex ? "h-1.5 w-6 bg-accent" : "size-1.5 bg-accent/30 hover:bg-accent/60"}`}
-                            />
-                        ))}
-                    </div>
-                    <button
-                        type="button"
-                        aria-label="Thông tin về tiệm tiếp theo"
-                        disabled={!canScrollNext}
-                        onClick={() => emblaApi?.scrollNext()}
-                        className="focus-ring flex size-11 shrink-0 items-center justify-center rounded-full border border-line bg-surface text-ink transition-colors hover:bg-tint disabled:cursor-not-allowed disabled:opacity-35"
-                    >
-                        <ArrowIcon direction="right" />
-                    </button>
-                </div>
-            ) : null}
+            <CarouselDots
+                count={snapCount}
+                selectedIndex={selectedIndex}
+                onSelect={(index) => emblaApi?.scrollTo(index)}
+            />
         </div>
     );
 }

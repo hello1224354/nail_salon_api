@@ -149,7 +149,7 @@ export function CurrentOffers({ offers, instagramHandle }: CurrentOffersProps) {
                                 </div>
 
                                 {offers.length > 1 ? (
-                                    <div className="mt-7 flex items-center gap-2" aria-label="Chọn ưu đãi">
+                                    <div className="mt-7 flex items-center gap-2.5" aria-label="Chọn ưu đãi">
                                         {offers.map((_, dotIndex) => (
                                             <button
                                                 key={dotIndex}
@@ -158,8 +158,8 @@ export function CurrentOffers({ offers, instagramHandle }: CurrentOffersProps) {
                                                 aria-current={dotIndex === selectedIndex ? "true" : undefined}
                                                 className={`focus-ring rounded-full transition-all ${
                                                     dotIndex === selectedIndex
-                                                        ? "h-1.5 w-5 bg-accent"
-                                                        : "size-1.5 bg-accent/35 hover:bg-accent/60"
+                                                        ? "h-2 w-7 bg-accent"
+                                                        : "size-2 bg-accent/35 hover:bg-accent/60"
                                                 }`}
                                                 onClick={() => emblaApi?.scrollTo(dotIndex)}
                                             />
@@ -184,50 +184,6 @@ export function CurrentOffers({ offers, instagramHandle }: CurrentOffersProps) {
                 </div>
             </div>
 
-            {offers.length > 1 ? (
-                <div className="pointer-events-none absolute inset-x-3 top-1/2 z-20 hidden -translate-y-1/2 items-center justify-between lg:flex">
-                    <button
-                        type="button"
-                        aria-label="Ưu đãi trước"
-                        className="focus-ring pointer-events-auto flex size-11 items-center justify-center rounded-full border border-line bg-surface/95 font-semibold text-ink shadow-[0_10px_30px_rgba(48,40,35,0.12)] backdrop-blur-sm transition hover:bg-tint"
-                        onClick={() => emblaApi?.scrollPrev()}
-                    >
-                        <svg
-                            aria-hidden="true"
-                            viewBox="0 0 24 24"
-                            className="size-7 shrink-0"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="1.8"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                        >
-                            <path d="M14.5 5 7.5 12l7 7" />
-                            <path d="M8 12h9" />
-                        </svg>
-                    </button>
-                    <button
-                        type="button"
-                        aria-label="Ưu đãi tiếp theo"
-                        className="focus-ring pointer-events-auto flex size-11 items-center justify-center rounded-full border border-line bg-surface/95 font-semibold text-ink shadow-[0_10px_30px_rgba(48,40,35,0.12)] backdrop-blur-sm transition hover:bg-tint"
-                        onClick={() => emblaApi?.scrollNext()}
-                    >
-                        <svg
-                            aria-hidden="true"
-                            viewBox="0 0 24 24"
-                            className="size-7 shrink-0"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="1.8"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                        >
-                            <path d="m9.5 5 7 7-7 7" />
-                            <path d="M16 12H7" />
-                        </svg>
-                    </button>
-                </div>
-            ) : null}
         </div>
     );
 }
