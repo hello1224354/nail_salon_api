@@ -5,6 +5,9 @@ import Link from "next/link";
 import { getInstagramUrl, getMapsSearchUrl, localizeBranchName } from "@/lib/studio-data";
 import { useBranch } from "@/components/branch/BranchProvider";
 
+const headingClass = "text-[11px] font-semibold uppercase tracking-[0.18em] text-[#bba18e]";
+const linkClass = "w-fit max-w-full [overflow-wrap:anywhere] text-white/80 transition-colors hover:text-[#d8c2b5]";
+
 export function Footer() {
     const pathname = usePathname();
     const { branches, salonContent: content, contentLoading, contentError } = useBranch();
@@ -16,94 +19,90 @@ export function Footer() {
     return (
         <footer className="bg-studio-dark text-white">
             <div className="site-shell py-12 sm:py-14 lg:py-16">
-                <div className="mx-auto grid w-full gap-x-8 gap-y-10 md:w-[90%] md:grid-cols-[minmax(0,0.35fr)_minmax(0,0.65fr)] lg:w-[80%] xl:w-[65%] 2xl:w-[52%]">
-                    <div className="min-w-0">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#bba18e]">
-                            Khám phá
-                        </p>
-                        <nav aria-label="Khám phá" className="mt-5 flex flex-col gap-3 text-sm text-white/90">
-                            <Link className="w-fit transition-colors hover:text-[#d8c2b5]" href="/">Trang chủ</Link>
-                            <Link className="w-fit transition-colors hover:text-[#d8c2b5]" href="/services">Bảng giá</Link>
-                            <Link className="w-fit transition-colors hover:text-[#d8c2b5]" href="/appointments">Lịch của tôi</Link>
+                <div className="grid grid-cols-2 gap-x-6 gap-y-12 sm:gap-x-10 lg:grid-cols-4 lg:gap-x-12">
+                    <section className="min-w-0">
+                        <h2 className={headingClass}>Khám phá</h2>
+                        <nav aria-label="Khám phá" className="mt-5 flex flex-col items-start gap-3 text-sm">
+                            <Link className={linkClass} href="/">Trang chủ</Link>
+                            <Link className={linkClass} href="/services">Bảng giá</Link>
                         </nav>
-                        <Link
-                            href="/book"
-                            className="focus-ring mt-6 inline-flex w-fit items-center gap-3 rounded-full border border-[#9a7767]/70 bg-white/5 px-5 py-2.5 text-xs font-semibold tracking-[0.03em] text-white transition-colors hover:border-[#c6aa97] hover:bg-white/10"
-                        >
-                            Đặt lịch
-                            <span aria-hidden="true" className="text-sm leading-none text-[#d7bdab]">↗</span>
-                        </Link>
-                    </div>
+                    </section>
 
-                    <div className="min-w-0">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#bba18e]">
-                            Liên hệ
-                        </p>
-                        {contentError && !contentLoading ? <p role="status" className="mt-2 text-xs text-[#f2bcb2]">{contentError}</p> : null}
-                        <div className="mt-5 space-y-7">
+                    <section className="min-w-0">
+                        <h2 className={headingClass}>Lịch hẹn</h2>
+                        <nav aria-label="Lịch hẹn" className="mt-5 flex flex-col items-start gap-3 text-sm">
+                            <Link className={linkClass} href="/book">Đặt lịch</Link>
+                            <Link className={linkClass} href="/appointments">Lịch của tôi</Link>
+                        </nav>
+                    </section>
+
+                    <section className="min-w-0">
+                        <h2 className={headingClass}>Chi nhánh</h2>
+                        <div className="mt-5 space-y-6">
                             {branches.map((branch) => {
                                 const branchMapsUrl = getMapsSearchUrl(branch.address);
-                                const phoneHref = branch.phone
-                                    ? `tel:${branch.phone.replace(/[^+\d]/g, "")}`
-                                    : null;
 
                                 return (
-                                    <div key={branch.id} className="space-y-3">
-                                        <p className="font-serif text-[clamp(1.4rem,2vw,1.8rem)] leading-tight tracking-[-0.025em] text-white">
-                                            {localizeBranchName(branch.name)}
-                                        </p>
-                                        <div className="space-y-3 text-sm leading-6 text-white/80">
-                                            {branch.address ? (
-                                                branchMapsUrl ? (
-                                                    <a
-                                                        href={branchMapsUrl}
-                                                        target="_blank"
-                                                        rel="noreferrer"
-                                                        className="block max-w-[56ch] [overflow-wrap:anywhere] transition-colors hover:text-[#d8c2b5]"
-                                                    >
-                                                        {branch.address}
-                                                    </a>
-                                                ) : (
-                                                    <p className="max-w-[56ch] [overflow-wrap:anywhere]">{branch.address}</p>
-                                                )
-                                            ) : null}
-                                            {(branch.phone || branch.opening_hours) ? (
-                                                <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-[13px] text-white/75">
-                                                    {branch.phone && phoneHref ? (
-                                                        <a className="w-fit transition-colors hover:text-[#d8c2b5]" href={phoneHref}>
-                                                            {branch.phone}
-                                                        </a>
-                                                    ) : null}
-                                                    {branch.opening_hours ? <p>Mở cửa: {branch.opening_hours}</p> : null}
-                                                </div>
-                                            ) : null}
-                                        </div>
+                                    <div key={branch.id} className="space-y-2 text-sm leading-6">
+                                        <p className="font-medium text-white">{localizeBranchName(branch.name)}</p>
+                                        {branch.address ? (
+                                            branchMapsUrl ? (
+                                                <a
+                                                    href={branchMapsUrl}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="block [overflow-wrap:anywhere] text-white/75 transition-colors hover:text-[#d8c2b5]"
+                                                >
+                                                    {branch.address}
+                                                </a>
+                                            ) : (
+                                                <p className="[overflow-wrap:anywhere] text-white/75">{branch.address}</p>
+                                            )
+                                        ) : null}
+                                        {branch.opening_hours ? (
+                                            <p className="text-white/75">Mở cửa: {branch.opening_hours}</p>
+                                        ) : null}
                                     </div>
                                 );
                             })}
+                        </div>
+                    </section>
 
-                            {(content?.contact_email || instagramUrl) ? (
-                                <div className="flex flex-wrap items-center gap-x-7 gap-y-2 pt-1 text-[13px] text-white/80">
-                                    {content?.contact_email ? (
-                                        <a
-                                            className="w-fit max-w-full [overflow-wrap:anywhere] transition-colors hover:text-[#d8c2b5]"
-                                            href={`mailto:${content.contact_email}`}
-                                        >
-                                            {content.contact_email}
-                                        </a>
-                                    ) : null}
-                                    {instagramUrl ? (
-                                        <a href={instagramUrl} target="_blank" rel="noreferrer" className="w-fit max-w-full [overflow-wrap:anywhere] transition-colors hover:text-[#d8c2b5]">
-                                            Instagram
-                                        </a>
-                                    ) : null}
-                                </div>
+                    <section className="min-w-0">
+                        <h2 className={headingClass}>Kết nối</h2>
+                        {contentError && !contentLoading ? (
+                            <p role="status" className="mt-2 text-xs text-[#f2bcb2]">{contentError}</p>
+                        ) : null}
+                        <div className="mt-5 flex flex-col items-start gap-3 text-sm leading-6">
+                            {branches.map((branch) => {
+                                const phoneHref = branch.phone
+                                    ? `tel:${branch.phone.replace(/[^+\\d]/g, "")}`
+                                    : null;
+
+                                return branch.phone && phoneHref ? (
+                                    <div key={branch.id} className="min-w-0">
+                                        {branches.length > 1 ? (
+                                            <p className="text-xs text-white/60">{localizeBranchName(branch.name)}</p>
+                                        ) : null}
+                                        <a className={linkClass} href={phoneHref}>{branch.phone}</a>
+                                    </div>
+                                ) : null;
+                            })}
+                            {content?.contact_email ? (
+                                <a className={linkClass} href={`mailto:${content.contact_email}`}>
+                                    {content.contact_email}
+                                </a>
+                            ) : null}
+                            {instagramUrl ? (
+                                <a className={linkClass} href={instagramUrl} target="_blank" rel="noreferrer">
+                                    Instagram
+                                </a>
                             ) : null}
                         </div>
-                    </div>
+                    </section>
                 </div>
 
-                <div className="mx-auto mt-12 w-full border-t border-white/15 pt-5 text-[11px] text-[#bfb0a4] md:w-[90%] lg:w-[80%] xl:w-[65%] 2xl:w-[52%]">
+                <div className="mt-12 border-t border-white/15 pt-5 text-[11px] text-[#bfb0a4]">
                     <span>© 2026 Serpente Nail Room</span>
                 </div>
             </div>
