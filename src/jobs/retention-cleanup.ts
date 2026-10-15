@@ -4,6 +4,7 @@ import mysql from "mysql2/promise";
 const AUDIT_RETENTION_DAYS = 90;
 const CHALLENGE_RETENTION_DAYS = 7;
 const SESSION_RETENTION_DAYS = 30;
+const SENT_NOTIFICATION_RETENTION_DAYS = 30;
 
 function required(name: string) {
     const value = process.env[name];
@@ -51,6 +52,26 @@ async function main() {
                 OR consumed_at < DATE_SUB(UTC_TIMESTAMP(), INTERVAL ${CHALLENGE_RETENTION_DAYS} DAY)`
         );
 
+        const [registrationChallengeResult] = await connection.execute<ResultSetHeader>(
+            `DELETE FROM registration_email_challenges
+             WHERE expires_at < DATE_SUB(UTC_TIMESTAMP(), INTERVAL ${CHALLENGE_RETENTION_DAYS} DAY)
+                OR consumed_at < DATE_SUB(UTC_TIMESTAMP(), INTERVAL ${CHALLENGE_RETENTION_DAYS} DAY)`
+        );
+
+        const [passwordChangeChallengeResult] = await connection.execute<ResultSetHeader>(
+            `DELETE FROM password_change_challenges
+             WHERE expires_at < DATE_SUB(UTC_TIMESTAMP(), INTERVAL ${CHALLENGE_RETENTION_DAYS} DAY)
+                OR consumed_at < DATE_SUB(UTC_TIMESTAMP(), INTERVAL ${CHALLENGE_RETENTION_DAYS} DAY)`
+        );
+
+        // Keep pending/processing messages available to the delivery worker.
+        // Only discard fully sent notifications after their retention period.
+        const [sentNotificationResult] = await connection.execute<ResultSetHeader>(
+            `DELETE FROM notification_outbox
+             WHERE status = 'sent'
+               AND sent_at < DATE_SUB(UTC_TIMESTAMP(), INTERVAL ${SENT_NOTIFICATION_RETENTION_DAYS} DAY)`
+        );
+
         const [sessionResult] = await connection.execute<ResultSetHeader>(
             `DELETE FROM refresh_sessions
              WHERE expires_at < DATE_SUB(UTC_TIMESTAMP(), INTERVAL ${SESSION_RETENTION_DAYS} DAY)
@@ -69,6 +90,9 @@ async function main() {
             audit_logs: auditResult.affectedRows,
             password_reset_challenges: passwordResetResult.affectedRows,
             login_mfa_challenges: mfaResult.affectedRows,
+            registration_email_challenges: registrationChallengeResult.affectedRows,
+            password_change_challenges: passwordChangeChallengeResult.affectedRows,
+            sent_notification_outbox: sentNotificationResult.affectedRows,
             refresh_sessions: sessionResult.affectedRows,
             trusted_login_devices: trustedDevicesResult.affectedRows,
         });
