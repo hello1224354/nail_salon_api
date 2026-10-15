@@ -90,7 +90,11 @@ export function Footer() {
                             })}
                             {content?.contact_email ? (
                                 <a className={linkClass} href={`mailto:${content.contact_email}`}>
-                                    {content.contact_email}
+                                    {content.contact_email.split("@").map((part, index) =>
+                                        index === 0 ? part : (
+                                            <span key={index}>@<wbr />{part}</span>
+                                        )
+                                    )}
                                 </a>
                             ) : null}
                             {instagramUrl ? (
