@@ -84,7 +84,7 @@ export function Footer() {
                                         {branches.length > 1 ? (
                                             <p className="text-xs text-white/60">{localizeBranchName(branch.name)}</p>
                                         ) : null}
-                                        <a className={linkClass} href={phoneHref}>{branch.phone}</a>
+                                        <a className={linkClass} href={phoneHref}>Điện thoại</a>
                                     </div>
                                 ) : null;
                             })}
