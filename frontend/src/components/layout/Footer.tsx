@@ -19,8 +19,8 @@ export function Footer() {
     return (
         <footer className="bg-studio-dark text-white">
             <div className="site-shell py-12 sm:py-14 lg:py-16">
-                <div className="grid grid-cols-2 justify-items-center gap-x-6 gap-y-12 sm:gap-x-10 lg:grid-cols-4 lg:gap-x-12">
-                    <section className="min-w-0 w-fit max-w-full">
+                <div className="grid grid-cols-2 gap-x-6 gap-y-12 sm:gap-x-10 lg:grid-cols-4 lg:gap-x-12">
+                    <section className="w-full min-w-0">
                         <h2 className={headingClass}>Khám phá</h2>
                         <nav aria-label="Khám phá" className="mt-5 flex flex-col items-start gap-3 text-sm">
                             <Link className={linkClass} href="/">Trang chủ</Link>
@@ -28,7 +28,7 @@ export function Footer() {
                         </nav>
                     </section>
 
-                    <section className="min-w-0 w-fit max-w-full">
+                    <section className="w-full min-w-0">
                         <h2 className={headingClass}>Lịch hẹn</h2>
                         <nav aria-label="Lịch hẹn" className="mt-5 flex flex-col items-start gap-3 text-sm">
                             <Link className={linkClass} href="/book">Đặt lịch</Link>
@@ -36,7 +36,7 @@ export function Footer() {
                         </nav>
                     </section>
 
-                    <section className="min-w-0 w-fit max-w-full">
+                    <section className="w-full min-w-0">
                         <h2 className={headingClass}>Chi nhánh</h2>
                         <div className="mt-5 space-y-6">
                             {branches.map((branch) => {
@@ -68,7 +68,7 @@ export function Footer() {
                         </div>
                     </section>
 
-                    <section className="min-w-0 w-fit max-w-full">
+                    <section className="w-full min-w-0">
                         <h2 className={headingClass}>Kết nối</h2>
                         {contentError && !contentLoading ? (
                             <p role="status" className="mt-2 text-xs text-[#f2bcb2]">{contentError}</p>
