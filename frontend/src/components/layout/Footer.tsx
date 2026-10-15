@@ -19,7 +19,7 @@ export function Footer() {
     return (
         <footer className="bg-studio-dark text-white">
             <div className="site-shell py-12 sm:py-14 lg:py-16">
-                <div className="grid grid-cols-[repeat(2,fit-content(45%))] justify-between gap-x-6 gap-y-12 sm:gap-x-10 lg:grid-cols-[repeat(4,fit-content(20%))] lg:gap-x-12">
+                <div className="grid grid-cols-[repeat(2,fit-content(45%))] justify-between gap-x-6 gap-y-12 sm:gap-x-10 lg:mx-auto lg:w-[90%] lg:grid-cols-[repeat(4,fit-content(20%))] lg:gap-x-12">
                     <section className="w-full min-w-0">
                         <h2 className={headingClass}>Khám phá</h2>
                         <nav aria-label="Khám phá" className="mt-5 flex flex-col items-start gap-3 text-sm">
