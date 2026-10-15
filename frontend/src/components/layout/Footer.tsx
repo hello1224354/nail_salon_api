@@ -16,7 +16,7 @@ export function Footer() {
     return (
         <footer className="bg-studio-dark text-white">
             <div className="site-shell py-12 lg:py-14">
-                <div className="grid gap-10 md:grid-cols-[minmax(0,0.65fr)_minmax(0,1.35fr)] xl:gap-12">
+                <div className="mx-auto grid w-full gap-10 md:w-[90%] md:grid-cols-[minmax(0,0.65fr)_minmax(0,1.35fr)] xl:w-[85%] xl:gap-12">
                     <div className="min-w-0">
                         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#bba18e]">
                             Khám phá
