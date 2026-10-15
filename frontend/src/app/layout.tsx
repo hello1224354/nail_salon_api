@@ -43,6 +43,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
     themeColor: "#f6f3ee",
     colorScheme: "light",
+    viewportFit: "cover",
 };
 
 export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
@@ -52,12 +53,12 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
 
     return (
         <html lang="vi" className={`${displayFont.variable} h-full antialiased`}>
-            <body className="flex min-h-screen flex-col bg-cream text-ink">
+            <body className="flex min-h-screen flex-col bg-studio-dark text-ink">
                 <BranchProvider>
                     <Header />
                     <div className="relative grid flex-1">
                         <div className="col-start-1 row-start-1 flex min-w-0 flex-col">
-                            <main className="flex-1">
+                            <main className="flex-1 bg-cream">
                                 <RouteMotion>{children}</RouteMotion>
                             </main>
                             <Footer />
