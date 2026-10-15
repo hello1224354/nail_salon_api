@@ -36,12 +36,17 @@
 
 html {
     scroll-behavior: smooth;
+    /* The page ends with the dark footer. Cover any exposed canvas below it,
+       including Safari's bottom safe area / visual viewport remainder. */
+    background: var(--dark);
 }
 
 body {
     margin: 0;
     min-width: 320px;
-    background: var(--background);
+    /* Sections remain cream, but any area outside the document's last
+       full-width footer must never expose a cream/white body canvas. */
+    background: var(--dark);
     color: var(--foreground);
     font-family: var(--font-ui);
     text-rendering: optimizeLegibility;
@@ -50,7 +55,7 @@ body {
 
 .site-shell {
     /* Fluid gutters use the actual available width, not device-specific offsets. */
-    width: min(calc(100% - clamp(1.5rem, 5vw, 5rem)), 100rem);
+    width: min(calc(100% - clamp(1.5rem, 5vw, 5rem) - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)), 100rem);
     min-width: 0;
     margin-inline: auto;
 }
