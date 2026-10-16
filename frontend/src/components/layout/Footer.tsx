@@ -190,9 +190,9 @@ export function Footer() {
                     <path d="M1080-90C1310 110 1400 170 1570 200" />
                 </svg>
 
-                <div className="relative z-10 mx-auto max-w-[106rem] px-6 pb-12 pt-11 sm:px-9 sm:pb-14 sm:pt-12 lg:px-12 lg:py-14 2xl:px-[5.5rem]">
-                    <div className="grid min-w-0 grid-cols-1 gap-x-8 gap-y-10 sm:grid-cols-2 sm:gap-x-12 lg:grid-cols-[minmax(0,2.5fr)_minmax(0,0.92fr)_minmax(0,0.98fr)_minmax(0,1.12fr)] lg:gap-x-9 xl:gap-x-12">
-                        <section className="min-w-0 sm:col-span-2 lg:col-span-1" aria-label="Thông tin Serpente Nail Room">
+                <div className="relative z-10 mx-auto max-w-[116rem] px-6 pb-12 pt-11 sm:px-9 sm:pb-14 sm:pt-12 lg:px-12 lg:py-14 2xl:px-16">
+                    <div className="grid min-w-0 grid-cols-1 gap-x-8 gap-y-10 sm:grid-cols-2 sm:gap-x-12 xl:grid-cols-[minmax(0,3fr)_minmax(0,0.95fr)_minmax(0,0.95fr)_minmax(0,0.75fr)] xl:gap-x-11">
+                        <section className="min-w-0 sm:col-span-2 xl:col-span-1" aria-label="Thông tin Serpente Nail Room">
                             <div className="flex min-w-0 items-center gap-3">
                                 <Image
                                     src="/brand/serpente-logo.svg"
@@ -301,7 +301,7 @@ export function Footer() {
                             </div>
                         </section>
 
-                        <nav aria-label="Khám phá" className="min-w-0 lg:pt-12">
+                        <nav aria-label="Khám phá" className="min-w-0 xl:pt-12">
                             <div className="flex flex-col items-start gap-3.5">
                                 <Link className={footerLinkClass} href="/">Trang chủ</Link>
                                 <Link className={footerLinkClass} href="/services">Bảng giá</Link>
@@ -310,7 +310,7 @@ export function Footer() {
                             </div>
                         </nav>
 
-                        <nav aria-label="Liên kết hữu ích" className="min-w-0 lg:pt-12">
+                        <nav aria-label="Liên kết hữu ích" className="min-w-0 xl:pt-12">
                             <div className="flex flex-col items-start gap-3.5">
                                 <a href="#footer-contact" className={footerLinkClass}>Liên hệ</a>
                                 {branches.map((branch) => {
@@ -345,7 +345,7 @@ export function Footer() {
                             </div>
                         </nav>
 
-                        <section id="footer-contact" aria-label="Kết nối với chúng tôi" className="min-w-0 sm:col-span-2 lg:col-span-1 lg:pt-12">
+                        <section id="footer-contact" aria-label="Kết nối với chúng tôi" className="min-w-0 sm:col-span-2 xl:col-span-1 xl:pt-12">
                             <h3 className="whitespace-normal text-[14px] font-semibold text-white">Kết nối với chúng tôi</h3>
                             <div className="mt-4 flex flex-wrap items-center gap-2.5">
                                 {instagramUrl ? (
@@ -378,7 +378,7 @@ export function Footer() {
                 <div className="pointer-events-none absolute -bottom-12 -right-10 size-28 rounded-full bg-[#df9e7c]/85" aria-hidden="true" />
                 <div className="pointer-events-none absolute -bottom-9 -right-12 size-24 rounded-full bg-[#58a878]/95" aria-hidden="true" />
                 <div className="relative z-10 border-t border-white/10 bg-[#078b88]/90 px-6 py-4 text-[12px] text-white/85 sm:px-10 lg:px-16 lg:py-[18px]">
-                    <div className="mx-auto w-full max-w-[106rem] pl-12 sm:pl-14 lg:pl-20">
+                    <div className="mx-auto w-full max-w-[116rem] pl-12 sm:pl-14 lg:pl-20">
                         © 2026 Serpente Nail Room
                     </div>
                 </div>
