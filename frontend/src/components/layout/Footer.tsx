@@ -9,7 +9,7 @@ import { useBranch } from "@/components/branch/BranchProvider";
 
 const headingClass = "text-[11px] font-semibold uppercase tracking-[0.18em] text-[#bba18e]";
 const linkClass = "w-fit max-w-full [overflow-wrap:anywhere] text-white/80 transition-colors hover:text-[#d8c2b5]";
-const copyClass = "focus-ring inline-flex size-9 shrink-0 items-center justify-center rounded-sm text-white/65 transition-colors hover:text-white";
+const copyClass = "focus-ring inline-flex size-8 shrink-0 items-center justify-center rounded-md text-white/65 transition-colors hover:bg-white/10 hover:text-white";
 
 function CopyContactButton({
     copied,
@@ -132,24 +132,24 @@ export function Footer() {
 
     return (
         <footer className="bg-studio-dark text-white">
-            <div className="site-shell px-3 py-12 sm:px-0 sm:py-14 lg:py-16">
-                <div className="mx-auto grid w-full grid-cols-[repeat(2,fit-content(45%))] justify-between gap-x-6 gap-y-12 sm:w-[85%] sm:gap-x-10 lg:w-[90%] lg:grid-cols-[repeat(4,fit-content(20%))] lg:gap-x-12">
-                    <section className="w-full min-w-0">
-                        <div className="flex min-w-0 items-center gap-1.5 sm:gap-2 lg:gap-2">
+            <div className="site-shell py-12 sm:py-14 lg:py-16">
+                <div className="mx-auto grid w-full grid-cols-2 gap-x-5 gap-y-10 sm:w-[90%] sm:gap-x-10 sm:gap-y-12 lg:max-w-[78rem] lg:grid-cols-[minmax(0,1.3fr)_minmax(0,0.75fr)_minmax(0,1.55fr)_minmax(0,0.9fr)] lg:gap-x-10 xl:gap-x-12">
+                    <section className="col-span-2 min-w-0 sm:col-span-1">
+                        <div className="flex min-w-0 items-center gap-2 sm:gap-3">
                             <Image
                                 src="/brand/serpente-logo.svg"
                                 alt=""
                                 width={36}
                                 height={36}
-                                className="size-6 shrink-0 object-contain sm:size-8 lg:size-7 xl:size-9"
+                                className="size-9 shrink-0 object-contain invert sm:size-10 lg:size-11"
                             />
-                            <span className="min-w-0 font-serif text-[11px] leading-tight tracking-[-0.025em] text-white sm:text-base lg:text-[13px] xl:text-[17px]">
+                            <span className="min-w-0 font-serif text-[18px] leading-tight tracking-[-0.025em] text-white sm:text-[19px] lg:text-[18px] xl:text-[21px]">
                                 Serpente Nail Room
                             </span>
                         </div>
                     </section>
 
-                    <section className="w-full min-w-0">
+                    <section className="min-w-0">
                         <h2 className={headingClass}>Khám phá</h2>
                         <nav aria-label="Khám phá" className="mt-5 flex flex-col items-start gap-3 text-sm">
                             <Link className={linkClass} href="/">Trang chủ</Link>
@@ -159,7 +159,7 @@ export function Footer() {
                         </nav>
                     </section>
 
-                    <section className="w-full min-w-0">
+                    <section className="col-span-2 min-w-0 sm:col-span-1">
                         <h2 className={headingClass}>Chi nhánh</h2>
                         <div className="mt-5 space-y-6">
                             {branches.map((branch) => {
@@ -191,12 +191,12 @@ export function Footer() {
                         </div>
                     </section>
 
-                    <section className="w-full min-w-0">
+                    <section className="col-start-2 row-start-2 min-w-0 sm:col-start-auto sm:row-start-auto">
                         <h2 className={headingClass}>Kết nối</h2>
                         {contentError && !contentLoading ? (
                             <p role="status" className="mt-2 text-xs text-[#f2bcb2]">{contentError}</p>
                         ) : null}
-                        <div className="mt-5 flex flex-col items-start gap-3 text-sm leading-6">
+                        <div className="mt-5 flex flex-col items-start gap-2 text-sm leading-6">
                             {branches.map((branch) => {
                                 const phoneHref = branch.phone
                                     ? `tel:${branch.phone.replace(/[^+\d]/g, "")}`
@@ -209,7 +209,7 @@ export function Footer() {
                                         {branches.length > 1 ? (
                                             <p className="text-xs text-white/60">{localizeBranchName(branch.name)}</p>
                                         ) : null}
-                                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                                        <div className="flex min-h-8 flex-wrap items-center gap-x-2 gap-y-1">
                                             <a
                                                 className={linkClass}
                                                 href={phoneHref}
@@ -227,7 +227,7 @@ export function Footer() {
                                 ) : null;
                             })}
                             {contactEmail ? (
-                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                                <div className="flex min-h-8 flex-wrap items-center gap-x-2 gap-y-1">
                                     <a
                                         className={linkClass}
                                         href={`mailto:${contactEmail}`}
@@ -251,7 +251,7 @@ export function Footer() {
                     </section>
                 </div>
 
-                <div className="mt-12 border-t border-white/15 pt-5 text-[11px] text-[#bfb0a4]">
+                <div className="mx-auto mt-12 w-full border-t border-white/15 pt-5 text-[11px] text-[#bfb0a4] sm:w-[90%] lg:max-w-[78rem]">
                     <span>© 2026 Serpente Nail Room</span>
                 </div>
             </div>
