@@ -133,17 +133,17 @@ export function Footer() {
     return (
         <footer className="bg-studio-dark text-white">
             <div className="site-shell px-3 py-12 sm:px-0 sm:py-14 lg:py-16">
-                <div className="mx-auto grid w-full grid-cols-[repeat(2,fit-content(45%))] justify-between gap-x-6 gap-y-12 sm:w-[85%] sm:gap-x-10 lg:w-[90%] lg:grid-cols-[repeat(4,fit-content(20%))] lg:gap-x-12">
+                <div className="mx-auto grid w-full grid-cols-[repeat(2,fit-content(45%))] justify-between gap-x-6 gap-y-12 sm:w-[85%] sm:gap-x-10 lg:w-[90%] lg:max-w-[85rem] lg:grid-cols-[minmax(0,1.25fr)_minmax(0,0.8fr)_minmax(0,1.35fr)_minmax(0,0.7fr)] lg:justify-normal lg:gap-x-12">
                     <section className="w-full min-w-0">
-                        <div className="flex min-w-0 items-center gap-1.5 sm:gap-2 lg:gap-2">
+                        <div className="flex min-w-0 items-center gap-1.5 sm:gap-2 lg:gap-3">
                             <Image
                                 src="/brand/serpente-logo.svg"
                                 alt=""
                                 width={36}
                                 height={36}
-                                className="size-6 shrink-0 object-contain sm:size-8 lg:size-7 xl:size-9"
+                                className="size-6 shrink-0 object-contain invert sm:size-8 xl:size-10"
                             />
-                            <span className="min-w-0 font-serif text-[11px] leading-tight tracking-[-0.025em] text-white sm:text-base lg:text-[13px] xl:text-[17px]">
+                            <span className="min-w-0 font-serif text-[11px] leading-tight tracking-[-0.025em] text-white sm:text-base lg:whitespace-nowrap lg:text-sm xl:text-[19px]">
                                 Serpente Nail Room
                             </span>
                         </div>
