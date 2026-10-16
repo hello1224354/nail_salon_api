@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useRef, useState, type MouseEvent } from "react";
 import { getInstagramUrl, getMapsSearchUrl, localizeBranchName } from "@/lib/studio-data";
 import { useBranch } from "@/components/branch/BranchProvider";
@@ -134,16 +135,25 @@ export function Footer() {
             <div className="site-shell px-3 py-12 sm:px-0 sm:py-14 lg:py-16">
                 <div className="mx-auto grid w-full grid-cols-[repeat(2,fit-content(45%))] justify-between gap-x-6 gap-y-12 sm:w-[85%] sm:gap-x-10 lg:w-[90%] lg:grid-cols-[repeat(4,fit-content(20%))] lg:gap-x-12">
                     <section className="w-full min-w-0">
+                        <div className="flex min-w-0 items-center gap-1.5 sm:gap-2 lg:gap-2">
+                            <Image
+                                src="/brand/serpente-logo.svg"
+                                alt=""
+                                width={36}
+                                height={36}
+                                className="size-6 shrink-0 object-contain sm:size-8 lg:size-7 xl:size-9"
+                            />
+                            <span className="min-w-0 font-serif text-[11px] leading-tight tracking-[-0.025em] text-white sm:text-base lg:text-[13px] xl:text-[17px]">
+                                Serpente Nail Room
+                            </span>
+                        </div>
+                    </section>
+
+                    <section className="w-full min-w-0">
                         <h2 className={headingClass}>Khám phá</h2>
                         <nav aria-label="Khám phá" className="mt-5 flex flex-col items-start gap-3 text-sm">
                             <Link className={linkClass} href="/">Trang chủ</Link>
                             <Link className={linkClass} href="/services">Bảng giá</Link>
-                        </nav>
-                    </section>
-
-                    <section className="w-full min-w-0">
-                        <h2 className={headingClass}>Lịch hẹn</h2>
-                        <nav aria-label="Lịch hẹn" className="mt-5 flex flex-col items-start gap-3 text-sm">
                             <Link className={linkClass} href="/book">Đặt lịch</Link>
                             <Link className={linkClass} href="/appointments">Lịch của tôi</Link>
                         </nav>
