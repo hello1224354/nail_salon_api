@@ -416,7 +416,8 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
 
     if (businessEndMinute > hours.closeMinute) throw new AppError(`Appointment must end by ${formatMinuteOfDay(hours.closeMinute)}`, 400, "OUTSIDE_BUSINESS_HOURS");
 
-    const created = await AppDataSource.transaction(async (manager) => {
+    // READ COMMITTED lets workload queries observe bookings committed before the cursor lock was acquired.
+    const created = await AppDataSource.transaction("READ COMMITTED", async (manager) => {
         const transactionAppointmentRepo = manager.getRepository(Appointment);
         const appointmentServiceRepo = manager.getRepository(AppointmentService);
         const transactionUserRepo = manager.getRepository(User);
@@ -689,7 +690,8 @@ export const getAppointment = async (id: string, userId: string, role: UserRole)
 };
 
 export const updateAppointment = async (id: string, userId: string, role: UserRole, data: UpdateAppointmentDto) => {
-    return AppDataSource.transaction(async (manager) => {
+    // The per-branch cursor serializes assignment, and this isolation gives each workload read a fresh view.
+    return AppDataSource.transaction("READ COMMITTED", async (manager) => {
         const appointments = manager.getRepository(Appointment);
         const appointmentServicesRepo = manager.getRepository(AppointmentService);
         const assignmentRepo = manager.getRepository(AppointmentStaffAssignment);
