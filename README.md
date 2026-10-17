@@ -19,7 +19,7 @@ A salon with multiple employees must let customers find bookable times without s
 | Browse salon information, promotions, branches, service prices | Maintain services, branches, employees, promotions and database-hosted website photos |
 | Register/login with email OTP and trusted-browser recognition | View a dashboard and manage appointment states |
 | Select services, party size, date and **available time** | Search all appointments by date range, branch, status or customer-facing booking code |
-| Book without choosing staff; receive confirmation code | Receive Gmail notification for a new booking |
+| Book without choosing staff; receive confirmation code | Receive queued email notifications for new bookings |
 | Review personal appointment status | View assigned appointments according to server-side role rules |
 
 **Application:** [Homepage](https://serpentenailroom.site/) · [Services](https://serpentenailroom.site/services) · [Booking](https://serpentenailroom.site/book) · [Admin](https://serpentenailroom.site/admin/login). Booking and management features are accessible to authenticated users with the appropriate role.
@@ -33,17 +33,18 @@ flowchart LR
   API --> Auth[JWT, OTP, RBAC]
   API --> Booking[Booking engine]
   Booking --> DB[(MySQL / TypeORM)]
-  API --> Email[Gmail API / OAuth2]
+  API --> Outbox[MySQL notification outbox]
+  Outbox --> Email[Resend or Gmail email provider]
 ```
 
 | Layer | Technology |
 |---|---|
 | Web | Next.js 16 App Router, React 19, TypeScript, Tailwind CSS 4 |
 | API | Node.js, Express 5, TypeScript |
-| Persistence | MySQL 8, TypeORM, versioned migrations |
+| Persistence | MySQL 8, TypeORM; historical migrations archived in Git history |
 | Security | JWT access tokens, refresh-token rotation/reuse detection, email OTP, account-scoped trusted-browser cookies, RBAC |
-| Integration | Gmail API via OAuth2 |
-| Delivery | Vercel (web), Railway (API); alternative VPS/Docker Compose configuration |
+| Integration | Resend transactional email (Gmail OAuth2 fallback) |
+| Delivery | Vercel (web), Railway (API and MySQL) |
 
 ## Engineering highlights
 
@@ -73,12 +74,12 @@ The admin appointments table supports date-range filters and customer-visible 8-
 |---|---|---|
 | Unique staff/15-minute slot key | Atomic conflict detection independent of frontend timing | Extra reservation rows; updates must release/reacquire slots |
 | Automatic staff assignment | Simple customer UX and central scheduling rules | Availability depends on staff working hours and active bookings |
-| One row per person in group booking | Staff-specific assignments with shared group ID | Group views must aggregate or identify `booking_group_id` |
+| One appointment per person in group booking | Staff-specific assignments with shared group ID | Group views must aggregate by `booking_group_id` |
 | Snapshot service price/name at booking | Historical bookings remain meaningful after catalog edits | Intentional duplication |
-| Gmail notifications after DB commit | Email outages do not roll back valid bookings | **Best-effort delivery:** no persistent retry/outbox yet |
+| Transactional email outbox | Notification rows are committed alongside bookings, with worker retries | At-least-once delivery: duplicate email is possible after ambiguous provider success |
 | JWT + rotating refresh sessions | Short-lived access credentials and revocable sessions | Additional state and cookie/origin management |
 
-The current implementation focuses on appointment scheduling rather than online payments or employee-specific shift planning. Technical analysis and design constraints are covered in the [engineering case study](docs/PORTFOLIO.md).
+The current implementation focuses on appointment scheduling rather than online payments or per-date employee shift rosters; daily staff working hours are configurable. Technical analysis and design constraints are covered in the [engineering case study](docs/PORTFOLIO.md).
 
 ## Live application
 
@@ -114,11 +115,11 @@ npm ci
 npm run dev
 ```
 
-Frontend: http://localhost:3001 · Backend: http://localhost:3000 · Health: http://localhost:3000/health. Email OTP requires separate Gmail OAuth configuration; never commit credentials.
+Frontend: http://localhost:3001 · Backend: http://localhost:3000 · Health: http://localhost:3000/health. Email OTP requires Resend or fallback Gmail credentials; never commit secrets.
 
 ## Build
 
 Backend: `npm run build`. Frontend: `cd frontend && npm run build`.
-The applications are deployed separately via Railway and Vercel, without a repository test suite or GitHub Actions testing workflow.
+The repository does not contain a unit-test suite or GitHub Actions CI workflow. Backend and frontend builds can be checked manually with the commands above. Production is deployed on Railway (API/DB) and Vercel (web).
 
 **Deep dives:** [API](docs/API.md) · [DB schema](docs/DATABASE.md) · [Booking rules](docs/BOOKING.md) · [Security](docs/AUTH-SECURITY.md) · [Deployment](docs/DEPLOYMENT.md) · [Operations](docs/OPERATIONS.md).

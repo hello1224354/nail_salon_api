@@ -81,7 +81,11 @@ stateDiagram-v2
 
 ## 6. Thông báo email sau booking
 
-`createAppointment` gọi `notifyAdminsOfNewBooking` **sau DB commit**. Service chọn user `role=admin` với email, bỏ trùng địa chỉ và gửi mỗi admin **một email cho booking group**. Subject hiện tại:
+`createAppointment` gọi `enqueueBookingEmails` **trong cùng database transaction** với việc tạo lịch. Hệ thống tạo bản ghi `notification_outbox` cho từng địa chỉ email ADMIN duy nhất; nếu transaction rollback thì cả lịch lẫn thông báo chưa gửi đều rollback.
+
+Sau khi commit, backend có thể gọi `drainBookingNotificationOutbox`; worker cũng chạy định kỳ khoảng **60 giây** từ `src/server.ts`. Worker claim các bản ghi `pending` (hoặc `processing` quá hạn), gửi mail bằng `sendPlainTextEmail` (Resend nếu cấu hình, nếu không thì Gmail OAuth), rồi đánh dấu `sent` hoặc đặt lịch thử lại với exponential backoff.
+
+Subject hiện tại:
 
 ```text
 Serpente Nail Room - Có khách hàng vừa đặt lịch
@@ -89,7 +93,7 @@ Serpente Nail Room - Có khách hàng vừa đặt lịch
 
 Nội dung có UUID nhóm, trạng thái, khách, chi nhánh, thời gian, nhân viên, dịch vụ và tổng dự kiến.
 
-Email là **best-effort fire-and-forget**: Gmail lỗi không rollback booking. Chưa có queue/outbox hoặc retry bền vững, vì vậy cần log/monitoring nếu yêu cầu độ tin cậy cao. OTP cũng dùng Gmail sender nhưng là luồng khác.
+Gửi email **không được làm rollback booking đã commit**. Outbox bền vững giúp thử lại khi dịch vụ gửi thư bị lỗi, nhưng là cơ chế **at-least-once**, không bảo đảm email không bao giờ bị gửi trùng. Cần theo dõi `notification_outbox` và log worker; OTP là luồng gửi thư đồng bộ riêng.
 
 ## 7. Tài liệu liên quan
 

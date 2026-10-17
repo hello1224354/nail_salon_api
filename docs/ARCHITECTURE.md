@@ -8,7 +8,8 @@ flowchart LR
     Next -->|same-origin /api| Express[Express API]
     Express --> Services[Domain services + validation]
     Services --> DB[(MySQL 8)]
-    Services --> Gmail[Gmail API / OAuth2]
+    Services --> Outbox[Notification outbox]
+    Outbox --> Mail[Resend or Gmail]
 ```
 
 Frontend triển khai trên **Vercel**, backend trên **Railway**. Trình duyệt gọi endpoint cùng origin `/api/...`; Next.js rewrite request sang origin cấu hình bởi `NEXT_PUBLIC_API_BASE_URL`. Express cung cấp `GET /health` cùng các namespace `/api/{users,appointments,services,staffs,branches,offers,site-content}`.
@@ -23,10 +24,10 @@ Frontend triển khai trên **Vercel**, backend trên **Railway**. Trình duyệ
 | HTTP entry | `src/app.ts`, `src/server.ts` | security headers, CORS, JSON body, DB init, migrations guard |
 | Middleware | `src/common/middleware` | authentication, RBAC, origin, limits, audit |
 | Domain boundary | `src/modules/{domain}` | `.routes`, `.controller`, `.dto`, `.service`, `.entity` |
-| Persistence | `src/config/database.ts`, `src/migrations` | MySQL datasource, entities, migrations/seed |
+| Persistence | `src/config/database.ts`, các `.entity.ts` | MySQL datasource và entity mapping; chưa có baseline tạo schema mới |
 | Jobs | `src/jobs/retention-cleanup.ts` | xóa records security hết hạn theo policy |
 
-Modules: `users` (auth, OTP, Gmail), `appointments` (availability/booking/trạng thái), `branches`, `services`, `staffs`, `offers`, `site-content`, `audit`.
+Modules: `users` (auth, OTP, Resend/Gmail fallback), `appointments` (availability/booking/trạng thái), `branches`, `services`, `staffs`, `offers`, `site-content`, `audit`.
 
 ## Luồng tạo booking
 
@@ -36,7 +37,7 @@ sequenceDiagram
     participant N as Next BookingForm
     participant A as Express API
     participant D as MySQL
-    participant M as Gmail
+    participant W as Email outbox worker
     C->>N: Chọn chi nhánh/dịch vụ/số khách/ngày
     N->>A: GET /api/appointments/availability
     A->>D: Đọc active appointments + staff
@@ -44,10 +45,11 @@ sequenceDiagram
     C->>N: Chọn giờ rồi xác nhận
     N->>A: POST /api/appointments
     A->>D: Transaction: lock owner, reserve staff slots
-    A->>D: Save appointments + service snapshots
+    A->>D: Save appointments, snapshots + notification_outbox trong 1 transaction
     D-->>A: COMMIT
     A-->>N: 201 appointment
-    A-->>M: Gửi email ADMIN bất đồng bộ, best-effort
+    W->>D: Claim queued notifications after commit
+    W->>W: Send email via Resend/Gmail; retry on failure
     N-->>C: Booking code + pending status
 ```
 
@@ -81,4 +83,4 @@ flowchart TD
 
 ## Phạm vi hệ thống hiện tại
 
-Không thấy trong source: thanh toán online, quản lý ca làm việc nhân viên theo lịch riêng, hàng đợi email retry bền vững, realtime websocket, hoặc endpoint khách hàng tự hủy lịch. Chi tiết xem [BOOKING](BOOKING.md), [AUTH](AUTH-SECURITY.md), [DATABASE](DATABASE.md).
+Không thấy trong source: thanh toán online, lịch ca nhân viên thay đổi theo từng ngày (hiện dùng giờ làm lặp lại hằng ngày), realtime websocket hoặc endpoint khách hàng tự hủy lịch. Outbox email có retry bền vững nhưng không bảo đảm exactly-once. Chi tiết xem [BOOKING](BOOKING.md), [AUTH](AUTH-SECURITY.md), [DATABASE](DATABASE.md).

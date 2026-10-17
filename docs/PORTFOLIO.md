@@ -8,7 +8,7 @@ The application supports a nail salon where customers book services at a branch 
 
 The scope also covers a public service catalog, authenticated customer history and a role-protected administrative dashboard.
 
-**Stack:** Next.js 16 + React 19 + TypeScript frontend; Node/Express 5 API; MySQL 8 + TypeORM; JWT/refresh sessions; Gmail OAuth2; Vercel/Railway deployment.
+**Stack:** Next.js 16 + React 19 + TypeScript frontend; Node/Express 5 API; MySQL 8 + TypeORM; JWT/refresh sessions; Resend/Gmail sender; transactional notification outbox; Vercel/Railway deployment.
 
 ## Concurrency-safe slot reservation
 
@@ -75,23 +75,23 @@ Customers receive an easy-to-read code: the first 8 hexadecimal characters of th
 
 ## Email delivery and transaction boundaries
 
-An email to configured ADMIN recipients is triggered **after** appointment transaction commit. The booking succeeds even when Gmail is unavailable, so a third-party failure does not invalidate the salon's reservation.
+One message per unique ADMIN email is enqueued in `notification_outbox` **within the booking transaction**. The API commits appointments and outbox messages atomically; after commit, an independent worker delivers messages using Resend (when configured) or Gmail OAuth fallback. Delivery failures are retried with exponential backoff, so email outages do not invalidate reservations.
 
-**Reliability boundary:** Notification is currently best-effort. Process termination or a Gmail outage can prevent delivery after a booking has committed. A transactional outbox with a separate worker, bounded retries and deduplication would provide stronger delivery guarantees.
+**Reliability boundary:** This provides persistent **at-least-once** delivery, not exactly-once email delivery: a worker crash after provider acceptance but before status persistence can lead to a duplicate. The worker also reclaims stale processing messages.
 
-**Source:** [notification service](../src/modules/appointments/booking-notification.service.ts).
+**Source:** [notification outbox service](../src/modules/appointments/notification-outbox.service.ts), [notification entity](../src/modules/appointments/notification-outbox.entity.ts).
 
 ## Deployment
 
 - Live frontend: [Vercel](https://serpentenailroom.site/).
 - API: [Railway health endpoint](https://api-production-e911.up.railway.app/health).
-- Deployments are managed through Vercel and Railway; the repository no longer contains automated testing workflows.
+- Deployments are managed through Vercel and Railway. The repository no longer includes GitHub Actions CI or a unit-test suite; builds and behavior require explicit verification before deployment.
 - References: [deployment guide](DEPLOYMENT.md), [operations guide](OPERATIONS.md).
 
 ## Current scope and limitations
 
-The booking engine uses fixed business-hour rules rather than individual employee shift calendars. A payment gateway is not part of the application. Booking notifications are sent after the reservation commits, so Gmail delivery failures do not invalidate appointments; however, notification delivery is best-effort and does not yet use an outbox with persistent retries.
+The booking engine uses fixed branch-wide bookable hours and configurable **recurring daily staff working hours**, but not date-specific shift rosters. A payment gateway is not part of the application. Booking notifications are persisted in an outbox and retried, with at-least-once rather than exactly-once delivery semantics.
 
-The repository contains no automated test suite. Centralized production alerting is not implemented.
+The repository contains no automated unit tests or GitHub Actions CI; validation currently relies on manual build and behavior checks. Centralized production alerting is not implemented. Historical database migrations are absent from the current source; provisioning a fresh production-equivalent database requires a verified backup until a new baseline is established.
 
 Further implementation details are available in the [booking specification](BOOKING.md), [authentication and security](AUTH-SECURITY.md) and [API reference](API.md).

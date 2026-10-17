@@ -1,6 +1,6 @@
-# DATABASE — MySQL, entities và migration
+# DATABASE — MySQL, entities và quản lý schema
 
-Source: `src/config/database.ts`, `src/modules/**` (entities) và `src/migrations`. DB là **MySQL 8**; TypeORM `timezone: "Z"`. Không dùng TypeORM `synchronize` tại production; production `src/server.ts` chặn start khi còn pending migrations.
+Source: `src/config/database.ts` và các entity tại `src/modules/**`. DB là **MySQL 8**; TypeORM `timezone: "Z"`. Production luôn `DB_SYNCHRONIZE=false`; `src/server.ts` chặn start nếu có migration mới chưa chạy.
 
 ## Sơ đồ quan hệ nghiệp vụ
 
@@ -57,38 +57,15 @@ Sơ đồ biểu đạt mối liên hệ **logic**; không phải mọi liên h�
 
 ## Snapshot và delete
 
-Lịch giữ `customer_full_name/phone/email`, `staff_full_name`, `branch_name/address` và snapshot service. Khi sửa/xóa user, staff, service hoặc branch, cần giữ semantics lịch sử theo migration và service. Admin `DELETE /api/appointments/:id` xóa thực một appointment và giải phóng slot. Trong khi đó, chuyển trạng thái sang `cancelled` giữ bản ghi lịch để phục vụ tra cứu lịch sử; hai thao tác có ngữ nghĩa dữ liệu khác nhau.
+Lịch giữ `customer_full_name/phone/email`, `staff_full_name`, `branch_name/address` và snapshot service. Khi sửa/xóa user, staff, service hoặc branch, cần giữ semantics lịch sử theo service và schema đang triển khai. Admin `DELETE /api/appointments/:id` xóa thực một appointment và giải phóng slot. Trong khi đó, chuyển trạng thái sang `cancelled` giữ bản ghi lịch để phục vụ tra cứu lịch sử; hai thao tác có ngữ nghĩa dữ liệu khác nhau.
 
-## Migrations hiện có
+## Schema production và lịch sử migration
 
-Theo thứ tự filename trong `src/migrations`:
-
-1. `1790982346696-InitialSchema.ts`
-2. `1791260400000-AddOffers.ts`
-3. `1791260800000-SeedInitialOffers.ts`
-4. `1791313200000-HardenAuthentication.ts`
-5. `1791397000000-UnifyAuditLogs.ts`
-6. `1791403200000-HardDeleteSnapshots.ts`
-7. `1791414000000-AddGroupBookings.ts`
-8. `1791421200000-LoadRealSalonData.ts`
-9. `1791434400000-NormalizeSiteContentItems.ts`
-10. `1791438000000-BranchReviewsAndReseedTrends.ts`
-11. `1791441600000-CorrectInstagramTrendItems.ts`
-12. `1791445200000-EmailAuthenticationBookingPhone.ts`
-13. `1791448800000-RegistrationOtpRememberSession.ts`
-14. `1791449000000-TrustedLoginDeviceOtp.ts`
-15. `1791452400000-AddMediaFiles.ts`
-
-Tên file mô tả phạm vi, không thay thế việc đọc nội dung migration khi rollback/cutover.
-
-```bash
-npm ci
-npm run build
-npm run migration:show
-npm run migration:run
-```
-
-Trên production, backup DB trước migration, dùng `DB_SYNCHRONIZE=false`. Không chạy `migration:run` khi schema DB đã được auto-sync theo cách không khớp migration history mà chưa đối chiếu bảng `migrations`.
+- MySQL production `nail_salon_db` đã được kiểm tra có **28 bảng** sau khi xóa `media_object_deletions` và cột `media_files.object_key`. 4 bản ghi ảnh vẫn có dữ liệu `image_data` tại thời điểm kiểm tra.
+- Toàn bộ **30 file migration lịch sử đã được xóa khỏi source**; bảng TypeORM `migrations` trong production vẫn giữ lịch sử các migration đã chạy. Điều đó không tự làm thay đổi bảng/dữ liệu đang có.
+- Hiện **không có baseline migration dựng database rỗng**. `npm run migration:run` trong phiên bản này không dựng được schema production mới; cần bản backup MySQL đã xác minh (gồm cả schema và dữ liệu) để phục hồi một môi trường tương đương. `DB_SYNCHRONIZE=true` chỉ dành cho local, không thay thế bản backup hoặc schema production.
+- Railway API còn cấu hình pre-deploy `npm run migration:run`; khi source không có migration mới, bước này không tạo schema hoặc khôi phục dữ liệu. Nếu thay đổi cấu trúc trong tương lai, tạo migration mới được kiểm tra với schema hiện tại và backup trước khi áp dụng.
+- Không xóa bảng `migrations` ở production chỉ vì đã dọn file lịch sử trong GitHub.
 
 ## Retention
 
@@ -98,6 +75,6 @@ Script `src/jobs/retention-cleanup.ts` dọn:
 - `login_mfa_challenges` và `password_reset_challenges` quá 7 ngày; script **không** dọn `registration_email_challenges` hay `password_change_challenges`.
 - `refresh_sessions`, `trusted_login_devices` hết hạn hoặc đã revoke quá 30 ngày.
 
-VPS Compose có service `retention` chạy theo chu kỳ 24 giờ. Cấu hình scheduler tương ứng trên Railway không nằm trong repository; cần kiểm tra cấu hình runtime nếu sử dụng môi trường này. Script retention không xóa dữ liệu booking/khách hàng.
+Script retention có trong source nhưng repository không xác nhận Railway có scheduler đang chạy. Phải cấu hình/kiểm tra lịch chạy riêng trên Railway nếu cần; không được giả định nó tự hoạt động. Script không xóa dữ liệu booking/khách hàng.
 
 Xem [BOOKING](BOOKING.md) để hiểu slot reservations và [DEPLOYMENT](DEPLOYMENT.md) để migrate/backup an toàn.

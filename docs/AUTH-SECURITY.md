@@ -70,6 +70,6 @@ Chỉ lưu API key và refresh token trong secrets manager/biến môi trường
 | Refresh 403 | `Origin` không khớp `CORS_ORIGIN` |
 | 429 | Rate limiter / audit thresholds |
 | API 403 | Role server-side, không sửa bằng UI bypass |
-| Gmail 503 | OAuth config/quyền gửi, log server |
+| Email provider error | Resend key/sender và DNS, hoặc Gmail OAuth fallback; kiểm tra log server |
 
 Các giá trị credentials, token, cookie, Gmail OAuth secrets, JWT secret và log chứa dữ liệu cá nhân được phân loại là thông tin nhạy cảm, không lưu trong repository.
