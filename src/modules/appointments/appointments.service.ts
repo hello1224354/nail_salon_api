@@ -150,7 +150,7 @@ async function allocateBookingStaff(
         });
         if (current && current.branch_id === branchId &&
             isWithinStaffWorkingHours(current, beginMinute, finishMinute)) {
-            eligible.set(staff.user_id, staff);
+            eligible.set(staff.user_id, { ...staff, work_start_time: current.work_start_time, work_end_time: current.work_end_time });
         }
     }
     if (preferredStaffIds.some(id => !eligible.has(id))) {
@@ -180,10 +180,11 @@ async function allocateBookingStaff(
     const loads = new Map<string, StaffWorkload>();
     for (const staff of roster) {
         const shift = (value: string) => Number(value.slice(0, 2)) * 60 + Number(value.slice(3, 5));
+        const current = eligible.get(staff.user_id) ?? staff;
         loads.set(staff.user_id, {
             dayMinutes: 0,
             trailing14DaysMinutes: 0,
-            shiftMinutes: shift(staff.work_end_time) - shift(staff.work_start_time),
+            shiftMinutes: shift(current.work_end_time) - shift(current.work_start_time),
         });
     }
     for (const appointment of related) {
@@ -488,10 +489,11 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
             end_time: endTime,
             status: AppointmentStatus.PENDING,
         }));
-        const assignments = reservedStaffs.map(staff => ({
+        const assignments = reservedStaffs.map((staff, position) => ({
             appointment_id: appointment.id,
             staff_id: staff.user_id,
             staff_full_name: staff.user.full_name,
+            position,
         }));
         appointment.staff_assignments = await manager.getRepository(AppointmentStaffAssignment).save(assignments);
         appointment.appointment_services = await appointmentServiceRepo.save(services.map(service =>
@@ -829,10 +831,11 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
             // A reschedule/reassignment clears stale actual entries before new assignments.
             await manager.getRepository(AppointmentActualPrice).delete({ appointment_id: appointment.id });
             await assignmentRepo.delete({ appointment_id: appointment.id });
-            appointment.staff_assignments = await assignmentRepo.save(assigned.map(staff => ({
+            appointment.staff_assignments = await assignmentRepo.save(assigned.map((staff, position) => ({
                 appointment_id: appointment.id,
                 staff_id: staff.user_id,
                 staff_full_name: staff.user.full_name,
+                position,
             })));
             appointment.staff_id = assigned[0].user_id;
             appointment.staff_full_name = assigned[0].user.full_name;
