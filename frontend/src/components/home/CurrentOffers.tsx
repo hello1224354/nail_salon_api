@@ -131,40 +131,58 @@ export function CurrentOffers({ offers, instagramHandle }: CurrentOffersProps) {
                             aria-label={`Ưu đãi ${index + 1} trên ${offers.length}`}
                         >
                             <div className="grid min-w-0 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
-                                <div className="order-2 flex min-w-0 flex-col justify-center bg-[#e9ddd2] px-6 py-9 sm:px-10 sm:py-12 lg:order-1 lg:min-h-[32rem] lg:px-[clamp(2.5rem,4.3vw,5.25rem)] lg:py-14">
-                                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#856451] sm:text-[11px]">
-                                        Serpente <span aria-hidden="true" className="mx-2 text-[#b29480]">—</span> Ưu đãi
-                                    </p>
+                                <div className="relative isolate order-2 flex min-w-0 flex-col overflow-hidden bg-[linear-gradient(145deg,#eddfd3_0%,#e7d6c8_100%)] px-7 pb-9 pt-9 sm:px-10 sm:pb-10 sm:pt-10 lg:order-1 lg:min-h-[30rem] lg:px-[clamp(2.5rem,4.3vw,5.25rem)] lg:py-12">
+                                    <div aria-hidden="true" className="pointer-events-none absolute -bottom-40 -right-40 size-[26rem] rounded-full border border-[#bd9d88]/30" />
+                                    <div aria-hidden="true" className="pointer-events-none absolute -bottom-28 -right-28 size-[20rem] rounded-full border border-[#bd9d88]/25" />
+                                    <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 w-1 bg-[#aa806d]/70" />
 
-                                    <h1 className="mt-7 max-w-[16ch] font-serif text-[clamp(2.25rem,4vw,3.8rem)] font-medium leading-[1.1] tracking-[-0.045em] text-[#302823] [overflow-wrap:anywhere]">
-                                        {offer.name}
-                                    </h1>
+                                    <div className="relative z-10 flex min-h-0 flex-1 flex-col">
+                                        <div className="flex items-center gap-3">
+                                            <span aria-hidden="true" className="size-2 shrink-0 rounded-full bg-[#946e59]" />
+                                            <p className="text-[10px] font-semibold uppercase tracking-[0.19em] text-[#795949] sm:text-[11px]">
+                                                Serpente <span aria-hidden="true" className="mx-1.5 text-[#b29480]">/</span> Ưu đãi đang áp dụng
+                                            </p>
+                                        </div>
 
-                                    <div aria-hidden="true" className="mt-7 h-px w-16 bg-[#ab8974]" />
-                                    <p className="mt-6 max-w-[42ch] whitespace-pre-line text-sm leading-7 text-[#55473f] sm:text-[15px]">
-                                        {offer.details}
-                                    </p>
+                                        <div className="flex flex-1 flex-col justify-center py-10 lg:py-11">
+                                            <h1 className="max-w-[16ch] font-serif text-[clamp(2.75rem,4.4vw,4.75rem)] font-medium leading-[1.06] tracking-[-0.045em] text-[#302823] [overflow-wrap:anywhere]">
+                                                {offer.name}
+                                            </h1>
+                                            <div aria-hidden="true" className="mt-7 h-[2px] w-20 bg-[#a47b64]/75" />
+                                            <p className="mt-6 max-w-[44ch] whitespace-pre-line border-l-2 border-[#ba9882] pl-4 text-sm leading-7 text-[#55473f] sm:text-[15px]">
+                                                {offer.details}
+                                            </p>
+                                        </div>
 
-                                    <div className="mt-7 flex items-start gap-2.5 text-xs leading-5 text-[#765e50] sm:text-[13px]">
-                                        <svg
-                                            aria-hidden="true"
-                                            viewBox="0 0 24 24"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            strokeWidth="1.8"
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            className="mt-0.5 size-[16px] shrink-0"
-                                        >
-                                            <rect x="3" y="5" width="18" height="16" rx="2" />
-                                            <path d="M7 3v4M17 3v4M3 10h18" />
-                                        </svg>
-                                        <span>{offer.validDates}</span>
+                                        <div className="flex items-start gap-3 border-t border-[#c6ae9d]/80 pt-5">
+                                            <span className="flex size-10 shrink-0 items-center justify-center rounded-full border border-[#b99b88] text-[#745a4b]">
+                                                <svg
+                                                    aria-hidden="true"
+                                                    viewBox="0 0 24 24"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    strokeWidth="1.7"
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    className="size-[19px]"
+                                                >
+                                                    <rect x="3" y="5" width="18" height="16" rx="2" />
+                                                    <path d="M7 3v4M17 3v4M3 10h18" />
+                                                </svg>
+                                            </span>
+                                            <div className="min-w-0">
+                                                <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[#856451]">
+                                                    Thời gian áp dụng
+                                                </p>
+                                                <p className="mt-1 text-[13px] leading-6 text-[#55473f] sm:text-sm">
+                                                    {offer.validDates}
+                                                </p>
+                                            </div>
+                                        </div>
                                     </div>
-
                                 </div>
 
-                                <div className="relative order-1 min-h-[19rem] bg-[#d9c5ba] sm:min-h-[24rem] lg:order-2 lg:min-h-[32rem]">
+                                <div className="relative order-1 min-h-[19rem] bg-[#d9c5ba] sm:min-h-[24rem] lg:order-2 lg:min-h-[30rem]">
                                     <Image
                                         src={offer.image}
                                         alt={offer.name}
@@ -181,24 +199,24 @@ export function CurrentOffers({ offers, instagramHandle }: CurrentOffersProps) {
             </div>
             </section>
 
-            <div className="mt-5 flex flex-col gap-5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-                <div className="flex flex-wrap items-center gap-3">
+            <div className="mt-6 flex flex-col gap-6 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
                     <Link
                         href="/book"
-                        className="focus-ring inline-flex min-h-11 items-center justify-center rounded-full bg-[#302823] px-6 py-3 text-xs font-semibold text-white transition-colors hover:bg-[#51423a]"
+                        className="focus-ring inline-flex min-h-14 w-full items-center justify-center rounded-full bg-[#302823] px-9 py-4 text-[15px] font-semibold text-white shadow-[0_7px_18px_rgba(48,40,35,0.12)] transition-colors hover:bg-[#51423a] sm:min-h-[60px] sm:w-auto sm:min-w-[185px]"
                     >
                         Đặt lịch
                     </Link>
                     <Link
                         href="/services"
-                        className="focus-ring inline-flex min-h-11 items-center justify-center rounded-full border border-[#bea797] bg-transparent px-6 py-3 text-xs font-semibold text-[#302823] transition-colors hover:bg-[#efe4dc]"
+                        className="focus-ring inline-flex min-h-14 w-full items-center justify-center rounded-full border border-[#aa8977] bg-transparent px-9 py-4 text-[15px] font-semibold text-[#302823] transition-colors hover:bg-[#efe4dc] sm:min-h-[60px] sm:w-auto sm:min-w-[185px]"
                     >
                         Xem bảng giá
                     </Link>
                 </div>
 
                 {offers.length > 1 ? (
-                    <div className="flex items-center gap-2.5" aria-label="Chọn ưu đãi">
+                    <div className="flex items-center justify-center gap-3 sm:justify-end" aria-label="Chọn ưu đãi">
                         {offers.map((_, dotIndex) => (
                             <button
                                 key={dotIndex}
