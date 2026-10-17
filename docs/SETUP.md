@@ -2,10 +2,10 @@
 
 ## Prerequisites
 
-- Node.js **22+** và npm (`Dockerfile` dùng Node 24).
+- Node.js **22+** và npm.
 - Docker Engine + Docker Compose v2 để chạy MySQL 8 local.
 - Git, terminal; nền tảng Windows có thể dùng PowerShell (thay `cp` bằng `Copy-Item`).
-- Gmail OAuth credentials khi bật chức năng gửi OTP/email. Không lưu credentials vào Git.
+- Resend API key và sender đã xác minh, hoặc Gmail OAuth fallback, khi cần gửi OTP/email. Không lưu secrets vào Git.
 
 ## 1. Clone & database
 
@@ -22,7 +22,7 @@ docker compose up -d
 docker compose ps
 ```
 
-`DB_SYNCHRONIZE=true` được hỗ trợ trong môi trường local để tạo schema phục vụ phát triển; production luôn sử dụng `false`. Với cơ sở dữ liệu cần tái hiện schema production, cấu hình `DB_SYNCHRONIZE=false` và chạy migrations sau bước build, trước khi khởi động API. Bất kỳ thay đổi schema trên cơ sở dữ liệu đã có dữ liệu đều yêu cầu backup trước.
+`DB_SYNCHRONIZE=true` chỉ hỗ trợ local để TypeORM tạo bảng từ entity phục vụ phát triển, **không bảo đảm giống hoàn toàn schema production hoặc dữ liệu seed**. Production luôn sử dụng `false`. Vì 30 migration lịch sử đã bị xóa khỏi source và chưa có baseline mới, muốn dựng môi trường tương đương production phải **restore bản backup MySQL hợp lệ**; không thể chỉ chạy `migration:run` trên DB rỗng. Bất kỳ thay đổi schema production nào đều phải backup trước.
 
 ## 2. Backend
 
@@ -34,8 +34,8 @@ npm run dev
 - `npm run dev`: `tsx watch src/server.ts` tại port `3000`.
 - `npm run build`: TypeScript compile ra `dist/`.
 - `npm run start`: chạy `node dist/server.js` sau khi build.
-- `npm run migration:show`: chỉ sau khi build và có DB config.
-- `npm run migration:run`: chạy migration qua `dist/config/database.js` (build trước).
+- `npm run migration:show`: xem migration **mới** đang pending (nếu có), sau khi build và có DB config.
+- `npm run migration:run`: áp dụng migration **mới** qua `dist/config/database.js` (build trước); hiện không có migration trong source, nên lệnh không tạo DB rỗng.
 
 API health: `http://localhost:3000/health` → `{"status":"ok"}`.
 
@@ -77,22 +77,23 @@ Lệnh `npm run start` của Next không được cấu hình sẵn để sử d
 | `JWT_SECRET` | ký JWT và OTP HMAC | bắt buộc, bảo vệ tuyệt đối |
 | `JWT_EXPIRES_IN_SECONDS` | tuổi JWT | 300–900, default 600 |
 | `REFRESH_SESSION_DAYS` | tuổi refresh session/trust | 1–30, default 7 |
-| `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN`, `GMAIL_FROM_EMAIL` | Gmail OAuth sender | cần cả 4 để gửi email |
+| `RESEND_API_KEY`, `RESEND_FROM_EMAIL` | Transactional email ưu tiên | địa chỉ gửi phải thuộc domain đã xác minh |
+| `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN`, `GMAIL_FROM_EMAIL` | Gmail OAuth fallback | cần cả 4 khi không dùng Resend |
 | `GOOGLE_MAPS_URL` | link map nội dung salon | optional |
 
-`frontend/.env.example` chỉ có `NEXT_PUBLIC_API_BASE_URL`. `SITE_ADDRESS`, `ACME_EMAIL`, `MYSQL_ROOT_PASSWORD` nằm trong **mẫu môi trường VPS** `.env.production.example`, không phải cấu hình Express API.
+`frontend/.env.example` chỉ có `NEXT_PUBLIC_API_BASE_URL`. Các biến deployment production được thiết lập trực tiếp trong Railway/Vercel; không commit file `.env` chứa secrets.
 
-## 5. Gmail
+## 5. Gửi email (Resend/Gmail)
 
-Sender `src/modules/users/email.service.ts` trao đổi refresh token qua Google OAuth token endpoint, sau đó POST Gmail `users/me/messages/send`. Cần refresh token với quyền gửi Gmail hợp lệ của địa chỉ `GMAIL_FROM_EMAIL`. Các chức năng phụ thuộc sender: OTP đăng ký, OTP đăng nhập, reset/đổi mật khẩu và thông báo booking cho admin. Nếu thiếu cấu hình, `EMAIL_NOT_CONFIGURED` hoặc lỗi gửi; không tự tạo bypass OTP.
+`src/modules/users/email.service.ts` ưu tiên Resend khi `RESEND_API_KEY` được cấu hình cùng `RESEND_FROM_EMAIL` hợp lệ. Nếu chưa có Resend API key thì mới dùng Gmail OAuth2 (`GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN`, `GMAIL_FROM_EMAIL`). Các luồng OTP đăng ký, đăng nhập, khôi phục/đổi mật khẩu gửi đồng bộ; email thông báo booking sử dụng `notification_outbox` và worker retry. Không có nhà cung cấp gửi mail hợp lệ sẽ trả lỗi; không tự tạo đường bypass OTP.
 
 ## 6. Troubleshooting setup
 
 - `JWT_EXPIRES_IN_SECONDS must be between 300 and 900`: kiểm tra `.env`; không dùng giá trị ngoài khoảng.
 - `DB_PASSWORD is required`: thêm biến vào `.env`.
 - `ECONNREFUSED:3306`: kiểm tra container MySQL và port conflict.
-- Server không chạy production: `npm run build`, `npm run migration:run`, rồi `npm start`.
-- OTP không được gửi: kiểm tra đủ 4 biến Gmail, OAuth scope/token, server logs; không chia sẻ token.
+- Server không chạy production: kiểm tra Railway pre-deploy `npm run migration:run` và kết nối tới **DB đã có schema hợp lệ**, rồi kiểm tra `npm run build`/`npm start`; lệnh migration không dựng schema mới từ DB rỗng.
+- OTP không được gửi: kiểm tra Resend key/sender đã verify hoặc bộ Gmail fallback, DNS/provider logs và server logs; không chia sẻ token.
 - Lỗi frontend fetch: kiểm tra `NEXT_PUBLIC_API_BASE_URL`, API health, cấu hình rewrite/CORS.
 
 Xem [DEPLOYMENT](DEPLOYMENT.md) cho production và [OPERATIONS](OPERATIONS.md) cho vận hành.

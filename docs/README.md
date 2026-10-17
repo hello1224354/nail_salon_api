@@ -7,14 +7,14 @@ Tài liệu về kiến trúc, API, dữ liệu, bảo mật, vận hành và c�
 | [PORTFOLIO.md](PORTFOLIO.md) | Phân tích thiết kế kỹ thuật, concurrency và trade-offs |
 | [DEMO.md](DEMO.md) | Tổng quan sản phẩm, các trang demo và luồng người dùng |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Kiến trúc, sơ đồ luồng, ranh giới trách nhiệm |
-| [SETUP.md](SETUP.md) | Chạy local, môi trường, Gmail, migration |
+| [SETUP.md](SETUP.md) | Chạy local, môi trường, Resend/Gmail, schema |
 | [MEDIA-STORAGE.md](MEDIA-STORAGE.md) | MySQL image BLOB storage, admin image upload/management and rollout |
 | [API.md](API.md) | Danh sách endpoint, phân quyền, request/response, lỗi |
-| [DATABASE.md](DATABASE.md) | Entities, quan hệ, index, migration, dữ liệu snapshot |
+| [DATABASE.md](DATABASE.md) | Entities, quan hệ, index, lịch sử schema, dữ liệu snapshot |
 | [BOOKING.md](BOOKING.md) | Availability, slot 15 phút, nhóm, trạng thái, notification |
 | [AUTH-SECURITY.md](AUTH-SECURITY.md) | OTP, JWT/refresh, trusted browser, audit, bảo mật |
 | [FRONTEND.md](FRONTEND.md) | Pages, components, admin/booking UX và proxy |
-| [DEPLOYMENT.md](DEPLOYMENT.md) | Railway + Vercel, VPS alternative, kiểm tra/rollback |
+| [DEPLOYMENT.md](DEPLOYMENT.md) | Railway + Vercel, kiểm tra triển khai và rollback |
 | [OPERATIONS.md](OPERATIONS.md) | Theo dõi production, xử lý sự cố, backup và phục hồi |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Quy trình thay đổi source/docs/PR |
 
@@ -37,4 +37,4 @@ Tài liệu về kiến trúc, API, dữ liệu, bảo mật, vận hành và c�
 
 ## Versioning
 
-Tài liệu được duy trì cùng source code. Hợp đồng API, migration và logic nghiệp vụ trong repository là căn cứ khi triển khai hoặc thay đổi hệ thống. Các thay đổi chức năng cần cập nhật tài liệu liên quan trong cùng pull request.
+Tài liệu được duy trì cùng source code. Hợp đồng API, TypeORM entities, schema production đã được kiểm tra và logic nghiệp vụ là căn cứ khi triển khai hoặc thay đổi hệ thống. File migration cũ không còn trong nhánh hiện tại; lịch sử đã thực thi vẫn lưu trong database. Các thay đổi chức năng cần cập nhật tài liệu liên quan trong cùng pull request.

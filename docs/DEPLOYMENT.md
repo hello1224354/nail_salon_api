@@ -1,6 +1,6 @@
-# DEPLOYMENT — production, rollback, VPS
+# DEPLOYMENT — Vercel, Railway và rollback
 
-Source đối chiếu: `Dockerfile`, `compose.production.yml`, `deploy/vps/README.md`, `frontend/next.config.ts`, `src/server.ts`.
+Source đối chiếu: `frontend/next.config.ts`, `src/server.ts`, `src/config/database.ts` và cấu hình Railway/Vercel.
 
 ## Môi trường đang sử dụng
 
@@ -17,7 +17,7 @@ Frontend Next rewrite `/api/:path*` sang `NEXT_PUBLIC_API_BASE_URL`. Trên Verce
 
 ## Triển khai
 
-Repository không còn bộ kiểm thử. Workflow GitHub Actions [Build](../.github/workflows/build.yml) chỉ cài dependencies và build backend/frontend (hai status checks bắt buộc của nhánh `main`), **không chạy test, QA, audit hoặc kiểm tra trình duyệt**. Vercel và Railway triển khai ứng dụng theo cấu hình deployment riêng.
+GitHub Actions [Build](../.github/workflows/build.yml) cài dependencies, build backend/frontend và chạy 8 unit test trong `tests/`. Đây chưa phải integration test hoặc kiểm thử trình duyệt. Vercel và Railway triển khai theo cấu hình deployment riêng.
 
 ## Quy trình deploy an toàn
 
@@ -26,11 +26,11 @@ Repository không còn bộ kiểm thử. Workflow GitHub Actions [Build](../.gi
 3. Merge vào `main` khi head còn khớp/không conflict.
 4. **Vercel:** kiểm tra project nội bộ `nail-salon-web-v2` nhận đúng commit SHA và deployment `READY`; xác nhận `https://serpentenailroom.site` trỏ đúng deployment production, không chỉ kiểm tra URL deployment `.vercel.app`. Alias cũ phải chuyển hướng về domain chính, không được quảng bá làm website độc lập.
 5. **Railway:** kiểm tra service `api` nhận đúng commit SHA và deployment `SUCCESS`. Nếu auto-deploy không nhận, kiểm tra GitHub source/branch trong Railway thay vì giả định deploy đã chạy.
-6. Kiểm tra logs backend có DB migrations hoàn tất và `Server is running on port: 3000`.
+6. Kiểm tra Railway pre-deploy command `npm run migration:run` hoàn thành và backend ghi `Server is running on port: 3000`; hiện repository chưa có migration để dựng schema mới.
 7. Theo dõi `/health`, trạng thái deployment, runtime logs và cảnh báo vận hành.
 8. Nếu thay đổi schema, làm verified database backup **trước** migration; chuẩn bị rollback tương thích schema.
 
-Backend `src/server.ts` gọi `AppDataSource.showMigrations()` ở production và **fail startup nếu còn pending migration**. TypeORM migrations cần chạy trước khi start, có thể đặt thành Railway pre-deploy step phù hợp service; Dockerfile mặc định chỉ build và start application.
+Backend `src/server.ts` gọi `AppDataSource.showMigrations()` ở production và **fail startup nếu còn pending migration**. Railway API thực tế đã cấu hình pre-deploy `npm run migration:run`. 30 migration cũ không còn trong source; khi tạo DB mới từ đầu, bước này không thay thế được việc restore schema từ backup.
 
 ## Config production
 
@@ -42,7 +42,7 @@ Backend `src/server.ts` gọi `AppDataSource.showMigrations()` ở production v�
 - Chỉ khi **chưa** cấu hình `RESEND_API_KEY`, code mới dùng Gmail OAuth cũ (`GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN`, `GMAIL_FROM_EMAIL`). Nếu đặt Resend key nhưng thiếu sender, API sẽ báo thiếu cấu hình; không tự động gửi bằng Gmail.
 - Chuyển production sang Resend: (1) tạo tài khoản tại https://resend.com; (2) thêm và xác minh domain `serpentenailroom.site`, cấu hình bản ghi DNS đúng theo dashboard Resend, **không xóa MX nhận thư hoặc ghi đè SPF hiện có**; (3) tạo API key chỉ có quyền gửi; (4) đặt `RESEND_API_KEY` và `RESEND_FROM_EMAIL=no-reply@serpentenailroom.site` trong Railway service `api` production; (5) deploy lại service theo cấu hình Railway. Không thêm API key vào Git.
 - Resend loại bỏ rủi ro hết hạn 7 ngày do Google OAuth app ở chế độ Testing nhưng **không** bảo đảm 100% email luôn gửi được: API key có thể bị revoke, DNS bị sửa, provider gặp sự cố, hoặc tài khoản vượt giới hạn gửi. Theo dõi lỗi `Resend email send failed` trong runtime logs và dashboard nhà cung cấp.
-- Ảnh upload được lưu trong bảng `media_files` dưới dạng MEDIUMBLOB trong MySQL Railway. Không yêu cầu R2 hay secret bổ sung. Khi chạy migration, cần backup database trước. Hướng dẫn: [MEDIA-STORAGE](MEDIA-STORAGE.md).
+- Ảnh upload được lưu trong bảng `media_files` dưới dạng MEDIUMBLOB trong MySQL Railway. Không yêu cầu R2 hay secret bổ sung. Khi thay đổi schema, cần backup database trước. Hướng dẫn: [MEDIA-STORAGE](MEDIA-STORAGE.md).
 - `NEXT_PUBLIC_API_BASE_URL` cấu hình tại Vercel trước build.
 - Cookie production dùng `Secure`, cần HTTPS. Không test login thực qua HTTP.
 
@@ -51,29 +51,9 @@ Backend `src/server.ts` gọi `AppDataSource.showMigrations()` ở production v�
 ## Rollback
 
 - **Frontend-only:** chọn deployment Vercel trước đó tương thích API, xác nhận domain/health/UI.
-- **Backend-only:** rollback phiên bản API tương thích với schema DB hiện tại; **không** rollback Docker image và kỳ vọng migration DB tự đảo ngược.
+- **Backend-only:** rollback phiên bản API tương thích với schema DB hiện tại; **không** rollback application image và kỳ vọng thay đổi DB tự đảo ngược.
 - **Có migration/ghi dữ liệu mới:** sao lưu, đánh giá backward/forward compatibility và kế hoạch phục hồi; không restore bản backup cũ lên production đang nhận booking mới vì sẽ làm mất các lần đặt.
 - Ghi lại SHA source, deployment ID, thời gian cutover, trạng thái vận hành và rollback.
-
-## VPS Compose — phương án thay thế, chưa cutover
-
-`compose.production.yml` tổ chức:
-
-```text
-db (MySQL internal) -> migrate -> api -> frontend -> caddy :80/:443
-                       retention job (mỗi 24h)
-```
-
-`deploy/vps/README.md` là runbook cụ thể; `deploy/vps/Caddyfile` terminate HTTPS và reverse-proxy Next, không public MySQL/API port. Để cài mới:
-
-```bash
-cp .env.production.example .env.production
-# Điền mọi placeholder an toàn, tạo DNS A record và backup strategy
-docker compose --env-file .env.production -f compose.production.yml config
-docker compose --env-file .env.production -f compose.production.yml up -d --build
-```
-
-**Nếu chuyển production khỏi Railway:** bắt buộc dump/restore MySQL một cách nhất quán trong maintenance window, verify users/appointments/staff slots/migrations, thử restore backup, rồi mới đổi DNS. Không chạy đồng thời hai bản production ghi hai DB khác nhau. `deploy/vps/backup.sh` yêu cầu encrypted offsite destination (`BACKUP_TARGET` qua rclone); không xem một disk volume là backup.
 
 ## Thông tin vận hành
 

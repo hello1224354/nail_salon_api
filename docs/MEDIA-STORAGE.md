@@ -27,16 +27,14 @@ The `image_data` column is marked `select: false` in TypeORM so the admin galler
 | GET | `/api/site-content/admin/trends` | ADMIN | List Hot Trend entries |
 | POST/PUT/DELETE | `/api/site-content/admin/trends[/:id]` | ADMIN | Add, update and delete trends |
 
-The existing `/api/offers` API accepts the uploaded image URL as its `image` field. Newly created trends must select an image already in the media library. Existing Google Drive trend URLs and `/nails/...` files are **preserved** until an admin updates each item. No automatic download of legacy images occurs.
+The existing `/api/offers` API accepts an uploaded image URL as its `image` field. Newly created trends select an image from the media library. Existing Google Drive URLs and **still-referenced** static images remain supported; three unreferenced public assets (`nail-01.png`, `nail-03.png`, `nail-care.png`) have been removed from the repository. No automatic download of legacy images occurs.
 
 ## Deployment
 
-1. **Back up the current MySQL database** and verify that the backup can be restored. Images will increase database size and backup duration; monitor Railway storage/usage.
-2. Build from the merged commit: `npm ci && npm run build`.
-3. Run TypeORM migration `1791452400000-AddMediaFiles` against production **before** the new backend starts. The Railway API already uses `npm run migration:run` as its pre-deploy command.
-4. Check Railway API health and backend logs; confirm the migration created `media_files` with `image_data MEDIUMBLOB`.
-5. Verify the Vercel frontend deployment uses the same compatible GitHub source.
-6. Sign in as ADMIN and test: upload a small image, open its `/api/media/:id/file` URL, assign it to an offer/trend, confirm homepage rendering, then replace/remove it and clean up the unused test file.
+1. Back up Railway MySQL, including the full `media_files.image_data` BLOBs; test a restore before schema changes.
+2. Existing production `media_files` uses `image_data MEDIUMBLOB` and was verified with four complete image records. The obsolete `object_key` column and `media_object_deletions` table have been removed from production.
+3. The 30 historical TypeORM migrations (including `AddMediaFiles`) are no longer present in the current branch; `npm run migration:run` does **not** initialize a new database. Restore a verified database snapshot for a fresh environment.
+4. Confirm Railway API health, Vercel deployment compatibility, and as ADMIN verify upload, file retrieval, offer/trend assignment and deletion behavior.
 
 **Do not use production customer data in test screenshots or upload private images for testing.**
 
@@ -46,11 +44,11 @@ The existing `/api/offers` API accepts the uploaded image URL as its `image` fie
 - **Ưu đãi**: choose an image already uploaded or upload a new one while editing the offer.
 - **Hot Trend**: add/edit an image with Instagram URL, title and display order; delete a trend without deleting its underlying media file.
 
-The UI leaves existing Google Drive and static images unchanged until replaced.
+The UI leaves existing Google Drive and currently deployed referenced static image URLs unchanged until replaced.
 
 ## Limits and operating considerations
 
-- **Storage is not unlimited or automatically free.** A 5 MiB image adds approximately 5 MiB to the database, plus backup/storage overhead. The existing Railway MySQL volume currently has 500 MB allocated, so monitor its free capacity closely. Railway storage and transfer usage continue to apply.
+- **Storage is not unlimited or automatically free.** A 5 MiB image adds approximately 5 MiB to the database, plus backup/storage overhead. Monitor the actual Railway volume capacity and free space in the dashboard. Railway storage and transfer usage continue to apply.
 - **Operational trade-off:** Storing image BLOBs alongside booking data increases database size and I/O load. Suitable for a smaller image gallery and early-stage site, not an unrestricted multi-user photo hosting service.
 - **Cache:** Images use long-lived UUID URLs and a one-hour cache header. Each upload creates a new URL, so replacing an image in an offer/trend will cause the frontend to use a new URL.
 - **Optimization:** The Admin frontend attempts to resize large photos to a maximum side of 1600 pixels and encode smaller WebP images before upload, reducing storage and download costs. The backend still validates format and size independently. Raw API uploads are not server-reencoded, so restrict uploads to trusted admins.
