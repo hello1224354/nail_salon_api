@@ -103,18 +103,12 @@ export function ForgotPasswordForm() {
                 <div className="rounded-2xl border border-[#aac6b3] bg-[#edf7f0] p-5 text-sm leading-6 text-[#315c40]">
                     Mật khẩu đã được đặt lại. Tất cả phiên đăng nhập cũ đã bị thu hồi.
                 </div>
-                <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                <div className="mt-6">
                     <Link
                         href="/login"
                         className="focus-ring flex h-12 items-center justify-center rounded-full bg-ink px-5 text-sm font-semibold text-white"
                     >
-                        Đăng nhập khách hàng
-                    </Link>
-                    <Link
-                        href="/admin/login"
-                        className="focus-ring flex h-12 items-center justify-center rounded-full border border-line bg-white px-5 text-sm font-semibold text-ink"
-                    >
-                        Đăng nhập quản trị
+                        Quay lại trang đăng nhập
                     </Link>
                 </div>
             </div>
