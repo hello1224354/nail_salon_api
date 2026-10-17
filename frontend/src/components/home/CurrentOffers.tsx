@@ -144,12 +144,14 @@ export function CurrentOffers({ offers, instagramHandle }: CurrentOffersProps) {
                                         </div>
 
                                         <div className="flex flex-1 flex-col justify-start pb-8 pt-7 sm:pt-8 lg:pb-10 lg:pt-8">
-                                            <h1 className="max-w-[16ch] font-serif text-[clamp(2.75rem,4.4vw,4.75rem)] font-medium leading-[1.06] tracking-[-0.045em] text-[#302823] [overflow-wrap:anywhere]">
-                                                {offer.name}
-                                            </h1>
-                                            <p className="mt-6 w-full whitespace-pre-line border-l-2 border-[#ba9882] pl-4 text-sm leading-7 text-[#55473f] sm:text-[15px]">
-                                                {offer.details}
-                                            </p>
+                                            <div className="w-full max-w-[16ch] font-serif text-[clamp(2.75rem,4.4vw,4.75rem)]">
+                                                <h1 className="font-medium leading-[1.06] tracking-[-0.045em] text-[#302823] [overflow-wrap:anywhere]">
+                                                    {offer.name}
+                                                </h1>
+                                                <p className="mt-6 whitespace-pre-line border-l-2 border-[#ba9882] pl-4 font-sans text-sm leading-7 text-[#55473f] [overflow-wrap:anywhere] sm:text-[15px]">
+                                                    {offer.details}
+                                                </p>
+                                            </div>
                                             {offer.instagramPostUrl?.startsWith("https://www.instagram.com/") ? (
                                                 <a
                                                     href={offer.instagramPostUrl}
