@@ -565,6 +565,7 @@ export function AdminDashboard() {
             start_date: String(form.get("start_date") || ""),
             end_date: String(form.get("end_date") || ""),
             image: String(form.get("image") || "").trim(),
+            instagram_post_url: String(form.get("instagram_post_url") || "").trim() || null,
             sort_order: Number(form.get("sort_order") || 0),
         };
 
@@ -1010,6 +1011,20 @@ export function AdminDashboard() {
                         </Field>
                         <Field label="Mô tả" span>
                             <textarea name="details" defaultValue={editingOffer?.details || ""} className={textareaClass} required maxLength={2000} />
+                        </Field>
+                        <Field label="Link bài Instagram (không bắt buộc)" span>
+                            <input
+                                name="instagram_post_url"
+                                type="url"
+                                inputMode="url"
+                                placeholder="https://www.instagram.com/p/..."
+                                defaultValue={editingOffer?.instagram_post_url ?? ""}
+                                className={inputClass}
+                                maxLength={500}
+                            />
+                            <p className="mt-1 text-[11px] text-muted">
+                                Dán link bài đăng hoặc Reel của ưu đãi. Để trống nếu chưa có bài Instagram.
+                            </p>
                         </Field>
                         <div className="flex justify-end gap-3 md:col-span-2">
                             <button type="button" onClick={() => setModal(null)} className="rounded-full border border-line px-5 py-2.5 text-xs font-semibold">Hủy</button>
@@ -1552,6 +1567,16 @@ function OffersPanel({
                             <p className="mt-3 line-clamp-3 text-xs leading-5 text-muted">{offer.details}</p>
                             <p className="mt-4 text-[10px] font-semibold text-ink">{formatDate(offer.start_date)} — {formatDate(offer.end_date)}</p>
                             <p className="mt-1 truncate text-[10px] text-muted">{offer.image}</p>
+                            {offer.instagram_post_url ? (
+                                <a
+                                    href={offer.instagram_post_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="mt-2 block w-fit text-[11px] font-semibold text-accent underline-offset-4 hover:underline"
+                                >
+                                    Xem bài Instagram
+                                </a>
+                            ) : null}
                             <div className="mt-5 flex gap-4 border-t border-line pt-4 text-[11px]">
                                 <button onClick={() => onEdit(offer)} className="font-semibold text-accent">Chỉnh sửa</button>
                                 <button disabled={submitting} onClick={() => void onDelete(offer)} className="font-semibold text-[#8a5147]">Xóa</button>
