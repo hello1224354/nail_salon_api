@@ -1,5 +1,7 @@
 import { DataSource } from "typeorm";
 import { Service } from "../modules/services/service.entity";
+import { ServiceCategory } from "../modules/services/service-category.entity";
+import { WebsiteVisit } from "../modules/traffic/website-visit.entity";
 import { Staff } from "../modules/staffs/staffs.entity";
 import { Appointment } from "../modules/appointments/appointments.entity";
 import { User } from "../modules/users/users.entity";
@@ -37,6 +39,8 @@ export const AppDataSource = new DataSource({
     logging: env.DB_LOGGING,
     entities: [
         Service,
+        ServiceCategory,
+        WebsiteVisit,
         Staff,
         Appointment,
         AppointmentService,
