@@ -1,6 +1,7 @@
 import { AppError } from "../../common/errors";
 
 export interface CreateOfferDto {
+    branch_id: number | null;
     name: string;
     details: string;
     start_date: string;
@@ -11,6 +12,7 @@ export interface CreateOfferDto {
 }
 
 export interface UpdateOfferDto {
+    branch_id?: number | null;
     name?: string;
     details?: string;
     start_date?: string;
@@ -21,6 +23,7 @@ export interface UpdateOfferDto {
 }
 
 export interface GetOffersQueryDto {
+    branch_id?: number;
     page: number;
     limit: number;
 }
@@ -133,6 +136,14 @@ function parseInstagramPostUrl(value: unknown): string | null {
     return "https://www.instagram.com" + path;
 }
 
+function parseBranchId(value: unknown): number | null {
+    if (value === null) return null;
+    if (typeof value !== "number" || !Number.isSafeInteger(value) || value <= 0) {
+        throw new AppError("Branch_id must be a valid branch ID or null", 400, "VALIDATION_ERROR");
+    }
+    return value;
+}
+
 export function parseGetOffersQuery(query: unknown): GetOffersQueryDto {
     if (query === null || typeof query !== "object" || Array.isArray(query)) {
         throw new AppError("Query must be an object", 400, "VALIDATION_ERROR");
@@ -156,7 +167,11 @@ export function parseGetOffersQuery(query: unknown): GetOffersQueryDto {
         throw new AppError("Pagination offset is too large", 400, "VALIDATION_ERROR");
     }
 
-    return { page, limit };
+    const branchId = data.branch_id === undefined ? undefined : Number(data.branch_id);
+    if (branchId !== undefined && (!Number.isSafeInteger(branchId) || branchId <= 0)) {
+        throw new AppError("Invalid branch_id filter", 400, "VALIDATION_ERROR");
+    }
+    return { page, limit, branch_id: branchId };
 }
 
 export function parseCreateOfferDto(body: unknown): CreateOfferDto {
@@ -180,6 +195,7 @@ export function parseCreateOfferDto(body: unknown): CreateOfferDto {
         image: parseRequiredString(data.image, "Image", 500),
         instagram_post_url: parseInstagramPostUrl(data.instagram_post_url),
         sort_order: data.sort_order === undefined ? 0 : parseSortOrder(data.sort_order),
+        branch_id: data.branch_id === undefined ? null : parseBranchId(data.branch_id),
     };
 }
 
@@ -198,6 +214,7 @@ export function parseUpdateOfferDto(body: unknown): UpdateOfferDto {
     if (data.image !== undefined) result.image = parseRequiredString(data.image, "Image", 500);
     if (data.instagram_post_url !== undefined) result.instagram_post_url = parseInstagramPostUrl(data.instagram_post_url);
     if (data.sort_order !== undefined) result.sort_order = parseSortOrder(data.sort_order);
+    if (data.branch_id !== undefined) result.branch_id = parseBranchId(data.branch_id);
 
     if (
         result.start_date !== undefined &&
