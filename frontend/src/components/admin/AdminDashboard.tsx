@@ -1081,7 +1081,7 @@ function Overview({
     setTab: (tab: TabKey) => void;
 }) {
     const cards = [
-        { label: "Lịch trong tháng đã chọn", value: data.appointmentTotal },
+        { label: "Lịch theo bộ lọc", value: data.appointmentTotal },
         { label: "Chờ xác nhận hôm nay", value: todayStats.pending },
         { label: "Nhân viên", value: staffCount },
         { label: "Dịch vụ", value: serviceCount },
