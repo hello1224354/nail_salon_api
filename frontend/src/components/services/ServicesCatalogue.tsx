@@ -138,15 +138,9 @@ export function ServicesCatalogue() {
                         >
                             <div className="min-w-0 flex-[1_1_16rem]">
                                 <div className="flex flex-wrap items-center gap-2">
-                                    {service.subcategory ? (
-                                        <span className="text-[9px] font-semibold uppercase tracking-[0.14em] text-accent">
-                                            {service.subcategory}
-                                        </span>
-                                    ) : (
-                                        <span className="text-[9px] font-semibold uppercase tracking-[0.14em] text-accent">
-                                            {service.category || "Dịch vụ"}
-                                        </span>
-                                    )}
+                                    <span className="text-[9px] font-semibold uppercase tracking-[0.14em] text-accent">
+                                        {service.category || "Dịch vụ"}
+                                    </span>
 
                                     {!service.booking_enabled ? (
                                         <span className="rounded-full bg-cream px-2.5 py-1 text-[9px] font-semibold text-muted">

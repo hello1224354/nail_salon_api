@@ -1,4 +1,5 @@
 import { AppError } from "../../common/errors";
+import { parseServiceCategory, type ServiceCategory } from "./service-categories";
 
 export interface CreateServiceDto {
     branch_id: number;
@@ -6,8 +7,7 @@ export interface CreateServiceDto {
     price: number;
     duration_minutes: number | null;
     booking_enabled: boolean;
-    category: string | null;
-    subcategory: string | null;
+    category: ServiceCategory;
     description: string | null;
 }
 
@@ -16,8 +16,7 @@ export interface UpdateServiceDto {
     price?: number;
     duration_minutes?: number | null;
     booking_enabled?: boolean;
-    category?: string | null;
-    subcategory?: string | null;
+    category?: ServiceCategory;
     description?: string | null;
 }
 
@@ -87,6 +86,9 @@ function durationValue(value: unknown): number | null {
 export function parseCreateServiceDto(body: unknown): CreateServiceDto {
     if (body === null || typeof body !== "object" || Array.isArray(body)) throw new AppError("Request body must be an object", 400, "VALIDATION_ERROR");
     const data = body as Record<string, unknown>;
+    if (data.subcategory !== undefined) {
+        throw new AppError("Subgroups are not supported; select a service group", 400, "VALIDATION_ERROR");
+    }
 
     if (!Number.isInteger(data.branch_id) || (data.branch_id as number) <= 0 || (data.branch_id as number) > MAX_INT) throw new AppError("Invalid branch_id", 400, "VALIDATION_ERROR");
     if (typeof data.name !== "string" || !data.name.trim() || data.name.trim().length > 255) throw new AppError("Name must be between 1 and 255 characters", 400, "VALIDATION_ERROR");
@@ -102,8 +104,7 @@ export function parseCreateServiceDto(body: unknown): CreateServiceDto {
         price: data.price as number,
         duration_minutes: duration,
         booking_enabled: enabled,
-        category: optionalText(data.category, "Category"),
-        subcategory: optionalText(data.subcategory, "Subcategory"),
+        category: parseServiceCategory(data.category),
         description: optionalText(data.description, "Description", 2000),
     };
 }
@@ -111,6 +112,9 @@ export function parseCreateServiceDto(body: unknown): CreateServiceDto {
 export function parseUpdateServiceDto(body: unknown): UpdateServiceDto {
     if (body === null || typeof body !== "object" || Array.isArray(body)) throw new AppError("Request body must be an object", 400, "VALIDATION_ERROR");
     const data = body as Record<string, unknown>;
+    if (data.subcategory !== undefined) {
+        throw new AppError("Subgroups are not supported; select a service group", 400, "VALIDATION_ERROR");
+    }
     const result: UpdateServiceDto = {};
     if (data.name !== undefined) {
         if (typeof data.name !== "string" || !data.name.trim() || data.name.trim().length > 255) throw new AppError("Invalid name", 400, "VALIDATION_ERROR");
@@ -125,8 +129,7 @@ export function parseUpdateServiceDto(body: unknown): UpdateServiceDto {
         if (typeof data.booking_enabled !== "boolean") throw new AppError("Booking_enabled must be boolean", 400, "VALIDATION_ERROR");
         result.booking_enabled = data.booking_enabled;
     }
-    if (data.category !== undefined) result.category = optionalText(data.category, "Category");
-    if (data.subcategory !== undefined) result.subcategory = optionalText(data.subcategory, "Subcategory");
+    if (data.category !== undefined) result.category = parseServiceCategory(data.category);
     if (data.description !== undefined) result.description = optionalText(data.description, "Description", 2000);
     if (!Object.keys(result).length) throw new AppError("At least one field must be provided", 400, "VALIDATION_ERROR");
     return result;

@@ -4,6 +4,21 @@ import { AppError } from "../../common/errors";
 import { parseCreateServiceDto, parseGetServicesQuery, parseUpdateServiceDto } from "./services.dto";
 import { parseUuidParam } from "../../common/validators";
 
+
+export const getServiceCategories = async (_req: Request, res: Response) => {
+    const data = await serviceService.getServiceCategories();
+    return res.status(200).json({
+        success: { message: "Get service groups successfully", data },
+    });
+};
+
+export const createServiceCategory = async (req: Request, res: Response) => {
+    const name = await serviceService.createServiceCategory((req.body as Record<string, unknown> | null)?.name);
+    return res.status(201).json({
+        success: { message: "Service group created successfully", data: { name } },
+    });
+};
+
 export const getAllServices = async (req: Request, res: Response) => {
     const data = await serviceService.getAllServices(parseGetServicesQuery(req.query));
     return res.status(200).json({

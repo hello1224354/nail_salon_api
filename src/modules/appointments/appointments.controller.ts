@@ -91,6 +91,13 @@ export const getAvailability = async (req: Request, res: Response) => {
     });
 };
 
+export const getAdminLifetimeSummary = async (_req: Request, res: Response) => {
+    const data = await appointmentService.getAdminLifetimeSummary();
+    return res.status(200).json({
+        success: { data, message: "Lifetime appointment and revenue summary" },
+    });
+};
+
 export const getAdminMonthSummary = async (req: Request, res: Response) => {
     const month = req.query.month;
     if (typeof month !== "string") throw new AppError("Month is required (YYYY-MM)", 400, "VALIDATION_ERROR");

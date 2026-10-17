@@ -19,7 +19,7 @@ jobs:
           node-version: 22
       - run: npm ci
       - run: npm run build
-      - run: npx tsx --test src/modules/appointments/*.test.ts src/modules/offers/*.test.ts src/modules/walk-ins/*.test.ts
+      - run: npx tsx --test src/modules/appointments/*.test.ts src/modules/offers/*.test.ts src/modules/walk-ins/*.test.ts src/modules/services/*.test.ts src/modules/traffic/*.test.ts
 
   frontend:
     runs-on: ubuntu-latest

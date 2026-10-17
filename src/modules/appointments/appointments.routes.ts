@@ -11,6 +11,7 @@ router.get("/", authenticate, controller.getAllAppointments);
 router.get("/availability", authenticate, requireRole(UserRole.CUSTOMER, UserRole.ADMIN), availabilityRateLimiter, controller.getAvailability);
 router.get("/admin/today-summary", authenticate, requireRole(UserRole.ADMIN), controller.getAdminTodaySummary);
 router.get("/admin/month-summary", authenticate, requireRole(UserRole.ADMIN), controller.getAdminMonthSummary);
+router.get("/admin/lifetime-summary", authenticate, requireRole(UserRole.ADMIN), controller.getAdminLifetimeSummary);
 router.post("/", authenticate, requireRole(UserRole.CUSTOMER, UserRole.ADMIN), bookingRateLimiter, controller.createAppointment);
 router.get("/:id", authenticate, controller.getAppointmentById);
 router.put("/:id/actual-prices/:serviceId", authenticate, requireRole(UserRole.STAFF), controller.setActualPrice);
