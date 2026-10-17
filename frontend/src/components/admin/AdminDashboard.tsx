@@ -1094,7 +1094,9 @@ function Overview({
     ];
 
     const upcoming = data.appointments
-        .filter((appointment) => !["completed", "cancelled"].includes(appointment.status))
+        .filter(appointment => !["completed", "cancelled"].includes(appointment.status) &&
+            new Date(appointment.start_time).getTime() >= Date.now())
+        .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
         .slice(0, 6);
 
     return (
@@ -1114,7 +1116,7 @@ function Overview({
                     <div className="flex items-center justify-between border-b border-line px-5 py-4">
                         <div>
                             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-accent">Vận hành</p>
-                            <h2 className="mt-1 font-serif text-2xl">Lịch sắp tới</h2>
+                            <h2 className="mt-1 font-serif text-2xl">Lịch sắp tới trong tháng</h2>
                         </div>
                         <button onClick={() => setTab("appointments")} className="text-[11px] font-semibold text-accent">Xem tất cả →</button>
                     </div>
