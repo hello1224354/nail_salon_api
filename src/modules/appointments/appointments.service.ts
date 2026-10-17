@@ -24,6 +24,7 @@ import { parseBranchOpeningHours } from "../branches/branch-opening-hours";
 import { monthWindow } from "./admin-month-summary";
 import { StaffAssignmentRotation } from "./staff-assignment-rotation.entity";
 import { addAssignedMinutes, chooseFairStaff, type StaffWorkload } from "./staff-allocation";
+import { hasAllStaffPrices, isGroupComplete } from "./staff-completion";
 
 const appointmentRepo = AppDataSource.getRepository(Appointment);
 
@@ -802,6 +803,7 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
                 [AppointmentStatus.COMPLETED]: [],
                 [AppointmentStatus.CANCELLED]: [],
             };
+            // A worker's COMPLETED command marks only their assignment, not the group.
             if (!allowed[appointment.status].includes(data.status)) {
                 throw new AppError("Invalid appointment status transition", 409, "INVALID_STATUS_TRANSITION");
             }
@@ -817,13 +819,27 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
                 }
                 if (data.status === AppointmentStatus.IN_PROGRESS) appointment.actual_started_at = new Date();
                 if (data.status === AppointmentStatus.COMPLETED) {
-                    // Every employee in this group must enter each service's actual charge.
-                    const count = await manager.getRepository(AppointmentActualPrice).countBy({ appointment_id: appointment.id });
-                    const expected = appointment.staff_assignments.length * appointment.appointment_services.length;
-                    if (count !== expected) {
-                        throw new AppError("Every assigned employee must enter actual prices before completion", 409, "ACTUAL_PRICES_INCOMPLETE");
+                    if (role !== UserRole.STAFF) {
+                        throw new AppError("Only assigned staff can mark their work complete", 403, "STAFF_COMPLETION_REQUIRED");
                     }
-                    appointment.actual_completed_at = new Date();
+                    const assignment = appointment.staff_assignments.find(row => row.staff_id === userId);
+                    if (!assignment) throw new AppError("Staff not assigned", 403, "FORBIDDEN");
+                    if (assignment.completed_at !== null) {
+                        throw new AppError("Work already completed by this employee", 409, "STAFF_ALREADY_COMPLETED");
+                    }
+                    const prices = await manager.getRepository(AppointmentActualPrice).findBy({ appointment_id: appointment.id });
+                    if (!hasAllStaffPrices(userId, appointment.appointment_services.map(s => s.service_id), prices)) {
+                        throw new AppError("Enter your actual price for each service before completion", 409, "ACTUAL_PRICES_INCOMPLETE");
+                    }
+                    const finishedAt = new Date();
+                    assignment.completed_at = finishedAt;
+                    await assignmentRepo.save(assignment);
+                    if (isGroupComplete(appointment.staff_assignments)) {
+                        appointment.actual_completed_at = finishedAt;
+                    } else {
+                        // Keep the booking active until every assigned employee finishes.
+                        return appointments.save(appointment);
+                    }
                 }
             }
             if (data.status === AppointmentStatus.COMPLETED || data.status === AppointmentStatus.CANCELLED) {
