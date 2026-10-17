@@ -1,4 +1,4 @@
-import { In } from "typeorm";
+import { Between, In } from "typeorm";
 import { AppDataSource } from "../../config/database";
 import { AppError } from "../../common/errors";
 import { Staff } from "../staffs/staffs.entity";
@@ -7,6 +7,7 @@ import { UserRole } from "../users/users.entity";
 import { CreateWalkInDto } from "./walk-ins.dto";
 import { WalkInVisit } from "./walk-in-visit.entity";
 import { WalkInVisitService } from "./walk-in-visit-service.entity";
+import { monthWindow } from "../appointments/admin-month-summary";
 
 export async function createWalkIn(actorId: string, data: CreateWalkInDto) {
     return AppDataSource.transaction(async manager => {
@@ -46,16 +47,25 @@ export async function createWalkIn(actorId: string, data: CreateWalkInDto) {
     });
 }
 
-export async function listWalkIns(actorId: string, role: UserRole) {
+export async function listWalkIns(actorId: string, role: UserRole, month?: string, page = 1, limit = 50) {
     if (role !== UserRole.STAFF && role !== UserRole.ADMIN) {
         throw new AppError("Staff or admin access required", 403, "FORBIDDEN");
     }
+    if (role === UserRole.STAFF && month !== undefined) {
+        throw new AppError("Month history filter is for admin only", 403, "FORBIDDEN");
+    }
+    const range = month === undefined ? null : monthWindow(month);
     const repo = AppDataSource.getRepository(WalkInVisit);
+    const where = role === UserRole.STAFF ? { staff_id: actorId } :
+        range ? { served_at: Between(range.start, new Date(range.end.getTime() - 1)) } : {};
     const [visits, total] = await repo.findAndCount({
-        where: role === UserRole.STAFF ? { staff_id: actorId } : {},
+        where,
         relations: { services: true },
         order: { served_at: "DESC" },
-        take: 100,
+        skip: role === UserRole.ADMIN ? (page - 1) * limit : 0,
+        take: role === UserRole.ADMIN ? limit : 100,
     });
-    return { visits, total };
+    return { visits, total, page: role === UserRole.ADMIN ? page : 1,
+        limit: role === UserRole.ADMIN ? limit : 100,
+        total_pages: Math.ceil(total / (role === UserRole.ADMIN ? limit : 100)) };
 }

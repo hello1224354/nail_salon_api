@@ -11,6 +11,10 @@ export class Offer {
     @Column({ type: "text" })
     details: string;
 
+    /** NULL = available at every branch. */
+    @Column({ type: "int", nullable: true })
+    branch_id: number | null;
+
     @Column({ type: "date" })
     start_date: string;
 

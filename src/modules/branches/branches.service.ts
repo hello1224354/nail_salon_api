@@ -3,6 +3,8 @@ import { AppDataSource } from "../../config/database";
 import { Staff } from "../staffs/staffs.entity";
 import { User } from "../users/users.entity";
 import { Branch } from "./branches.entity";
+import { Offer } from "../offers/offer.entity";
+import { AppError } from "../../common/errors";
 import { CreateBranchDto, GetBranchesQueryDto, UpdateBranchDto } from "./branches.dto";
 
 const branchRepo = AppDataSource.getRepository(Branch);
@@ -54,6 +56,13 @@ export const deleteBranch = async (id: number) => {
         });
 
         if (!branch) return null;
+
+        if (await manager.getRepository(Offer).exists({ where: { branch_id: id } })) {
+            throw new AppError(
+                "This branch still has offers. Reassign or delete those offers first.",
+                409, "BRANCH_HAS_OFFERS"
+            );
+        }
 
         const staffs = await transactionStaffRepo.find({
             where: { branch_id: id },

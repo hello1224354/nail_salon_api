@@ -1,9 +1,10 @@
-import { LessThanOrEqual, MoreThanOrEqual } from "typeorm";
+import { LessThanOrEqual, MoreThanOrEqual, IsNull } from "typeorm";
 import { AppError } from "../../common/errors";
 import { AppDataSource } from "../../config/database";
 import { CreateOfferDto, GetOffersQueryDto, UpdateOfferDto } from "./offers.dto";
 import { Offer } from "./offer.entity";
 import { MediaFile } from "../media/media-file.entity";
+import { Branch } from "../branches/branches.entity";
 
 const offerRepo = AppDataSource.getRepository(Offer);
 
@@ -45,11 +46,13 @@ function toPage(offers: Offer[], total: number, query: GetOffersQueryDto) {
 
 export const getCurrentOffers = async (query: GetOffersQueryDto) => {
     const today = getVietnamToday();
+    const base = { start_date: LessThanOrEqual(today), end_date: MoreThanOrEqual(today) };
+    const where = query.branch_id === undefined ? base : [
+        { ...base, branch_id: IsNull() },
+        { ...base, branch_id: query.branch_id },
+    ];
     const [offers, total] = await offerRepo.findAndCount({
-        where: {
-            start_date: LessThanOrEqual(today),
-            end_date: MoreThanOrEqual(today),
-        },
+        where,
         order: {
             sort_order: "ASC",
             created_at: "DESC",
@@ -85,8 +88,16 @@ async function ensureStoredImage(image: string) {
     }
 }
 
+async function validateBranchScope(branchId: number | null) {
+    if (branchId === null) return;
+    if (!await AppDataSource.getRepository(Branch).exists({ where: { id: branchId } })) {
+        throw new AppError("Offer branch not found", 404, "BRANCH_NOT_FOUND");
+    }
+}
+
 export const createOffer = async (data: CreateOfferDto) => {
     await ensureStoredImage(data.image);
+    await validateBranchScope(data.branch_id);
     return await offerRepo.save(offerRepo.create(data));
 };
 
@@ -103,6 +114,7 @@ export const updateOffer = async (id: string, data: UpdateOfferDto) => {
     }
 
     if (data.image) await ensureStoredImage(data.image);
+    if (data.branch_id !== undefined) await validateBranchScope(data.branch_id);
     offerRepo.merge(offer, data);
 
     return await offerRepo.save(offer);

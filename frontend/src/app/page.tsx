@@ -29,6 +29,7 @@ async function getCurrentOffers(): Promise<OfferCard[]> {
             validDates: `Từ ${formatOfferDate(offer.start_date)} đến ${formatOfferDate(offer.end_date)}`,
             image: offer.image,
             instagramPostUrl: offer.instagram_post_url ?? null,
+            branchId: offer.branch_id ?? null,
         }));
     } catch (error) {
         console.error("Chưa tải được ưu đãi", error);
