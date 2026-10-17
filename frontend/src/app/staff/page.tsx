@@ -1,9 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
-import { apiRequest, getApiErrorMessage, type AdminStaff, type Appointment, type AppointmentList, type Service, type ServiceList, type WalkInVisit, type WalkInList } from "@/lib/api";
-import { getAuthUser, restoreSession } from "@/lib/auth";
+import { ApiError, apiRequest, getApiErrorMessage, type AdminStaff, type Appointment, type AppointmentList, type Service, type ServiceList, type WalkInVisit, type WalkInList } from "@/lib/api";
+import { getAuthUser, logoutSession, restoreSession } from "@/lib/auth";
 import { formatAppointmentStatus, formatVnd, formatServicePrice } from "@/lib/studio-data";
 
 const inputClass = "w-full rounded-xl border border-line bg-white px-4 py-3 text-sm outline-none focus:border-accent";
@@ -25,6 +26,7 @@ export default function StaffPage() {
     const [saving, setSaving] = useState(false);
     const [nowMs, setNowMs] = useState(0);
     const [error, setError] = useState("");
+    const [signInRequired, setSignInRequired] = useState(false);
     const [message, setMessage] = useState("");
     const [customerName, setCustomerName] = useState("");
     const [customerPhone, setCustomerPhone] = useState("");
@@ -69,7 +71,22 @@ export default function StaffPage() {
                 setProfile(me);
                 await load(me);
             } catch (cause) {
-                if (mounted) setError(getApiErrorMessage(cause, "Không tải được trang nhân viên."));
+                if (!mounted) return;
+                // A missing STAFF profile is not a temporary load failure.
+                // Sign out the unusable account instead of leaving a stale
+                // account menu visible or suggesting an endless page refresh.
+                const staffProfileMissing = cause instanceof ApiError && cause.code === "STAFF_NOT_FOUND";
+                const sessionInvalid = cause instanceof ApiError && cause.status === 401;
+                if (staffProfileMissing || sessionInvalid) {
+                    setProfile(null);
+                    setSignInRequired(true);
+                    setError(staffProfileMissing
+                        ? "Tài khoản không có hồ sơ nhân viên hợp lệ. Vui lòng liên hệ quản trị để kiểm tra hoặc cấp lại tài khoản nhân viên."
+                        : "Phiên đăng nhập không còn hợp lệ. Vui lòng đăng nhập lại.");
+                    await logoutSession();
+                } else {
+                    setError(getApiErrorMessage(cause, "Không tải được trang nhân viên."));
+                }
             } finally {
                 if (mounted) setLoading(false);
             }
@@ -166,7 +183,20 @@ export default function StaffPage() {
     }
 
     if (loading) return <main className="site-shell py-16 text-sm">Đang tải khu vực nhân viên…</main>;
-    if (!profile) return <main className="site-shell py-16"><h1 className="font-serif text-3xl">Không thể mở khu vực nhân viên</h1><p role="alert" className="mt-4 text-red-700">{error}</p></main>;
+    if (!profile) return <main className="site-shell py-16">
+        <h1 className="font-serif text-3xl">Không thể mở khu vực nhân viên</h1>
+        <p role="alert" className="mt-4 text-sm leading-6 text-red-700">{error || "Không tải được thông tin nhân viên."}</p>
+        {signInRequired ? (
+            <Link href="/login" className="focus-ring mt-6 inline-flex min-h-11 items-center justify-center rounded-full bg-ink px-6 text-sm font-semibold text-white">
+                Quay lại trang đăng nhập
+            </Link>
+        ) : (
+            <button type="button" onClick={() => window.location.reload()}
+                className="focus-ring mt-6 inline-flex min-h-11 items-center justify-center rounded-full bg-ink px-6 text-sm font-semibold text-white">
+                Thử tải lại
+            </button>
+        )}
+    </main>;
 
     return <main className="site-shell pb-20 pt-12">
         <p className="text-xs font-semibold uppercase tracking-[0.15em] text-accent">Khu vực nhân viên</p>
