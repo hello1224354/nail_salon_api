@@ -33,6 +33,8 @@ export const createService = async (data: CreateServiceDto) => {
 
     const newService = serviceRepo.create({
         ...data,
+        // Legacy database column is kept for compatibility, but no longer used.
+        subcategory: null,
         display_name: data.name,
         price_min: data.price,
         price_max: data.price,
@@ -54,6 +56,8 @@ export const updateService = async (id: string, data: UpdateServiceDto) => {
     if (!service) return null;
 
     serviceRepo.merge(service, data);
+    // Remove the old free-text subgroup whenever a service is edited.
+    service.subcategory = null;
 
     if (data.name !== undefined) {
         service.display_name = data.name;
