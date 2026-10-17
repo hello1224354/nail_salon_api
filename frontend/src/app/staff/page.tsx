@@ -154,11 +154,13 @@ export default function StaffPage() {
         if (!window.confirm("Xác nhận cập nhật trạng thái lịch hẹn?")) return;
         setSaving(true); setError(""); setMessage("");
         try {
-            await apiRequest("/api/appointments/" + appt.id, {
+            const updated = await apiRequest<Appointment>("/api/appointments/" + appt.id, {
                 method: "PUT", body: JSON.stringify({ status }),
             });
             await load(profile);
-            setMessage("Đã cập nhật lịch hẹn.");
+            setMessage(status === "completed"
+                ? (updated.status === "completed" ? "Đã hoàn thành lịch hẹn." : "Đã hoàn thành phần việc của bạn.")
+                : "Đã bắt đầu thực hiện lịch hẹn.");
         } catch (cause) { setError(getApiErrorMessage(cause, "Không cập nhật được lịch hẹn.")); }
         finally { setSaving(false); }
     }
@@ -218,9 +220,11 @@ export default function StaffPage() {
                 </div>}
             </section>
         </> : <section className="mt-6 space-y-5">
-            <p className="rounded-xl border border-[#e5c0a6] bg-[#fff1e6] p-4 text-xs leading-5">Booking nhóm vẫn có một mã lịch. Mỗi nhân viên nhập giá thực tế của riêng mình; muốn hoàn thành lịch, tất cả nhân viên được giao phải nhập đủ giá.</p>
+            <p className="rounded-xl border border-[#e5c0a6] bg-[#fff1e6] p-4 text-xs leading-5">Booking nhóm có một mã lịch. Mỗi nhân viên nhập đủ giá thực tế rồi bấm Hoàn thành phần việc của mình; khi mọi người đã hoàn thành, lịch tự chuyển sang Hoàn thành.</p>
             {appointments.length === 0 ? <p className="text-sm text-muted">Chưa có lịch hẹn được giao.</p> : appointments.map(appt => {
                 const canStart = nowMs > 0 && nowMs >= new Date(appt.start_time).getTime();
+                const myWorkFinished = appt.assigned_staff?.some(worker =>
+                    worker.id === profile.id && Boolean(worker.completed_at)) ?? false;
                 return <article key={appt.id} className="rounded-[22px] border border-line bg-white p-5 sm:p-7">
                 <p className="text-xs text-accent">Mã {(appt.booking_group_id || appt.id).slice(0, 8).toUpperCase()} · {appt.party_size} người</p>
                 <h3 className="mt-1 font-serif text-2xl">{appt.customer?.full_name || "Khách"}</h3>
@@ -228,7 +232,7 @@ export default function StaffPage() {
                 <div className="mt-5 space-y-3">{(appt.appointment_services ?? []).map(s => {
                     const key = appt.id + ":" + s.service_id;
                     const old = appt.actual_prices?.find(v => v.staff_id === profile.id && v.service_id === s.service_id);
-                    const editable = ["confirmed", "in_progress"].includes(appt.status);
+                    const editable = ["confirmed", "in_progress"].includes(appt.status) && !myWorkFinished;
                     return <div key={s.service_id} className="grid gap-3 rounded-xl bg-cream p-4 sm:grid-cols-[1fr_180px_auto] sm:items-end">
                         <div><p className="text-sm font-semibold">{s.service_name}</p><p className="mt-1 text-xs text-muted">Giá tham khảo: {vnd(s.price)}</p></div>
                         <label className="text-xs font-semibold">Giá thực tế của tôi<input className={inputClass + " mt-1"} type="number" min={0} max={1000000000} step={1} disabled={!editable || saving} value={onlinePrices[key] ?? ""} onChange={e => setOnlinePrices(v => ({ ...v, [key]: e.target.value }))} placeholder="Nhập VND" /></label>
@@ -251,7 +255,11 @@ export default function StaffPage() {
                             </button>
                         </div>
                     ) : null}
-                    {appt.status === "in_progress" ? <button className={actionClass} type="button" disabled={saving} onClick={() => void changeStatus(appt, "completed")}>Hoàn thành</button> : null}
+                    {appt.status === "in_progress" && !myWorkFinished ?
+                        <button className={actionClass} type="button" disabled={saving}
+                            onClick={() => void changeStatus(appt, "completed")}>Hoàn thành</button> : null}
+                    {myWorkFinished && appt.status === "in_progress" ?
+                        <span className="rounded-full border border-line bg-cream px-4 py-2 text-xs font-semibold">Đã hoàn thành phần việc</span> : null}
                 </div>
             </article>;
             })}
