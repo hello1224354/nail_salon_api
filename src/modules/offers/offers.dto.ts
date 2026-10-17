@@ -6,6 +6,7 @@ export interface CreateOfferDto {
     start_date: string;
     end_date: string;
     image: string;
+    instagram_post_url?: string | null;
     sort_order?: number;
 }
 
@@ -15,6 +16,7 @@ export interface UpdateOfferDto {
     start_date?: string;
     end_date?: string;
     image?: string;
+    instagram_post_url?: string | null;
     sort_order?: number;
 }
 
@@ -98,6 +100,39 @@ function parseSortOrder(value: unknown): number {
     return value as number;
 }
 
+function parseInstagramPostUrl(value: unknown): string | null {
+    if (value === undefined || value === null) return null;
+    if (typeof value !== "string") {
+        throw new AppError("Instagram post URL must be a string", 400, "INVALID_INSTAGRAM_POST_URL");
+    }
+
+    const input = value.trim();
+    if (!input) return null;
+    if (input.length > 500) {
+        throw new AppError("Instagram post URL must be at most 500 characters", 400, "INVALID_INSTAGRAM_POST_URL");
+    }
+
+    let parsed: URL;
+    try {
+        parsed = new URL(input);
+    } catch {
+        throw new AppError("Invalid Instagram post URL", 400, "INVALID_INSTAGRAM_POST_URL");
+    }
+
+    if (
+        parsed.protocol !== "https:" ||
+        !["instagram.com", "www.instagram.com"].includes(parsed.hostname.toLowerCase()) ||
+        parsed.username || parsed.password || parsed.port ||
+        !/^\/(p|reel|tv)\/[A-Za-z0-9_-]+\/?$/.test(parsed.pathname)
+    ) {
+        throw new AppError("Use an Instagram post or Reel URL", 400, "INVALID_INSTAGRAM_POST_URL");
+    }
+
+    // Strip tracking/query parameters and normalize URLs before storage.
+    const path = parsed.pathname.endsWith("/") ? parsed.pathname : parsed.pathname + "/";
+    return "https://www.instagram.com" + path;
+}
+
 export function parseGetOffersQuery(query: unknown): GetOffersQueryDto {
     if (query === null || typeof query !== "object" || Array.isArray(query)) {
         throw new AppError("Query must be an object", 400, "VALIDATION_ERROR");
@@ -143,6 +178,7 @@ export function parseCreateOfferDto(body: unknown): CreateOfferDto {
         start_date: startDate,
         end_date: endDate,
         image: parseRequiredString(data.image, "Image", 500),
+        instagram_post_url: parseInstagramPostUrl(data.instagram_post_url),
         sort_order: data.sort_order === undefined ? 0 : parseSortOrder(data.sort_order),
     };
 }
@@ -160,6 +196,7 @@ export function parseUpdateOfferDto(body: unknown): UpdateOfferDto {
     if (data.start_date !== undefined) result.start_date = parseDate(data.start_date, "Start_date");
     if (data.end_date !== undefined) result.end_date = parseDate(data.end_date, "End_date");
     if (data.image !== undefined) result.image = parseRequiredString(data.image, "Image", 500);
+    if (data.instagram_post_url !== undefined) result.instagram_post_url = parseInstagramPostUrl(data.instagram_post_url);
     if (data.sort_order !== undefined) result.sort_order = parseSortOrder(data.sort_order);
 
     if (
