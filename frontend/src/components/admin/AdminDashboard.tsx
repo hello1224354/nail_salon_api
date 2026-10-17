@@ -33,6 +33,7 @@ type TabKey = "overview" | "appointments" | "services" | "staff" | "branches" | 
 type LoadState = {
     branches: Branch[];
     services: Service[];
+    serviceCategories: string[];
     staff: AdminStaff[];
     offers: Offer[];
     appointments: Appointment[];
@@ -43,6 +44,7 @@ type LoadState = {
 const emptyState: LoadState = {
     branches: [],
     services: [],
+    serviceCategories: [],
     staff: [],
     offers: [],
     appointments: [],
@@ -268,9 +270,10 @@ export function AdminDashboard() {
             return rows;
         }
 
-        const [branches, services, staff, offers] = await Promise.all([
+        const [branches, services, serviceCategories, staff, offers] = await Promise.all([
             loadPages<BranchList, Branch>("/api/branches/admin", (result) => result.branches),
             loadPages<ServiceList, Service>("/api/services/admin", (result) => result.services),
+            apiRequest<string[]>("/api/services/categories"),
             apiRequest<AdminStaff[]>("/api/staffs/admin"),
             loadPages<OfferList, Offer>("/api/offers/admin", (result) => result.offers),
         ]);
@@ -279,6 +282,7 @@ export function AdminDashboard() {
             ...current,
             branches,
             services,
+            serviceCategories,
             staff,
             offers,
         }));
@@ -482,8 +486,7 @@ export function AdminDashboard() {
             price: Number(form.get("price")),
             duration_minutes: duration ? Number(duration) : null,
             booking_enabled: form.get("booking_enabled") === "on",
-            category: String(form.get("category") || "").trim() || null,
-            subcategory: String(form.get("subcategory") || "").trim() || null,
+            category: String(form.get("category") || ""),
             description: String(form.get("description") || "").trim() || null,
         };
         const payload = editingService
@@ -930,11 +933,17 @@ export function AdminDashboard() {
                         <Field label="Thời lượng (phút)">
                             <input name="duration_minutes" type="number" min="1" step="1" defaultValue={editingService?.duration_minutes ?? ""} className={inputClass} placeholder="Để trống nếu chưa nhận đặt lịch" />
                         </Field>
-                        <Field label="Nhóm dịch vụ">
-                            <input name="category" defaultValue={editingService?.category ?? ""} className={inputClass} maxLength={255} />
-                        </Field>
-                        <Field label="Phân nhóm">
-                            <input name="subcategory" defaultValue={editingService?.subcategory ?? ""} className={inputClass} maxLength={255} />
+                        <Field label="Nhóm dịch vụ" span>
+                            <select name="category" className={selectClass}
+                                defaultValue={editingService?.category ?? ""} required>
+                                <option value="" disabled>Chọn nhóm dịch vụ</option>
+                                {data.serviceCategories.map((category) => (
+                                    <option key={category} value={category}>{category}</option>
+                                ))}
+                            </select>
+                            <p className="mt-1.5 text-[11px] text-muted">
+                                Chỉ chọn một nhóm trong danh sách có sẵn.
+                            </p>
                         </Field>
                         <Field label="Mô tả dịch vụ" span>
                             <textarea name="description" defaultValue={editingService?.description ?? ""} className={textareaClass} maxLength={2000} />
@@ -945,7 +954,7 @@ export function AdminDashboard() {
                         </label>
                         <div className="flex justify-end gap-3 md:col-span-2">
                             <button type="button" onClick={() => setModal(null)} className="rounded-full border border-line px-5 py-2.5 text-xs font-semibold">Hủy</button>
-                            <button disabled={submitting} className="rounded-full bg-ink px-5 py-2.5 text-xs font-semibold text-white disabled:opacity-50">
+                            <button disabled={submitting || !data.serviceCategories.length} className="rounded-full bg-ink px-5 py-2.5 text-xs font-semibold text-white disabled:opacity-50">
                                 {submitting ? "Đang lưu…" : "Lưu dịch vụ"}
                             </button>
                         </div>
