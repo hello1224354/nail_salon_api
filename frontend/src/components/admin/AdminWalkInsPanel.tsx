@@ -53,7 +53,7 @@ export function AdminWalkInsPanel() {
             <div className="flex flex-wrap items-end gap-3">
                 <label className="text-xs font-semibold text-muted">Chọn tháng
                     <input type="month" aria-label="Tháng khách vãng lai" value={month} required
-                        onChange={event => { setMonth(event.target.value); setPage(1); }}
+                        onChange={event => { if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(event.target.value)) return; setMonth(event.target.value); setPage(1); }}
                         className="mt-1.5 block h-10 rounded-xl border border-line bg-white px-3 text-ink" />
                 </label>
                 <button type="button" onClick={() => void refresh()}
