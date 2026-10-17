@@ -2,15 +2,16 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { apiRequest, getApiErrorMessage, type AdminMonthSummary } from "@/lib/api";
-import { vietnamMonthNow } from "@/lib/admin-month";
 import { formatVnd } from "@/lib/studio-data";
 
 const zero: AdminMonthSummary = {
     month: "", total: 0, pending: 0, confirmed: 0, in_progress: 0, completed: 0,
     cancelled: 0, walk_ins: 0, online_revenue: 0, walk_in_revenue: 0, revenue: 0,
 };
-export function AdminMonthlyOverview() {
-    const [month, setMonth] = useState(vietnamMonthNow);
+export function AdminMonthlyOverview({ month, setMonth }: {
+    month: string;
+    setMonth: (value: string) => void;
+}) {
     const [stats, setStats] = useState<AdminMonthSummary>(zero);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
