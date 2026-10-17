@@ -333,6 +333,24 @@ export type Appointment = {
     };
 };
 
+export type AdminLifetimeSummary = {
+    total: number;
+    pending: number;
+    confirmed: number;
+    in_progress: number;
+    completed: number;
+    cancelled: number;
+    walk_ins: number;
+    online_revenue: number;
+    walk_in_revenue: number;
+    revenue: number;
+};
+
+export type AdminWebsiteTraffic = {
+    online_visits: number;
+    total_visits: number;
+};
+
 export type AdminMonthSummary = {
     month: string;
     total: number;
