@@ -564,6 +564,7 @@ export function AdminDashboard() {
             image: String(form.get("image") || "").trim(),
             instagram_post_url: String(form.get("instagram_post_url") || "").trim() || null,
             sort_order: Number(form.get("sort_order") || 0),
+            branch_id: form.get("branch_id") ? Number(form.get("branch_id")) : null,
         };
 
         setSubmitting(true);
@@ -787,6 +788,7 @@ export function AdminDashboard() {
                                 {tab === "offers" ? (
                                     <OffersPanel
                                         offers={data.offers}
+                                        branches={data.branches}
                                         onAdd={() => {
                                             setEditingOffer(null);
                                             setOfferImage("");
@@ -994,6 +996,16 @@ export function AdminDashboard() {
                     <form onSubmit={saveOffer} className="grid gap-5 md:grid-cols-2">
                         <Field label="Tên ưu đãi" span>
                             <input name="name" defaultValue={editingOffer?.name || ""} className={inputClass} required maxLength={255} />
+                        </Field>
+                        <Field label="Áp dụng tại chi nhánh" span>
+                            <select name="branch_id" className={selectClass}
+                                defaultValue={editingOffer?.branch_id ?? ""}>
+                                <option value="">Tất cả chi nhánh</option>
+                                {data.branches.map(branch => (
+                                    <option key={branch.id} value={branch.id}>{shortBranchName(branch.name)}</option>
+                                ))}
+                            </select>
+                            <p className="mt-1 text-xs text-muted">Để tất cả chi nhánh hoặc chọn một nơi áp dụng.</p>
                         </Field>
                         <Field label="Từ ngày">
                             <input name="start_date" type="date" defaultValue={editingOffer?.start_date || ""} className={inputClass} required />
@@ -1207,9 +1219,23 @@ function StaffPanel({
     onDelete: (staff: AdminStaff) => Promise<void>;
     submitting: boolean;
 }) {
+    const [branchFilter, setBranchFilter] = useState("");
+    const filtered = branchFilter ? staff.filter(person => String(person.branch_id) === branchFilter) : staff;
     return (
         <section className="overflow-hidden rounded-[22px] border border-line bg-white">
             <PanelHeading eyebrow="Nhân sự" title="Nhân viên" action="Thêm nhân viên" onAction={onAdd} />
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-3">
+                <label className="text-xs font-semibold text-muted">
+                    Lọc chi nhánh
+                    <select aria-label="Lọc nhân viên theo chi nhánh" value={branchFilter}
+                        onChange={event => setBranchFilter(event.target.value)}
+                        className="ml-3 h-10 rounded-xl border border-line bg-cream px-3 text-xs text-ink">
+                        <option value="">Tất cả chi nhánh</option>
+                        {branches.map(branch => <option key={branch.id} value={branch.id}>{shortBranchName(branch.name)}</option>)}
+                    </select>
+                </label>
+                <p className="text-xs text-muted">{filtered.length} nhân viên</p>
+            </div>
             <div className="overflow-x-auto">
                 <table className="min-w-[860px] w-full text-left text-xs">
                     <thead className="bg-[#f8f5f1] text-[9px] uppercase tracking-[0.14em] text-muted">
@@ -1222,7 +1248,7 @@ function StaffPanel({
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-line">
-                        {staff.map((person) => (
+                        {filtered.map((person) => (
                             <tr key={person.id}>
                                 <td className="px-5 py-4 font-medium">{person.full_name}</td>
                                 <td className="px-5 py-4">
@@ -1251,6 +1277,7 @@ function StaffPanel({
                     </tbody>
                 </table>
             </div>
+            {filtered.length === 0 ? <p className="px-5 py-8 text-center text-xs text-muted">Chi nhánh này chưa có nhân viên.</p> : null}
         </section>
     );
 }
@@ -1296,12 +1323,14 @@ function BranchesPanel({
 
 function OffersPanel({
     offers,
+    branches,
     onAdd,
     onEdit,
     onDelete,
     submitting,
 }: {
     offers: Offer[];
+    branches: Branch[];
     onAdd: () => void;
     onEdit: (offer: Offer) => void;
     onDelete: (offer: Offer) => Promise<void>;
@@ -1321,6 +1350,10 @@ function OffersPanel({
                             </div>
                             <h3 className="mt-4 font-serif text-2xl leading-tight">{offer.name}</h3>
                             <p className="mt-3 line-clamp-3 text-xs leading-5 text-muted">{offer.details}</p>
+                            <p className="mt-3 text-xs font-semibold text-accent">
+                                Áp dụng: {offer.branch_id === null ? "Tất cả chi nhánh" :
+                                    shortBranchName(branches.find(branch => branch.id === offer.branch_id)?.name ?? "Chi nhánh #" + offer.branch_id)}
+                            </p>
                             <p className="mt-4 text-[10px] font-semibold text-ink">{formatDate(offer.start_date)} — {formatDate(offer.end_date)}</p>
                             <p className="mt-1 truncate text-[10px] text-muted">{offer.image}</p>
                             {offer.instagram_post_url ? (
