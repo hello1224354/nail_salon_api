@@ -703,6 +703,8 @@ export function AdminDashboard() {
                                     <Overview
                                         data={data}
                                         todayStats={data.todayStats}
+                                        month={appointmentMonth}
+                                        setMonth={(value) => { setAppointmentMonth(value); setAppointmentPage(1); }}
                                         serviceCount={serviceCount}
                                         staffCount={staffCount}
                                         setTab={setTab}
@@ -1056,12 +1058,16 @@ export function AdminDashboard() {
 function Overview({
     data,
     todayStats,
+    month,
+    setMonth,
     serviceCount,
     staffCount,
     setTab,
 }: {
     data: LoadState;
     todayStats: AdminTodaySummary;
+    month: string;
+    setMonth: (month: string) => void;
     serviceCount: number;
     staffCount: number;
     setTab: (tab: TabKey) => void;
@@ -1079,7 +1085,7 @@ function Overview({
 
     return (
         <div className="space-y-6">
-            <AdminMonthlyOverview />
+            <AdminMonthlyOverview month={month} setMonth={setMonth} />
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 {cards.map((card) => (
                     <article key={card.label} className="rounded-[20px] border border-line bg-white p-5 shadow-[0_8px_30px_rgba(48,40,35,0.035)]">
