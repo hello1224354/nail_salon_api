@@ -88,6 +88,13 @@ export const getAvailability = async (req: Request, res: Response) => {
     });
 };
 
+export const getAdminMonthSummary = async (req: Request, res: Response) => {
+    const month = req.query.month;
+    if (typeof month !== "string") throw new AppError("Month is required (YYYY-MM)", 400, "VALIDATION_ERROR");
+    const data = await appointmentService.getAdminMonthSummary(month);
+    return res.status(200).json({ success: { data, message: "Monthly appointment and revenue summary" } });
+};
+
 export const getAdminTodaySummary = async (_req: Request, res: Response) => {
     const data = await appointmentService.getAdminTodaySummary();
     return res.status(200).json({
