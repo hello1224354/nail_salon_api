@@ -12,7 +12,7 @@ Dự án gồm backend TypeScript/Express, frontend Next.js, MySQL và TypeORM. 
 6. Review diff và merge vào `main`.
 7. Theo dõi Vercel/Railway deployment status, commit SHA, runtime logs và rollback khi cần.
 
-Các unit test đã được chuyển ra `tests/` để không nằm trong `src/` runtime. GitHub Actions chạy backend build, unit test (`npx tsx --test tests/*.test.ts`) và frontend build; không thay thế integration/E2E tests.
+Các unit test và workflow GitHub Actions CI đã được loại khỏi repository. Trước khi merge hoặc deploy, phải tự chạy `npm ci && npm run build` cho backend và `cd frontend && npm ci && npm run build` cho frontend; build không thay thế kiểm thử nghiệp vụ/integration/E2E.
 
 ## Cấu trúc mã nguồn
 

@@ -85,13 +85,13 @@ One message per unique ADMIN email is enqueued in `notification_outbox` **within
 
 - Live frontend: [Vercel](https://serpentenailroom.site/).
 - API: [Railway health endpoint](https://api-production-e911.up.railway.app/health).
-- Deployments are managed through Vercel and Railway; GitHub Actions builds both applications and runs unit tests from `tests/`.
+- Deployments are managed through Vercel and Railway. The repository no longer includes GitHub Actions CI or a unit-test suite; builds and behavior require explicit verification before deployment.
 - References: [deployment guide](DEPLOYMENT.md), [operations guide](OPERATIONS.md).
 
 ## Current scope and limitations
 
 The booking engine uses fixed branch-wide bookable hours and configurable **recurring daily staff working hours**, but not date-specific shift rosters. A payment gateway is not part of the application. Booking notifications are persisted in an outbox and retried, with at-least-once rather than exactly-once delivery semantics.
 
-Unit tests cover selected booking, DTO and validation helpers in `tests/`; there is not yet comprehensive integration/E2E coverage. Centralized production alerting is not implemented. Historical database migrations are absent from the current source; provisioning a fresh production-equivalent database requires a verified backup until a new baseline is established.
+The repository contains no automated unit tests or GitHub Actions CI; validation currently relies on manual build and behavior checks. Centralized production alerting is not implemented. Historical database migrations are absent from the current source; provisioning a fresh production-equivalent database requires a verified backup until a new baseline is established.
 
 Further implementation details are available in the [booking specification](BOOKING.md), [authentication and security](AUTH-SECURITY.md) and [API reference](API.md).

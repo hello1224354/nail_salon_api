@@ -120,6 +120,6 @@ Frontend: http://localhost:3001 · Backend: http://localhost:3000 · Health: htt
 ## Build
 
 Backend: `npm run build`. Frontend: `cd frontend && npm run build`.
-GitHub Actions compiles both applications and runs the backend unit tests under `tests/`. Production is deployed on Railway (API/DB) and Vercel (web).
+The repository does not contain a unit-test suite or GitHub Actions CI workflow. Backend and frontend builds can be checked manually with the commands above. Production is deployed on Railway (API/DB) and Vercel (web).
 
 **Deep dives:** [API](docs/API.md) · [DB schema](docs/DATABASE.md) · [Booking rules](docs/BOOKING.md) · [Security](docs/AUTH-SECURITY.md) · [Deployment](docs/DEPLOYMENT.md) · [Operations](docs/OPERATIONS.md).

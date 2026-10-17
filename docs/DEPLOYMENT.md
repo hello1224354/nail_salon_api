@@ -17,7 +17,7 @@ Frontend Next rewrite `/api/:path*` sang `NEXT_PUBLIC_API_BASE_URL`. Trên Verce
 
 ## Triển khai
 
-GitHub Actions [Build](../.github/workflows/build.yml) cài dependencies, build backend/frontend và chạy 8 unit test trong `tests/`. Đây chưa phải integration test hoặc kiểm thử trình duyệt. Vercel và Railway triển khai theo cấu hình deployment riêng.
+Repository không còn unit test và GitHub Actions CI. Trước khi merge phải kiểm tra build backend (`npm ci && npm run build`), frontend (`cd frontend && npm ci && npm run build`) và kiểm thử nghiệp vụ phù hợp thủ công. Vercel và Railway triển khai theo cấu hình deployment riêng; trạng thái deployment thành công không bảo đảm mọi chức năng hoạt động.
 
 ## Quy trình deploy an toàn
 
