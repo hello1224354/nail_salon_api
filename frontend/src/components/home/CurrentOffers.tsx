@@ -147,7 +147,7 @@ export function CurrentOffers({ offers, instagramHandle }: CurrentOffersProps) {
                                             <h1 className="max-w-[16ch] font-serif text-[clamp(2.75rem,4.4vw,4.75rem)] font-medium leading-[1.06] tracking-[-0.045em] text-[#302823] [overflow-wrap:anywhere]">
                                                 {offer.name}
                                             </h1>
-                                            <p className="mt-6 max-w-[44ch] whitespace-pre-line border-l-2 border-[#ba9882] pl-4 text-sm leading-7 text-[#55473f] sm:text-[15px]">
+                                            <p className="mt-6 w-full whitespace-pre-line border-l-2 border-[#ba9882] pl-4 text-sm leading-7 text-[#55473f] sm:text-[15px]">
                                                 {offer.details}
                                             </p>
                                             {offer.instagramPostUrl?.startsWith("https://www.instagram.com/") ? (
@@ -228,17 +228,17 @@ export function CurrentOffers({ offers, instagramHandle }: CurrentOffersProps) {
                 </div>
 
                 {offers.length > 1 ? (
-                    <div className="flex items-center justify-center gap-3 sm:justify-end" aria-label="Chọn ưu đãi">
+                    <div className="flex items-center justify-center gap-2.5 sm:justify-end" aria-label="Chọn ưu đãi">
                         {offers.map((_, dotIndex) => (
                             <button
                                 key={dotIndex}
                                 type="button"
                                 aria-label={`Xem ưu đãi ${dotIndex + 1}`}
                                 aria-current={dotIndex === selectedIndex ? "true" : undefined}
-                                className={`focus-ring rounded-full transition-all ${
+                                className={`focus-ring rounded-full transition-all duration-300 ${
                                     dotIndex === selectedIndex
-                                        ? "h-1.5 w-8 bg-[#795847]"
-                                        : "size-1.5 bg-[#bda597] hover:bg-[#92705b]"
+                                        ? "h-2 w-7 bg-accent"
+                                        : "size-2 bg-accent/30 hover:bg-accent/60"
                                 }`}
                                 onClick={() => emblaApi?.scrollTo(dotIndex)}
                             />
