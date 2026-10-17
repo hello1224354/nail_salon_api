@@ -117,8 +117,9 @@ export function CurrentOffers({ offers, instagramHandle }: CurrentOffersProps) {
     }
 
     return (
-        <section
-            aria-label="Các chương trình ưu đãi đang áp dụng"
+        <div className="relative">
+            <section
+                aria-label="Các chương trình ưu đãi đang áp dụng"
             className="overflow-hidden rounded-[24px] border border-[#d9c8bc] bg-[#e9ddd2] shadow-[0_18px_55px_rgba(48,40,35,0.09)] sm:rounded-[28px]"
         >
             <div ref={emblaRef} className="overflow-hidden">
@@ -161,44 +162,6 @@ export function CurrentOffers({ offers, instagramHandle }: CurrentOffersProps) {
                                         <span>{offer.validDates}</span>
                                     </div>
 
-                                    <div className="mt-9 flex flex-wrap items-center gap-3">
-                                        <Link
-                                            href="/book"
-                                            className="focus-ring inline-flex min-h-11 items-center justify-center rounded-full bg-[#302823] px-6 py-3 text-xs font-semibold text-white transition-colors hover:bg-[#51423a]"
-                                        >
-                                            Đặt lịch
-                                        </Link>
-                                        <Link
-                                            href="/services"
-                                            className="focus-ring inline-flex min-h-11 items-center justify-center rounded-full border border-[#bea797] bg-white/25 px-6 py-3 text-xs font-semibold text-[#302823] transition-colors hover:bg-white/55"
-                                        >
-                                            Xem bảng giá
-                                        </Link>
-                                    </div>
-
-                                    {offers.length > 1 ? (
-                                        <div className="mt-10 flex items-center gap-4" aria-label="Chọn ưu đãi">
-                                            <span aria-hidden="true" className="text-[11px] font-medium tabular-nums text-[#765e50]">
-                                                {String(selectedIndex + 1).padStart(2, "0")} / {String(offers.length).padStart(2, "0")}
-                                            </span>
-                                            <div className="flex items-center gap-2.5">
-                                                {offers.map((_, dotIndex) => (
-                                                    <button
-                                                        key={dotIndex}
-                                                        type="button"
-                                                        aria-label={`Xem ưu đãi ${dotIndex + 1}`}
-                                                        aria-current={dotIndex === selectedIndex ? "true" : undefined}
-                                                        className={`focus-ring rounded-full transition-all ${
-                                                            dotIndex === selectedIndex
-                                                                ? "h-1.5 w-8 bg-[#795847]"
-                                                                : "size-1.5 bg-[#bda597] hover:bg-[#92705b]"
-                                                        }`}
-                                                        onClick={() => emblaApi?.scrollTo(dotIndex)}
-                                                    />
-                                                ))}
-                                            </div>
-                                        </div>
-                                    ) : null}
                                 </div>
 
                                 <div className="relative order-1 min-h-[19rem] bg-[#d9c5ba] sm:min-h-[24rem] lg:order-2 lg:min-h-[32rem]">
@@ -216,6 +179,43 @@ export function CurrentOffers({ offers, instagramHandle }: CurrentOffersProps) {
                     ))}
                 </div>
             </div>
-        </section>
+            </section>
+
+            <div className="mt-5 flex flex-col gap-5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                <div className="flex flex-wrap items-center gap-3">
+                    <Link
+                        href="/book"
+                        className="focus-ring inline-flex min-h-11 items-center justify-center rounded-full bg-[#302823] px-6 py-3 text-xs font-semibold text-white transition-colors hover:bg-[#51423a]"
+                    >
+                        Đặt lịch
+                    </Link>
+                    <Link
+                        href="/services"
+                        className="focus-ring inline-flex min-h-11 items-center justify-center rounded-full border border-[#bea797] bg-transparent px-6 py-3 text-xs font-semibold text-[#302823] transition-colors hover:bg-[#efe4dc]"
+                    >
+                        Xem bảng giá
+                    </Link>
+                </div>
+
+                {offers.length > 1 ? (
+                    <div className="flex items-center gap-2.5" aria-label="Chọn ưu đãi">
+                        {offers.map((_, dotIndex) => (
+                            <button
+                                key={dotIndex}
+                                type="button"
+                                aria-label={`Xem ưu đãi ${dotIndex + 1}`}
+                                aria-current={dotIndex === selectedIndex ? "true" : undefined}
+                                className={`focus-ring rounded-full transition-all ${
+                                    dotIndex === selectedIndex
+                                        ? "h-1.5 w-8 bg-[#795847]"
+                                        : "size-1.5 bg-[#bda597] hover:bg-[#92705b]"
+                                }`}
+                                onClick={() => emblaApi?.scrollTo(dotIndex)}
+                            />
+                        ))}
+                    </div>
+                ) : null}
+            </div>
+        </div>
     );
 }
