@@ -12,6 +12,7 @@ export type Offer = {
     validDates: string;
     image: string;
     instagramPostUrl?: string | null;
+    branchId: number | null;
 };
 
 type CurrentOffersProps = {
