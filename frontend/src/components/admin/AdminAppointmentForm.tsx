@@ -8,7 +8,7 @@ import { formatVnd, shortBranchName } from "@/lib/studio-data";
 export type AppointmentPayload = {
     branch_id?: number;
     customer_phone?: string;
-    staff_ids?: string[];
+    staff_ids?: Array<string | null>;
     service_ids?: string[];
     start_time?: string;
 };
@@ -117,7 +117,7 @@ export function AdminAppointmentForm({
         if (selectedChanged || branchId !== appointment.branch_id ||
             serviceIds.length !== oldIds.length || serviceIds.some(id => !oldIds.includes(id)) ||
             new Date(startTime).getTime() !== new Date(appointment.start_time).getTime()) {
-            payload.staff_ids = explicitlySelected;
+            payload.staff_ids = staffIds.map(id => id || null);
         }
         if (serviceIds.length !== oldIds.length || serviceIds.some((id) => !oldIds.includes(id))) {
             payload.service_ids = serviceIds;
