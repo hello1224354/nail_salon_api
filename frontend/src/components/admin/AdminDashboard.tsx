@@ -219,6 +219,7 @@ export function AdminDashboard() {
     const [appointmentCode, setAppointmentCode] = useState("");
     const [appointmentPage, setAppointmentPage] = useState(1);
     const [appointmentPages, setAppointmentPages] = useState(1);
+    const appointmentRequestId = useRef(0);
     const [submitting, setSubmitting] = useState(false);
 
     useEffect(() => {
@@ -284,6 +285,7 @@ export function AdminDashboard() {
 
     const loadAppointments = useCallback(
         async (page = appointmentPage) => {
+            const requestId = ++appointmentRequestId.current;
             const { from, to } = vietnamMonthBounds(appointmentMonth);
             const params = new URLSearchParams({
                 page: String(page),
@@ -299,6 +301,7 @@ export function AdminDashboard() {
             const result = await apiRequest<AppointmentList>(
                 `/api/appointments?${params.toString()}`
             );
+            if (requestId !== appointmentRequestId.current) return;
 
             setData((current) => ({
                 ...current,
@@ -378,6 +381,17 @@ export function AdminDashboard() {
             setToast(getApiErrorMessage(statusError, "Chưa cập nhật được lịch hẹn."));
         } finally {
             setSubmitting(false);
+        }
+    }
+
+    async function showAppointmentDetails(appointment: Appointment) {
+        setViewingAppointment(appointment);
+        setModal("details");
+        try {
+            const fresh = await apiRequest<Appointment>(`/api/appointments/${appointment.id}`);
+            setViewingAppointment(current => current?.id === appointment.id ? fresh : current);
+        } catch (cause) {
+            setToast(getApiErrorMessage(cause, "Không thể cập nhật chi tiết lịch hẹn."));
         }
     }
 
@@ -739,7 +753,7 @@ export function AdminDashboard() {
                                         page={appointmentPage}
                                         pages={appointmentPages}
                                         setPage={setAppointmentPage}
-                                        onView={(appointment) => { setViewingAppointment(appointment); setModal("details"); }}
+                                        onView={(appointment) => { void showAppointmentDetails(appointment); }}
                                     />
                                 ) : null}
 
