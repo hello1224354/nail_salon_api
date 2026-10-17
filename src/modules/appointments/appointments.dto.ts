@@ -15,6 +15,7 @@ export interface CreateAppointmentDto {
 export interface UpdateAppointmentDto {
     branch_id?: number;
     staff_id?: string;
+    staff_ids?: Array<string | null>;
     service_ids?: string[];
     start_time?: Date;
     customer_phone?: string;
@@ -224,7 +225,7 @@ export function parseUpdateAppointmentDto(body: unknown): UpdateAppointmentDto {
 
     const data = body as Record<string, unknown>;
 
-    const hasDetailChanges = data.branch_id !== undefined || data.staff_id !== undefined || data.service_ids !== undefined || data.start_time !== undefined || data.customer_phone !== undefined;
+    const hasDetailChanges = data.branch_id !== undefined || data.staff_id !== undefined || data.staff_ids !== undefined || data.service_ids !== undefined || data.start_time !== undefined || data.customer_phone !== undefined;
 
     if (data.status !== undefined && hasDetailChanges) throw new AppError("Status cannot be updated together with appointment details", 400, "VALIDATION_ERROR");
 
@@ -233,6 +234,17 @@ export function parseUpdateAppointmentDto(body: unknown): UpdateAppointmentDto {
     if (data.branch_id !== undefined) parsePositiveIntegerBody(data.branch_id, "Branch_id", 1);
 
     if (data.staff_id !== undefined && (typeof data.staff_id !== "string" || !isUuid(data.staff_id))) throw new AppError("Staff_id must be a valid UUID", 400, "VALIDATION_ERROR");
+    if (data.staff_id !== undefined && data.staff_ids !== undefined) {
+        throw new AppError("Choose staff_id or staff_ids, not both", 400, "VALIDATION_ERROR");
+    }
+    if (data.staff_ids !== undefined && (
+        !Array.isArray(data.staff_ids) ||
+        !data.staff_ids.every((id: unknown) => id === null || (typeof id === "string" && isUuid(id))) ||
+        new Set(data.staff_ids.filter((id: string | null) => id !== null)).size !==
+            data.staff_ids.filter((id: string | null) => id !== null).length
+    )) {
+        throw new AppError("Staff_ids must be an array of distinct staff UUIDs or null positions", 400, "VALIDATION_ERROR");
+    }
 
     if (data.service_ids !== undefined && !Array.isArray(data.service_ids)) throw new AppError("Service_ids must be an array", 400, "VALIDATION_ERROR");
 
@@ -255,6 +267,7 @@ export function parseUpdateAppointmentDto(body: unknown): UpdateAppointmentDto {
     return {
         branch_id: data.branch_id === undefined ? undefined : parsePositiveIntegerBody(data.branch_id, "Branch_id", 1),
         staff_id: data.staff_id as string | undefined,
+        staff_ids: data.staff_ids as Array<string | null> | undefined,
         service_ids: data.service_ids as string[] | undefined,
         start_time: startTime,
         customer_phone: data.customer_phone === undefined ? undefined : parseVietnamesePhone(data.customer_phone, "Customer_phone"),

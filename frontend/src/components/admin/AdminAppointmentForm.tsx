@@ -8,7 +8,7 @@ import { formatVnd, shortBranchName } from "@/lib/studio-data";
 export type AppointmentPayload = {
     branch_id?: number;
     customer_phone?: string;
-    staff_id?: string;
+    staff_ids?: Array<string | null>;
     service_ids?: string[];
     start_time?: string;
 };
@@ -46,7 +46,11 @@ export function AdminAppointmentForm({
     onCancel: () => void;
 }) {
     const [branchId, setBranchId] = useState(appointment.branch_id);
-    const [staffId, setStaffId] = useState("");
+    const existingStaffIds = appointment.assigned_staff?.map(person => person.id) ??
+        (appointment.staff_id ? [appointment.staff_id] : []);
+    const [staffIds, setStaffIds] = useState<string[]>(() =>
+        Array.from({ length: appointment.party_size }, (_, index) => existingStaffIds[index] ?? "")
+    );
     const [serviceIds, setServiceIds] = useState<string[]>(
         appointment.appointment_services?.map((service) => service.service_id) ?? []
     );
@@ -77,9 +81,14 @@ export function AdminAppointmentForm({
             return;
         }
 
-        if ((staffId && branchStaff.every((person) => person.id !== staffId)) ||
-            serviceIds.some((id) => branchServices.every((service) => service.id !== id))) {
-            setFormError("Nhân viên và dịch vụ phải cùng chi nhánh, đồng thời đang nhận đặt lịch.");
+        const explicitlySelected = staffIds.filter(Boolean);
+        if (new Set(explicitlySelected).size !== explicitlySelected.length) {
+            setFormError("Không thể chọn cùng một nhân viên cho nhiều khách trong cùng lịch.");
+            return;
+        }
+        if (explicitlySelected.some(id => branchStaff.every(person => person.id !== id)) ||
+            serviceIds.some(id => branchServices.every(service => service.id !== id))) {
+            setFormError("Nhân viên và dịch vụ phải thuộc đúng chi nhánh; dịch vụ phải đang nhận đặt lịch.");
             return;
         }
 
@@ -101,8 +110,16 @@ export function AdminAppointmentForm({
             payload.customer_phone = customerPhone.trim();
         }
         if (branchId !== appointment.branch_id) payload.branch_id = branchId;
-        // Leaving staff empty delegates *all* assignments to backend auto-allocation.
-        if (staffId) payload.staff_id = staffId;
+        // Selected people are mandatory; unselected positions are allocated fairly.
+        // When the schedule changes, preserve the selections shown in this form.
+        const selectedChanged = staffIds.some(
+            (id, index) => id !== (existingStaffIds[index] ?? "")
+        );
+        if (selectedChanged || branchId !== appointment.branch_id ||
+            serviceIds.length !== oldIds.length || serviceIds.some(id => !oldIds.includes(id)) ||
+            new Date(startTime).getTime() !== new Date(appointment.start_time).getTime()) {
+            payload.staff_ids = staffIds.map(id => id || null);
+        }
         if (serviceIds.length !== oldIds.length || serviceIds.some((id) => !oldIds.includes(id))) {
             payload.service_ids = serviceIds;
         }
@@ -137,7 +154,7 @@ export function AdminAppointmentForm({
                     <select className={inputClass} value={branchId}
                         onChange={(event) => {
                             setBranchId(Number(event.target.value));
-                            setStaffId("");
+                            setStaffIds(Array.from({ length: appointment.party_size }, () => ""));
                             setServiceIds([]);
                         }} required>
                         {branches.map((branch) => (
@@ -145,17 +162,42 @@ export function AdminAppointmentForm({
                         ))}
                     </select>
                 </label>
-                <label>
-                    <span className={captionClass}>Nhân viên thực hiện</span>
-                    <select className={inputClass} value={staffId}
-                        onChange={(event) => setStaffId(event.target.value)}>
-                        <option value="">Tự động gán nhân viên phù hợp</option>
-                        {branchStaff.map((person) => (
-                            <option key={person.id} value={person.id}>{person.full_name}</option>
+                <div className="sm:col-span-2">
+                    <p className={captionClass}>Phân công nhân viên · {appointment.party_size} người</p>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                        {staffIds.map((id, index) => (
+                            <label key={index} className="block rounded-xl border border-line bg-white p-3">
+                                <span className="mb-2 block text-xs font-semibold text-ink">
+                                    Nhân viên cho khách {index + 1}
+                                </span>
+                                <select
+                                    className={inputClass}
+                                    value={id}
+                                    onChange={(event) => setStaffIds(current =>
+                                        current.map((value, position) => position === index ? event.target.value : value)
+                                    )}
+                                >
+                                    <option value="">Tự động phân công</option>
+                                    {branchStaff.map(person => (
+                                        <option
+                                            key={person.id}
+                                            value={person.id}
+                                            disabled={staffIds.some((other, position) =>
+                                                position !== index && other === person.id
+                                            )}
+                                        >
+                                            {person.full_name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
                         ))}
-                    </select>
-                    <p className="mt-1 text-[10px] text-muted">Không chọn: tự gán đủ nhân viên cho {appointment.party_size} người. Nếu chọn, nhân viên này được ưu tiên trong nhóm.</p>
-                </label>
+                    </div>
+                    <p className="mt-2 text-xs leading-5 text-muted">
+                        Có thể chọn riêng từng nhân viên cho mỗi khách. Vị trí để trống sẽ được hệ thống
+                        tự phân công theo mức tải và lượt luân phiên. Mỗi nhân viên chỉ xuất hiện một lần trong nhóm.
+                    </p>
+                </div>
                 <label className="sm:col-span-2">
                     <span className={captionClass}>Ngày giờ hẹn (giờ Việt Nam)</span>
                     <input className={inputClass} type="datetime-local" step={900} required

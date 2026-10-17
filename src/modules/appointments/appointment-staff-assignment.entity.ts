@@ -15,6 +15,9 @@ export class AppointmentStaffAssignment {
     @Column({ type: "varchar", length: 255 })
     staff_full_name: string;
 
+    @Column({ type: "int", default: 0 })
+    position: number;
+
     @ManyToOne(() => Appointment, appointment => appointment.staff_assignments, { onDelete: "CASCADE" })
     @JoinColumn({ name: "appointment_id" })
     appointment: Appointment;
