@@ -4,6 +4,8 @@ import { Staff } from "../staffs/staffs.entity";
 import { User } from "../users/users.entity";
 import { Branch } from "./branches.entity";
 import { Offer } from "../offers/offer.entity";
+import { AppointmentStaffAssignment } from "../appointments/appointment-staff-assignment.entity";
+import { AppointmentStatus } from "../appointments/appointments.entity";
 import { AppError } from "../../common/errors";
 import { CreateBranchDto, GetBranchesQueryDto, UpdateBranchDto } from "./branches.dto";
 
@@ -72,6 +74,23 @@ export const deleteBranch = async (id: number) => {
         const staffUserIds = staffs.map((staff) => staff.user_id);
 
         if (staffUserIds.length > 0) {
+            // Closed booking snapshots must never block branch removal.
+            const linkedAppointments = await manager.getRepository(AppointmentStaffAssignment)
+                .createQueryBuilder("assigned")
+                .innerJoin("assigned.appointment", "appointment")
+                .where("assigned.staff_id IN (:...staffIds)", { staffIds: staffUserIds })
+                .andWhere("appointment.merged_into_id IS NULL")
+                .andWhere("appointment.status IN (:...statuses)", {
+                    statuses: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED, AppointmentStatus.IN_PROGRESS],
+                })
+                .getCount();
+            if (linkedAppointments > 0) {
+                throw new AppError(
+                    "This branch has employees assigned to active appointments. Resolve or reassign them before deleting this branch.",
+                    409,
+                    "BRANCH_HAS_ASSIGNED_STAFF",
+                );
+            }
             await transactionUserRepo.delete({
                 id: In(staffUserIds),
             });

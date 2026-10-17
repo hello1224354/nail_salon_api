@@ -1,6 +1,5 @@
 import { Column, Entity, Index, JoinColumn, ManyToOne, PrimaryColumn } from "typeorm";
 import { Appointment } from "./appointments.entity";
-import { Staff } from "../staffs/staffs.entity";
 
 // One appointment is the booking; these rows only identify reserved employees.
 @Entity("appointment_staff_assignments")
@@ -25,7 +24,4 @@ export class AppointmentStaffAssignment {
     @JoinColumn({ name: "appointment_id" })
     appointment: Appointment;
 
-    @ManyToOne(() => Staff, { onDelete: "RESTRICT" })
-    @JoinColumn({ name: "staff_id" })
-    staff: Staff;
 }

@@ -11,6 +11,7 @@ import { AppError } from "../../common/errors";
 import * as branchService from "../branches/branches.service";
 import { Branch } from "../branches/branches.entity";
 import { Appointment, AppointmentStatus } from "../appointments/appointments.entity";
+import { AppointmentStaffAssignment } from "../appointments/appointment-staff-assignment.entity";
 import { isWithinStaffWorkingHours, assertValidWorkingHours } from "./staff-working-hours";
 
 const staffRepo = AppDataSource.getRepository(Staff);
@@ -152,11 +153,48 @@ export const updateStaff = async (userId: string, data: UpdateStaffDto) => {
 };
 
 export const deleteStaff = async (userId: string) => {
-    const staff = await getStaff(userId);
-    if (!staff) return null;
+    return AppDataSource.transaction(async (manager) => {
+        // Booking allocation locks the staff row; obtain an exclusive lock so
+        // no booking can assign this employee during the delete transaction.
+        const lockedStaff = await manager.getRepository(Staff).findOne({
+            where: { user_id: userId },
+            lock: { mode: "pessimistic_write" },
+        });
+        if (!lockedStaff) return null;
 
-    const user = await userService.deleteUser(userId);
-    if (!user) return null;
+        const account = await manager.getRepository(User).findOne({
+            where: { id: userId, role: UserRole.STAFF },
+            lock: { mode: "pessimistic_write" },
+        });
+        if (!account) return null;
 
-    return staff;
+        const staff = await manager.getRepository(Staff).findOne({
+            where: { user_id: userId },
+            relations: { user: true, branch: true },
+        });
+        if (!staff) return null;
+
+        const activeAssignments = await manager.getRepository(AppointmentStaffAssignment)
+            .createQueryBuilder("assigned")
+            .innerJoin("assigned.appointment", "appointment")
+            .where("assigned.staff_id = :userId", { userId })
+            .andWhere("appointment.merged_into_id IS NULL")
+            .andWhere("appointment.status IN (:...statuses)", {
+                statuses: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED, AppointmentStatus.IN_PROGRESS],
+            })
+            .getCount();
+
+        if (activeAssignments > 0) {
+            throw new AppError(
+                "Employee has pending, confirmed, or in-progress appointments. Resolve or reassign them before deletion.",
+                409,
+                "STAFF_HAS_ACTIVE_APPOINTMENTS",
+            );
+        }
+
+        // Snapshot staff_id / staff_full_name and historical actual prices
+        // remain after the employee account is deleted (FK removed by migration).
+        await userService.deleteUser(userId, manager);
+        return staff;
+    });
 };
