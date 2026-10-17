@@ -139,7 +139,7 @@ export function CurrentOffers({ offers, instagramHandle }: CurrentOffersProps) {
                                         <div className="flex items-center gap-3">
                                             <span aria-hidden="true" className="size-2 shrink-0 rounded-full bg-[#946e59]" />
                                             <p className="text-[10px] font-semibold uppercase tracking-[0.19em] text-[#795949] sm:text-[11px]">
-                                                Ưu đãi đang áp dụng
+                                                Ưu đãi đang được áp dụng
                                             </p>
                                         </div>
 
