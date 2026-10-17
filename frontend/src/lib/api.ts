@@ -292,7 +292,7 @@ export type WalkInVisit = {
     }>;
 };
 
-export type WalkInList = { visits: WalkInVisit[]; total: number };
+export type WalkInList = { visits: WalkInVisit[]; total: number; page?: number; limit?: number; total_pages?: number };
 
 export type AppointmentService = {
     service_id: string;
@@ -313,6 +313,7 @@ export type Appointment = {
     end_time: string;
     actual_started_at?: string | null;
     actual_completed_at?: string | null;
+    created_at?: string;
     status: string;
     appointment_services?: AppointmentService[];
     actual_prices?: AppointmentActualPrice[];
@@ -331,6 +332,20 @@ export type Appointment = {
         name: string;
         address: string;
     };
+};
+
+export type AdminMonthSummary = {
+    month: string;
+    total: number;
+    pending: number;
+    confirmed: number;
+    in_progress: number;
+    completed: number;
+    cancelled: number;
+    walk_ins: number;
+    online_revenue: number;
+    walk_in_revenue: number;
+    revenue: number;
 };
 
 export type AdminTodaySummary = {
