@@ -307,7 +307,7 @@ export type Appointment = {
     booking_group_id?: string | null;
     party_size: number;
     staff_id: string;
-    assigned_staff?: Array<{ id: string; full_name: string }>;
+    assigned_staff?: Array<{ id: string; full_name: string; completed_at?: string | null }>;
     branch_id: number;
     start_time: string;
     end_time: string;

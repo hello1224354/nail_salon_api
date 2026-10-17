@@ -13,8 +13,12 @@ export async function setActualPriceForStaff(appointmentId: string, serviceId: s
             lock: { mode: "pessimistic_write" },
         });
         if (!appointment) throw new AppError("Appointment not found", 404, "APPOINTMENT_NOT_FOUND");
-        if (!appointment.staff_assignments.some(assigned => assigned.staff_id === staffId)) {
+        const myAssignment = appointment.staff_assignments.find(assigned => assigned.staff_id === staffId);
+        if (!myAssignment) {
             throw new AppError("You are not assigned to this appointment", 403, "FORBIDDEN");
+        }
+        if (myAssignment.completed_at !== null) {
+            throw new AppError("This employee has already completed their work", 409, "STAFF_ALREADY_COMPLETED");
         }
         if (![AppointmentStatus.CONFIRMED, AppointmentStatus.IN_PROGRESS].includes(appointment.status)) {
             throw new AppError("Only confirmed or active appointments can be priced", 409, "APPOINTMENT_NOT_EDITABLE");

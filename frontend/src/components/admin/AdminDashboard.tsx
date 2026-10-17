@@ -214,7 +214,8 @@ export function AdminDashboard() {
     const [offerImage, setOfferImage] = useState("");
     const [appointmentStatus, setAppointmentStatus] = useState("");
     const [appointmentBranch, setAppointmentBranch] = useState("");
-    const [appointmentMonth, setAppointmentMonth] = useState(vietnamMonthNow);
+    const [appointmentMonth, setAppointmentMonth] = useState("");
+    const [overviewMonth, setOverviewMonth] = useState(vietnamMonthNow);
     const [appointmentCodeInput, setAppointmentCodeInput] = useState("");
     const [appointmentCode, setAppointmentCode] = useState("");
     const [appointmentPage, setAppointmentPage] = useState(1);
@@ -286,13 +287,12 @@ export function AdminDashboard() {
     const loadAppointments = useCallback(
         async (page = appointmentPage) => {
             const requestId = ++appointmentRequestId.current;
-            const { from, to } = vietnamMonthBounds(appointmentMonth);
-            const params = new URLSearchParams({
-                page: String(page),
-                limit: "20",
-                from,
-                to,
-            });
+            const params = new URLSearchParams({ page: String(page), limit: "20" });
+            if (appointmentMonth) {
+                const { from, to } = vietnamMonthBounds(appointmentMonth);
+                params.set("from", from);
+                params.set("to", to);
+            }
 
             if (appointmentStatus) params.set("status", appointmentStatus);
             if (appointmentBranch) params.set("branch_id", appointmentBranch);
@@ -717,8 +717,8 @@ export function AdminDashboard() {
                                     <Overview
                                         data={data}
                                         todayStats={data.todayStats}
-                                        month={appointmentMonth}
-                                        setMonth={(value) => { if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(value)) return; setAppointmentMonth(value); setAppointmentPage(1); }}
+                                        month={overviewMonth}
+                                        setMonth={setOverviewMonth}
                                         serviceCount={serviceCount}
                                         staffCount={staffCount}
                                         setTab={setTab}
@@ -730,7 +730,11 @@ export function AdminDashboard() {
                                         appointments={data.appointments}
                                         branches={data.branches}
                                         month={appointmentMonth}
-                                        setMonth={(value) => { if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(value)) return; setAppointmentMonth(value); setAppointmentPage(1); }}
+                                        setMonth={(value) => {
+                                            const next = value === "current" ? vietnamMonthNow() : value;
+                                            if (next && !/^\d{4}-(0[1-9]|1[0-2])$/.test(next)) return;
+                                            setAppointmentMonth(next); setAppointmentPage(1);
+                                        }}
                                         branchFilter={appointmentBranch}
                                         statusFilter={appointmentStatus}
                                         codeInput={appointmentCodeInput}
@@ -741,7 +745,7 @@ export function AdminDashboard() {
                                             setAppointmentPage(1);
                                         }}
                                         onResetFilters={() => {
-                                            setAppointmentMonth(vietnamMonthNow());
+                                            setAppointmentMonth("");
                                             setAppointmentCodeInput("");
                                             setAppointmentCode("");
                                             setAppointmentBranch("");
@@ -754,6 +758,10 @@ export function AdminDashboard() {
                                         pages={appointmentPages}
                                         setPage={setAppointmentPage}
                                         onView={(appointment) => { void showAppointmentDetails(appointment); }}
+                                        onEdit={(appointment) => { setEditingAppointment(appointment); setModal("appointment"); }}
+                                        onUpdate={(appointment, status) => { void updateAppointmentStatus(appointment, status); }}
+                                        onDelete={(appointment) => { void deleteAppointment(appointment); }}
+                                        submitting={submitting}
                                     />
                                 ) : null}
 
@@ -820,7 +828,7 @@ export function AdminDashboard() {
                                     />
                                 ) : null}
                                 {tab === "media" ? <MediaPanel /> : null}
-                                 {tab === "walkins" ? <AdminWalkInsPanel /> : null}
+                                 {tab === "walkins" ? <AdminWalkInsPanel branches={data.branches} /> : null}
                                 {tab === "trends" ? <TrendsPanel /> : null}
                             </>
                         )}
@@ -851,21 +859,7 @@ export function AdminDashboard() {
                     title="Chi tiết lịch hẹn"
                     onClose={() => { setModal(null); setViewingAppointment(null); }}
                 >
-                    <AdminAppointmentDetails
-                        appointment={viewingAppointment}
-                        submitting={submitting}
-                        onEdit={() => { setEditingAppointment(viewingAppointment); setModal("appointment"); }}
-                        onUpdate={(status) => {
-                            const target = viewingAppointment;
-                            setModal(null);
-                            void updateAppointmentStatus(target, status);
-                        }}
-                        onDelete={() => {
-                            const target = viewingAppointment;
-                            setModal(null);
-                            void deleteAppointment(target);
-                        }}
-                    />
+                    <AdminAppointmentDetails appointment={viewingAppointment} />
                 </Modal>
             ) : null}
 
@@ -1087,7 +1081,7 @@ function Overview({
     setTab: (tab: TabKey) => void;
 }) {
     const cards = [
-        { label: "Lịch trong tháng đã chọn", value: data.appointmentTotal },
+        { label: "Lịch theo bộ lọc", value: data.appointmentTotal },
         { label: "Chờ xác nhận hôm nay", value: todayStats.pending },
         { label: "Nhân viên", value: staffCount },
         { label: "Dịch vụ", value: serviceCount },
