@@ -22,6 +22,10 @@ import { getAuthUser, logoutSession, restoreSession, type AuthUser } from "@/lib
 import { AdminAppointmentForm, type AppointmentPayload } from "./AdminAppointmentForm";
 import { MediaChooser, MediaPanel, TrendsPanel } from "./AdminMedia";
 import { AdminWalkInsPanel } from "./AdminWalkInsPanel";
+import { AdminAppointmentsPanel } from "./AdminAppointmentsPanel";
+import { AdminAppointmentDetails } from "./AdminAppointmentDetails";
+import { AdminMonthlyOverview } from "./AdminMonthlyOverview";
+import { vietnamMonthBounds, vietnamMonthNow } from "@/lib/admin-month";
 import { formatAppointmentStatus, formatServicePrice, formatVnd, localizeBranchName, shortBranchName } from "@/lib/studio-data";
 
 type TabKey = "overview" | "appointments" | "services" | "staff" | "branches" | "offers" | "media" | "trends" | "walkins";
@@ -200,17 +204,17 @@ export function AdminDashboard() {
     const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState("");
     const [toast, setToast] = useState("");
-    const [modal, setModal] = useState<null | "branch" | "service" | "staff" | "offer" | "appointment">(null);
+    const [modal, setModal] = useState<null | "branch" | "service" | "staff" | "offer" | "appointment" | "details">(null);
     const [editingBranch, setEditingBranch] = useState<Branch | null>(null);
     const [editingService, setEditingService] = useState<Service | null>(null);
     const [editingStaff, setEditingStaff] = useState<AdminStaff | null>(null);
     const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
+    const [viewingAppointment, setViewingAppointment] = useState<Appointment | null>(null);
     const [editingOffer, setEditingOffer] = useState<Offer | null>(null);
     const [offerImage, setOfferImage] = useState("");
     const [appointmentStatus, setAppointmentStatus] = useState("");
     const [appointmentBranch, setAppointmentBranch] = useState("");
-    const [appointmentFromDate, setAppointmentFromDate] = useState("");
-    const [appointmentToDate, setAppointmentToDate] = useState("");
+    const [appointmentMonth, setAppointmentMonth] = useState(vietnamMonthNow);
     const [appointmentCodeInput, setAppointmentCodeInput] = useState("");
     const [appointmentCode, setAppointmentCode] = useState("");
     const [appointmentPage, setAppointmentPage] = useState(1);
@@ -280,23 +284,16 @@ export function AdminDashboard() {
 
     const loadAppointments = useCallback(
         async (page = appointmentPage) => {
+            const { from, to } = vietnamMonthBounds(appointmentMonth);
             const params = new URLSearchParams({
                 page: String(page),
                 limit: "20",
+                from,
+                to,
             });
 
             if (appointmentStatus) params.set("status", appointmentStatus);
             if (appointmentBranch) params.set("branch_id", appointmentBranch);
-            // Date inputs are local Vietnam calendar dates, inclusive of both endpoints.
-            if (appointmentFromDate) {
-                params.set("from", new Date(`${appointmentFromDate}T00:00:00+07:00`).toISOString());
-            }
-            if (appointmentToDate) {
-                const endExclusive = new Date(
-                    new Date(`${appointmentToDate}T00:00:00+07:00`).getTime() + 24 * 60 * 60 * 1000
-                );
-                params.set("to", endExclusive.toISOString());
-            }
             if (appointmentCode) params.set("booking_code", appointmentCode);
 
             const result = await apiRequest<AppointmentList>(
@@ -310,7 +307,7 @@ export function AdminDashboard() {
             }));
             setAppointmentPages(Math.max(result.total_pages, 1));
         },
-        [appointmentBranch, appointmentCode, appointmentFromDate, appointmentPage, appointmentStatus, appointmentToDate]
+        [appointmentBranch, appointmentCode, appointmentMonth, appointmentPage, appointmentStatus]
     );
 
     const loadTodayStats = useCallback(async () => {
@@ -712,54 +709,34 @@ export function AdminDashboard() {
                                 ) : null}
 
                                 {tab === "appointments" ? (
-                                    <AppointmentsPanel
+                                    <AdminAppointmentsPanel
                                         appointments={data.appointments}
                                         branches={data.branches}
+                                        month={appointmentMonth}
+                                        setMonth={(value) => { setAppointmentMonth(value); setAppointmentPage(1); }}
                                         branchFilter={appointmentBranch}
                                         statusFilter={appointmentStatus}
-                                        fromDate={appointmentFromDate}
-                                        toDate={appointmentToDate}
                                         codeInput={appointmentCodeInput}
                                         total={data.appointmentTotal}
-                                        setFromDate={(value) => {
-                                            setAppointmentFromDate(value);
-                                            if (value && appointmentToDate && value > appointmentToDate) setAppointmentToDate("");
-                                            setAppointmentPage(1);
-                                        }}
-                                        setToDate={(value) => {
-                                            setAppointmentToDate(value);
-                                            if (value && appointmentFromDate && value < appointmentFromDate) setAppointmentFromDate("");
-                                            setAppointmentPage(1);
-                                        }}
                                         setCodeInput={setAppointmentCodeInput}
                                         onCodeSearch={() => {
                                             setAppointmentCode(appointmentCodeInput);
                                             setAppointmentPage(1);
                                         }}
                                         onResetFilters={() => {
-                                            setAppointmentFromDate("");
-                                            setAppointmentToDate("");
+                                            setAppointmentMonth(vietnamMonthNow());
                                             setAppointmentCodeInput("");
                                             setAppointmentCode("");
                                             setAppointmentBranch("");
                                             setAppointmentStatus("");
                                             setAppointmentPage(1);
                                         }}
-                                        setBranchFilter={(value) => {
-                                            setAppointmentBranch(value);
-                                            setAppointmentPage(1);
-                                        }}
-                                        setStatusFilter={(value) => {
-                                            setAppointmentStatus(value);
-                                            setAppointmentPage(1);
-                                        }}
+                                        setBranchFilter={value => { setAppointmentBranch(value); setAppointmentPage(1); }}
+                                        setStatusFilter={value => { setAppointmentStatus(value); setAppointmentPage(1); }}
                                         page={appointmentPage}
                                         pages={appointmentPages}
                                         setPage={setAppointmentPage}
-                                        updateStatus={updateAppointmentStatus}
-                                        onEdit={(appointment) => { setEditingAppointment(appointment); setModal("appointment"); }}
-                                        onDelete={deleteAppointment}
-                                        submitting={submitting}
+                                        onView={(appointment) => { setViewingAppointment(appointment); setModal("details"); }}
                                     />
                                 ) : null}
 
@@ -847,6 +824,29 @@ export function AdminDashboard() {
                         submitting={submitting}
                         onSave={saveAppointment}
                         onCancel={() => { setModal(null); setEditingAppointment(null); }}
+                    />
+                </Modal>
+            ) : null}
+
+            {modal === "details" && viewingAppointment ? (
+                <Modal
+                    title="Chi tiết lịch hẹn"
+                    onClose={() => { setModal(null); setViewingAppointment(null); }}
+                >
+                    <AdminAppointmentDetails
+                        appointment={viewingAppointment}
+                        submitting={submitting}
+                        onEdit={() => { setEditingAppointment(viewingAppointment); setModal("appointment"); }}
+                        onUpdate={(status) => {
+                            const target = viewingAppointment;
+                            setModal(null);
+                            void updateAppointmentStatus(target, status);
+                        }}
+                        onDelete={() => {
+                            const target = viewingAppointment;
+                            setModal(null);
+                            void deleteAppointment(target);
+                        }}
                     />
                 </Modal>
             ) : null}
@@ -1055,7 +1055,7 @@ function Overview({
     setTab: (tab: TabKey) => void;
 }) {
     const cards = [
-        { label: "Lịch đang tải", value: data.appointmentTotal },
+        { label: "Lịch trong tháng đã chọn", value: data.appointmentTotal },
         { label: "Chờ xác nhận hôm nay", value: todayStats.pending },
         { label: "Nhân viên", value: staffCount },
         { label: "Dịch vụ", value: serviceCount },
@@ -1067,6 +1067,7 @@ function Overview({
 
     return (
         <div className="space-y-6">
+            <AdminMonthlyOverview />
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 {cards.map((card) => (
                     <article key={card.label} className="rounded-[20px] border border-line bg-white p-5 shadow-[0_8px_30px_rgba(48,40,35,0.035)]">
@@ -1132,251 +1133,6 @@ function Overview({
                 </section>
             </div>
         </div>
-    );
-}
-
-function AppointmentsPanel({
-    appointments,
-    branches,
-    branchFilter,
-    statusFilter,
-    fromDate,
-    toDate,
-    codeInput,
-    total,
-    setFromDate,
-    setToDate,
-    setCodeInput,
-    onCodeSearch,
-    onResetFilters,
-    setBranchFilter,
-    setStatusFilter,
-    page,
-    pages,
-    setPage,
-    updateStatus,
-    onEdit,
-    onDelete,
-    submitting,
-}: {
-    appointments: Appointment[];
-    branches: Branch[];
-    branchFilter: string;
-    statusFilter: string;
-    fromDate: string;
-    toDate: string;
-    codeInput: string;
-    total: number;
-    setFromDate: (value: string) => void;
-    setToDate: (value: string) => void;
-    setCodeInput: (value: string) => void;
-    onCodeSearch: () => void;
-    onResetFilters: () => void;
-    setBranchFilter: (value: string) => void;
-    setStatusFilter: (value: string) => void;
-    page: number;
-    pages: number;
-    setPage: (page: number) => void;
-    updateStatus: (appointment: Appointment, status: string) => Promise<void>;
-    onEdit: (appointment: Appointment) => void;
-    onDelete: (appointment: Appointment) => Promise<void>;
-    submitting: boolean;
-}) {
-    return (
-        <section className="overflow-hidden rounded-[22px] border border-line bg-white">
-            <div className="flex flex-col gap-4 border-b border-line p-5 lg:flex-row lg:items-end lg:justify-between">
-                <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-accent">Quản lý lịch hẹn</p>
-                    <h2 className="mt-1 font-serif text-3xl">Lịch hẹn</h2>
-                </div>
-                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                    <select value={branchFilter} onChange={(event) => setBranchFilter(event.target.value)} className="h-10 rounded-xl border border-line bg-cream px-3 text-xs outline-none">
-                        <option value="">Tất cả chi nhánh</option>
-                        {branches.map((branch) => <option key={branch.id} value={branch.id}>{shortBranchName(branch.name)}</option>)}
-                    </select>
-                    <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="h-10 rounded-xl border border-line bg-cream px-3 text-xs outline-none">
-                        <option value="">Tất cả trạng thái</option>
-                        {statusOrder.map((status) => <option key={status} value={status}>{formatAppointmentStatus(status)}</option>)}
-                    </select>
-                </div>
-                <div className="grid gap-3 border-t border-line pt-4 sm:grid-cols-2 xl:grid-cols-[1fr_1fr_1.5fr_auto] xl:items-end">
-                    <label className="block">
-                        <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">Từ ngày</span>
-                        <input
-                            aria-label="Từ ngày"
-                            type="date"
-                            value={fromDate}
-                            max={toDate || undefined}
-                            onChange={(event) => setFromDate(event.target.value)}
-                            className="h-10 w-full rounded-xl border border-line bg-cream px-3 text-xs text-ink outline-none focus:border-accent"
-                        />
-                    </label>
-                    <label className="block">
-                        <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">Đến ngày</span>
-                        <input
-                            aria-label="Đến ngày"
-                            type="date"
-                            value={toDate}
-                            min={fromDate || undefined}
-                            onChange={(event) => setToDate(event.target.value)}
-                            className="h-10 w-full rounded-xl border border-line bg-cream px-3 text-xs text-ink outline-none focus:border-accent"
-                        />
-                    </label>
-                    <form
-                        onSubmit={(event) => {
-                            event.preventDefault();
-                            onCodeSearch();
-                        }}
-                        className="min-w-0"
-                        role="search"
-                    >
-                        <label htmlFor="admin-booking-code" className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">Mã lịch hẹn</label>
-                        <div className="flex gap-2">
-                            <input
-                                id="admin-booking-code"
-                                type="search"
-                                inputMode="text"
-                                autoComplete="off"
-                                maxLength={8}
-                                value={codeInput}
-                                onChange={(event) => setCodeInput(event.target.value.replace(/[^0-9a-f]/gi, "").slice(0, 8).toUpperCase())}
-                                placeholder="VD: 9DCB7830"
-                                className="h-10 min-w-0 flex-1 rounded-xl border border-line bg-cream px-3 font-mono text-xs uppercase tracking-wider text-ink outline-none focus:border-accent"
-                            />
-                            <button type="submit" className="h-10 shrink-0 rounded-xl bg-ink px-4 text-xs font-semibold text-white transition hover:bg-accent">Tìm</button>
-                        </div>
-                    </form>
-                    <button
-                        type="button"
-                        onClick={onResetFilters}
-                        className="h-10 rounded-xl border border-line px-4 text-xs font-semibold text-muted transition hover:border-accent hover:text-ink"
-                    >
-                        Xóa bộ lọc
-                    </button>
-                </div>
-            </div>
-
-            <div className="overflow-x-auto">
-                <table className="min-w-[950px] w-full text-left">
-                    <thead className="bg-[#f8f5f1] text-[9px] uppercase tracking-[0.14em] text-muted">
-                        <tr>
-                            <th className="px-5 py-3 font-semibold">Thời gian</th>
-                            <th className="px-5 py-3 font-semibold">Khách hàng</th>
-                            <th className="px-5 py-3 font-semibold">Dịch vụ</th>
-                            <th className="px-5 py-3 font-semibold">Nhân viên</th>
-                            <th className="px-5 py-3 font-semibold">Chi nhánh</th>
-                            <th className="px-5 py-3 font-semibold">Trạng thái</th>
-                            <th className="px-5 py-3 font-semibold">Thao tác</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-line text-xs">
-                        {appointments.map((appointment) => {
-                            const allowed =
-                                appointment.status === "pending"
-                                    ? ["confirmed", "cancelled"]
-                                    : appointment.status === "confirmed"
-                                      ? ["in_progress", "cancelled"]
-                                      : appointment.status === "in_progress"
-                                        ? ["completed", "cancelled"]
-                                        : [];
-
-                            return (
-                                <tr key={appointment.id} className="align-top">
-                                    <td className="px-5 py-4 whitespace-nowrap">
-                                        <p className="font-semibold">{formatDateTime(appointment.start_time)}</p>
-                                        <p className="mt-1 text-[10px] text-muted">đến {formatDateTime(appointment.end_time).split(" ").slice(-1)[0]}</p>
-                                        <p className="mt-1 font-mono text-[10px] font-semibold tracking-[0.05em] text-accent">
-                                            #{(appointment.booking_group_id ?? appointment.id).slice(0, 8).toUpperCase()}
-                                        </p>
-                                    </td>
-                                    <td className="px-5 py-4">
-                                        <p className="font-medium">{appointment.customer?.full_name || "—"}</p>
-                                        <p className="mt-1 text-[10px] text-muted">{appointment.customer?.phone || "—"}</p>
-                                        <p className="mt-1 text-[10px] text-muted">{appointment.customer?.email || "—"}</p>
-                                    </td>
-                                    <td className="max-w-[240px] px-5 py-4">
-                                        <p className="leading-5">{appointment.appointment_services?.map((service) => service.service_name).join(", ") || "—"}</p>
-                                        <p className="mt-1 text-[10px] text-muted">
-                                            Giá tham khảo / người: {formatVnd(appointment.appointment_services?.reduce((sum, service) => sum + service.price, 0) || 0)} VND
-                                        </p>
-                                        {(appointment.actual_prices ?? []).length > 0 ? (
-                                            <div className="mt-2 space-y-1 border-t border-line pt-2 text-[10px]">
-                                                <p className="font-semibold text-accent">Giá thực tế nhân viên nhập</p>
-                                                {(appointment.actual_prices ?? []).map(line => (
-                                                    <p key={line.staff_id + ":" + line.service_id}>
-                                                        {(appointment.assigned_staff ?? []).find(staff => staff.id === line.staff_id)?.full_name ?? "Nhân viên"}:
-                                                        {" "}{formatVnd(line.actual_price)}đ
-                                                    </p>
-                                                ))}
-                                                <p className="font-semibold">
-                                                    {(appointment.actual_prices ?? []).length === (appointment.appointment_services?.length ?? 0) * appointment.party_size
-                                                        ? "Tổng thực tế: " + formatVnd((appointment.actual_prices ?? []).reduce((sum, row) => sum + row.actual_price, 0)) + "đ"
-                                                        : "Chưa nhập đủ giá cho cả nhóm"}
-                                                </p>
-                                            </div>
-                                        ) : null}
-                                    </td>
-                                    <td className="px-5 py-4">
-                                        <p>{appointment.assigned_staff?.map(person => person.full_name).join(", ")
-                                            || appointment.staff?.full_name || appointment.staff_id.slice(0, 8)}</p>
-                                        {appointment.party_size > 1 ? (
-                                            <p className="mt-1 text-[10px] text-muted">{appointment.party_size} người · 1 lịch hẹn</p>
-                                        ) : null}
-                                    </td>
-                                    <td className="px-5 py-4">{appointment.branch?.name ? shortBranchName(appointment.branch.name) : `#${appointment.branch_id}`}</td>
-                                    <td className="px-5 py-4">
-                                        <span className={`inline-flex rounded-full border px-2.5 py-1 text-[9px] font-semibold ${badgeClass(appointment.status)}`}>
-                                            {formatAppointmentStatus(appointment.status)}
-                                        </span>
-                                    </td>
-                                    <td className="px-5 py-4">
-                                        <div className="flex items-center gap-3">
-                                            {["pending", "confirmed"].includes(appointment.status) ? (
-                                                <button type="button" onClick={() => onEdit(appointment)} className="font-semibold text-accent">Sửa</button>
-                                            ) : null}
-                                            {allowed.length ? (
-                                                <select
-                                                    defaultValue=""
-                                                    disabled={submitting}
-                                                    onChange={(event) => {
-                                                        const value = event.target.value;
-                                                        if (value) void updateStatus(appointment, value);
-                                                        event.target.value = "";
-                                                    }}
-                                                    className="h-8 rounded-lg border border-line bg-white px-2 text-[10px] outline-none"
-                                                >
-                                                    <option value="">Cập nhật…</option>
-                                                    {allowed.map((status) => <option key={status} value={status}>{formatAppointmentStatus(status)}</option>)}
-                                                </select>
-                                            ) : (
-                                                <span className="text-[10px] text-muted">Đã khóa</span>
-                                            )}
-                                            <button
-                                                disabled={submitting}
-                                                onClick={() => void onDelete(appointment)}
-                                                className="font-semibold text-[#8a5147]"
-                                            >
-                                                Xóa
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            );
-                        })}
-                    </tbody>
-                </table>
-            </div>
-
-            {!appointments.length ? <p className="px-5 py-12 text-center text-xs text-muted">Không có lịch hẹn nào khớp với bộ lọc đã chọn.</p> : null}
-
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-5 py-4">
-                <p className="text-[10px] text-muted">{total.toLocaleString("vi-VN")} lịch hẹn · Trang {page}/{pages}</p>
-                <div className="flex gap-2">
-                    <button disabled={page <= 1} onClick={() => setPage(page - 1)} className="rounded-full border border-line px-3 py-2 text-[10px] font-semibold disabled:opacity-35">← Trước</button>
-                    <button disabled={page >= pages} onClick={() => setPage(page + 1)} className="rounded-full border border-line px-3 py-2 text-[10px] font-semibold disabled:opacity-35">Sau →</button>
-                </div>
-            </div>
-        </section>
     );
 }
 
