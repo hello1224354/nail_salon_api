@@ -25,6 +25,8 @@ import { AdminWalkInsPanel } from "./AdminWalkInsPanel";
 import { AdminAppointmentsPanel } from "./AdminAppointmentsPanel";
 import { AdminAppointmentDetails } from "./AdminAppointmentDetails";
 import { AdminMonthlyOverview } from "./AdminMonthlyOverview";
+import { AdminLifetimeOverview } from "./AdminLifetimeOverview";
+import { ServiceCategoryPicker } from "./ServiceCategoryPicker";
 import { vietnamMonthBounds, vietnamMonthNow } from "@/lib/admin-month";
 import { formatAppointmentStatus, formatServicePrice, formatVnd, localizeBranchName, shortBranchName } from "@/lib/studio-data";
 
@@ -933,18 +935,20 @@ export function AdminDashboard() {
                         <Field label="Thời lượng (phút)">
                             <input name="duration_minutes" type="number" min="1" step="1" defaultValue={editingService?.duration_minutes ?? ""} className={inputClass} placeholder="Để trống nếu chưa nhận đặt lịch" />
                         </Field>
-                        <Field label="Nhóm dịch vụ" span>
-                            <select name="category" className={selectClass}
-                                defaultValue={editingService?.category ?? ""} required>
-                                <option value="" disabled>Chọn nhóm dịch vụ</option>
-                                {data.serviceCategories.map((category) => (
-                                    <option key={category} value={category}>{category}</option>
-                                ))}
-                            </select>
-                            <p className="mt-1.5 text-[11px] text-muted">
-                                Chỉ chọn một nhóm trong danh sách có sẵn.
-                            </p>
-                        </Field>
+                        <ServiceCategoryPicker
+                            key={editingService?.id ?? "new-service"}
+                            categories={data.serviceCategories}
+                            initial={editingService?.category ?? ""}
+                            onCreated={(group) => {
+                                setData(current => ({
+                                    ...current,
+                                    serviceCategories: Array.from(
+                                        new Set([...current.serviceCategories, group])
+                                    ).sort((a, b) => a.localeCompare(b, "vi")),
+                                }));
+                                setToast("Đã thêm nhóm dịch vụ.");
+                            }}
+                        />
                         <Field label="Mô tả dịch vụ" span>
                             <textarea name="description" defaultValue={editingService?.description ?? ""} className={textareaClass} maxLength={2000} />
                         </Field>
@@ -1104,6 +1108,7 @@ function Overview({
 
     return (
         <div className="space-y-6">
+            <AdminLifetimeOverview />
             <AdminMonthlyOverview month={month} setMonth={setMonth} />
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 {cards.map((card) => (
