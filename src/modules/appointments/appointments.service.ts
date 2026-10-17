@@ -148,7 +148,8 @@ async function allocateBookingStaff(
             where: { user_id: staff.user_id },
             lock: { mode: "pessimistic_read" },
         });
-        if (current && isWithinStaffWorkingHours(current, beginMinute, finishMinute)) {
+        if (current && current.branch_id === branchId &&
+            isWithinStaffWorkingHours(current, beginMinute, finishMinute)) {
             eligible.set(staff.user_id, staff);
         }
     }
