@@ -112,8 +112,9 @@ export function AdminAppointmentForm({
         if (branchId !== appointment.branch_id) payload.branch_id = branchId;
         // Selected people are mandatory; unselected positions are allocated fairly.
         // When the schedule changes, preserve the selections shown in this form.
-        const selectedChanged = explicitlySelected.length !== existingStaffIds.length ||
-            explicitlySelected.some(id => !existingStaffIds.includes(id));
+        const selectedChanged = staffIds.some(
+            (id, index) => id !== (existingStaffIds[index] ?? "")
+        );
         if (selectedChanged || branchId !== appointment.branch_id ||
             serviceIds.length !== oldIds.length || serviceIds.some(id => !oldIds.includes(id)) ||
             new Date(startTime).getTime() !== new Date(appointment.start_time).getTime()) {
