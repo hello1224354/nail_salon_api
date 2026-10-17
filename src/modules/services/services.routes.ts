@@ -9,6 +9,7 @@ const router = Router();
 
 router.get("/", publicReadRateLimiter, controller.getAllServices);
 router.get("/admin", authenticate, requireRole(UserRole.ADMIN), controller.getAllServicesForAdmin);
+router.get("/categories", publicReadRateLimiter, controller.getServiceCategories);
 router.get("/:id", publicReadRateLimiter, controller.getService);
 router.post("/", authenticate, requireRole(UserRole.ADMIN), controller.createService);
 router.put("/:id", authenticate, requireRole(UserRole.ADMIN), controller.updateService);
