@@ -136,6 +136,7 @@ const errorMessagesByCode: Record<string, string> = {
     BRANCH_MISMATCH: "Các dịch vụ đã chọn không thuộc cùng một chi nhánh.",
     SLOT_UNAVAILABLE: "Khung giờ này vừa hết chỗ. Vui lòng chọn khung giờ khác.",
     CUSTOMER_APPOINTMENT_CONFLICT: "Bạn đã có lịch hẹn trùng với khung giờ này.",
+    INVALID_INSTAGRAM_POST_URL: "Link phải là bài đăng hoặc Reel trên Instagram (https://www.instagram.com/p/... hoặc /reel/...).",
     TOO_MANY_PENDING_APPOINTMENTS: "Bạn đã có quá nhiều lịch hẹn đang chờ xác nhận.",
     INVALID_APPOINTMENT_TIME: "Giờ bắt đầu phải nằm trên mốc 15 phút.",
     OUTSIDE_BUSINESS_HOURS: "Khung giờ đã chọn nằm ngoài giờ mở cửa của tiệm.",
@@ -244,6 +245,7 @@ export type Offer = {
     start_date: string;
     end_date: string;
     image: string;
+    instagram_post_url?: string | null;
     sort_order: number;
 };
 

@@ -20,6 +20,9 @@ export class Offer {
     @Column({ type: "varchar", length: 500 })
     image: string;
 
+    @Column({ type: "varchar", length: 500, nullable: true })
+    instagram_post_url: string | null;
+
     @Column({ type: "int", default: 0 })
     sort_order: number;
 
