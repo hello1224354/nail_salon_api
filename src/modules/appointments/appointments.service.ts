@@ -21,6 +21,7 @@ import { Branch } from "../branches/branches.entity";
 import { isWithinStaffWorkingHours } from "../staffs/staff-working-hours";
 import { getVietnamMinuteOfDay } from "./booking-time";
 import { parseBranchOpeningHours } from "../branches/branch-opening-hours";
+import { monthWindow } from "./admin-month-summary";
 import { StaffAssignmentRotation } from "./staff-assignment-rotation.entity";
 import { addAssignedMinutes, chooseFairStaff, type StaffWorkload } from "./staff-allocation";
 
@@ -609,6 +610,58 @@ export const getAdminTodaySummary = async () => {
     };
 };
 
+/**
+ * Counts are based on scheduled appointment start dates; revenue is based on
+ * actual completion date, plus walk-in visits served in the chosen month.
+ * SQL aggregates return 0 for a month without data.
+ */
+export const getAdminMonthSummary = async (month: string) => {
+    const { start, end } = monthWindow(month);
+    const counts = await appointmentRepo.createQueryBuilder("appointment")
+        .select("COUNT(*)", "total")
+        .addSelect("SUM(CASE WHEN appointment.status = :pending THEN 1 ELSE 0 END)", "pending")
+        .addSelect("SUM(CASE WHEN appointment.status = :confirmed THEN 1 ELSE 0 END)", "confirmed")
+        .addSelect("SUM(CASE WHEN appointment.status = :inProgress THEN 1 ELSE 0 END)", "in_progress")
+        .addSelect("SUM(CASE WHEN appointment.status = :completed THEN 1 ELSE 0 END)", "completed")
+        .addSelect("SUM(CASE WHEN appointment.status = :cancelled THEN 1 ELSE 0 END)", "cancelled")
+        .where("appointment.start_time >= :start AND appointment.start_time < :end", { start, end })
+        .andWhere("appointment.merged_into_id IS NULL")
+        .setParameters({
+            pending: AppointmentStatus.PENDING, confirmed: AppointmentStatus.CONFIRMED,
+            inProgress: AppointmentStatus.IN_PROGRESS,
+            completed: AppointmentStatus.COMPLETED, cancelled: AppointmentStatus.CANCELLED,
+        }).getRawOne<Record<string, string | null>>();
+    const online = await AppDataSource.getRepository(AppointmentActualPrice)
+        .createQueryBuilder("price")
+        .innerJoin(Appointment, "appointment", "appointment.id = price.appointment_id")
+        .select("COALESCE(SUM(price.actual_price), 0)", "revenue")
+        .where("appointment.status = :completed", { completed: AppointmentStatus.COMPLETED })
+        .andWhere("appointment.merged_into_id IS NULL")
+        .andWhere("appointment.actual_completed_at >= :start AND appointment.actual_completed_at < :end", { start, end })
+        .getRawOne<{ revenue: string }>();
+    const walkIns = await AppDataSource.getRepository(WalkInVisitService)
+        .createQueryBuilder("price")
+        .innerJoin(WalkInVisit, "visit", "visit.id = price.visit_id")
+        .select("COALESCE(SUM(price.actual_price), 0)", "revenue")
+        .where("visit.served_at >= :start AND visit.served_at < :end", { start, end })
+        .getRawOne<{ revenue: string }>();
+    const walkInCount = await AppDataSource.getRepository(WalkInVisit).count({
+        where: { served_at: Between(start, new Date(end.getTime() - 1)) },
+    });
+    return {
+        month, total: Number(counts?.total ?? 0),
+        pending: Number(counts?.pending ?? 0),
+        confirmed: Number(counts?.confirmed ?? 0),
+        in_progress: Number(counts?.in_progress ?? 0),
+        completed: Number(counts?.completed ?? 0),
+        cancelled: Number(counts?.cancelled ?? 0),
+        walk_ins: walkInCount,
+        online_revenue: Number(online?.revenue ?? 0),
+        walk_in_revenue: Number(walkIns?.revenue ?? 0),
+        revenue: Number(online?.revenue ?? 0) + Number(walkIns?.revenue ?? 0),
+    };
+};
+
 export const getAllAppointments = async (userId: string, role: UserRole, query: GetAppointmentsQueryDto) => {
     const queryBuilder = appointmentRepo.createQueryBuilder("appointment")
         .leftJoinAndSelect("appointment.appointment_services", "appointment_services")
@@ -671,7 +724,7 @@ export const getAllAppointments = async (userId: string, role: UserRole, query: 
         });
     }
 
-    queryBuilder.orderBy("appointment.start_time", "ASC");
+    queryBuilder.orderBy("appointment.start_time", role === UserRole.ADMIN && query.scope !== "mine" ? "DESC" : "ASC");
 
     queryBuilder.skip((query.page - 1) * query.limit);
 
