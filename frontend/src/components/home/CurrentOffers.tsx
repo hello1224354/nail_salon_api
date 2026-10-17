@@ -142,7 +142,7 @@ export function CurrentOffers({ offers, instagramHandle }: CurrentOffersProps) {
                                             </p>
                                         </div>
 
-                                        <div className="flex flex-1 flex-col justify-center py-10 lg:py-11">
+                                        <div className="flex flex-1 flex-col justify-start pb-8 pt-7 sm:pt-8 lg:pb-10 lg:pt-8">
                                             <h1 className="max-w-[16ch] font-serif text-[clamp(2.75rem,4.4vw,4.75rem)] font-medium leading-[1.06] tracking-[-0.045em] text-[#302823] [overflow-wrap:anywhere]">
                                                 {offer.name}
                                             </h1>
