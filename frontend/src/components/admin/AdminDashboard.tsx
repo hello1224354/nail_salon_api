@@ -718,7 +718,7 @@ export function AdminDashboard() {
                                         data={data}
                                         todayStats={data.todayStats}
                                         month={appointmentMonth}
-                                        setMonth={(value) => { setAppointmentMonth(value); setAppointmentPage(1); }}
+                                        setMonth={(value) => { if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(value)) return; setAppointmentMonth(value); setAppointmentPage(1); }}
                                         serviceCount={serviceCount}
                                         staffCount={staffCount}
                                         setTab={setTab}
@@ -730,7 +730,7 @@ export function AdminDashboard() {
                                         appointments={data.appointments}
                                         branches={data.branches}
                                         month={appointmentMonth}
-                                        setMonth={(value) => { setAppointmentMonth(value); setAppointmentPage(1); }}
+                                        setMonth={(value) => { if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(value)) return; setAppointmentMonth(value); setAppointmentPage(1); }}
                                         branchFilter={appointmentBranch}
                                         statusFilter={appointmentStatus}
                                         codeInput={appointmentCodeInput}
