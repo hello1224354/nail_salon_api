@@ -8,6 +8,7 @@ import { Footer } from "@/components/layout/Footer";
 import { InstagramContact } from "@/components/layout/InstagramContact";
 import { RouteMotion } from "@/components/layout/RouteMotion";
 import { BranchProvider } from "@/components/branch/BranchProvider";
+import { WebsiteVisitTracker } from "@/components/traffic/WebsiteVisitTracker";
 import { SITE_ORIGIN } from "@/lib/site-url";
 
 // Self-host one Vietnamese-capable display font on every device.
@@ -53,6 +54,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
     return (
         <html lang="vi" className={`${displayFont.variable} h-full antialiased`}>
             <body className="flex min-h-screen flex-col bg-cream text-ink">
+                <WebsiteVisitTracker />
                 <BranchProvider>
                     <Header />
                     <div className="relative grid flex-1">
