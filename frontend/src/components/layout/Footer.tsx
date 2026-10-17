@@ -170,15 +170,13 @@ export function Footer() {
                 <div className="mx-auto grid w-full max-w-[84rem] grid-cols-1 gap-x-10 gap-y-11 md:grid-cols-2 md:gap-x-14 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,0.65fr)_minmax(0,1fr)] lg:gap-x-16 xl:gap-x-20">
                     <section className="min-w-0 md:col-span-2 lg:col-span-1" aria-label="Thông tin tiệm">
                         <Link href="/" aria-label="Serpente Nail Room — về trang chủ" className="focus-ring inline-flex max-w-full items-center gap-3">
-                            <span className="flex size-10 shrink-0 items-center justify-center bg-[#f6f3ee] p-1 sm:size-11">
-                                <Image
-                                    src="/brand/serpente-logo.svg"
-                                    alt=""
-                                    width={36}
-                                    height={36}
-                                    className="size-full object-contain"
-                                />
-                            </span>
+                            <Image
+                                src="/brand/serpente-logo.svg"
+                                alt=""
+                                width={44}
+                                height={44}
+                                className="size-10 shrink-0 object-contain sm:size-11"
+                            />
                             <span className="min-w-0 font-serif text-xl leading-tight tracking-[-0.025em] text-white sm:text-[23px]">
                                 Serpente Nail Room
                             </span>
@@ -194,8 +192,6 @@ export function Footer() {
 
                                 return (
                                     <div key={branch.id} className="min-w-0 space-y-3.5 text-sm leading-6">
-                                        <p className="font-semibold text-white">{localizeBranchName(branch.name)}</p>
-
                                         {branch.address ? (
                                             <div className="flex min-w-0 items-start gap-3">
                                                 <FooterDetailIcon name="pin" className="mt-1 size-4 shrink-0 text-[#c4a994]" />
@@ -278,7 +274,7 @@ export function Footer() {
                     <section className="min-w-0">
                         <h2 className={headingClass}>Tư vấn &amp; báo giá</h2>
                         <p className="mt-6 max-w-[22rem] text-sm leading-7 text-white/80">
-                            Giá dịch vụ trên website chỉ mang tính tham khảo và có thể thay đổi tùy theo mẫu móng.
+                            Giá dịch vụ trên website chỉ mang tính chất tham khảo và có thể thay đổi tùy theo mẫu móng.
                         </p>
                         {instagramMessageUrl ? (
                             <a
