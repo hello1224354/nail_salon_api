@@ -1,24 +1,21 @@
 import { AppError } from "../../common/errors";
 
-/**
- * The six existing public catalogue groups, shared by API validation and
- * the Admin category picker. Adding a new category is an intentional change,
- * not arbitrary free-form user input.
- */
-export const SERVICE_CATEGORIES = [
-    "Chăm sóc cơ bản",
-    "Combo",
-    "Dịch vụ khác",
-    "Nail art & trang trí",
-    "Phụ thu sơn nền",
-    "Sơn nền cao cấp",
-] as const;
-
-export type ServiceCategory = (typeof SERVICE_CATEGORIES)[number];
+/** Group labels are managed in the database, not hard-coded in the API. */
+export type ServiceCategory = string;
 
 export function parseServiceCategory(value: unknown): ServiceCategory {
-    if (typeof value !== "string" || !SERVICE_CATEGORIES.includes(value as ServiceCategory)) {
-        throw new AppError("Category must be selected from the existing service groups", 400, "VALIDATION_ERROR");
+    if (typeof value !== "string" || value.length === 0 || value.length > 255 ||
+        !value.trim() || value !== value.trim()) {
+        throw new AppError("Select an existing service group", 400, "VALIDATION_ERROR");
     }
-    return value as ServiceCategory;
+    return value;
+}
+
+export function parseNewServiceGroup(value: unknown): string {
+    if (typeof value !== "string" || value.trim().length < 2 ||
+        value.trim().length > 80 || /[\x00-\x1f\x7f]/.test(value) ||
+        value.trim().toLocaleLowerCase("vi-VN") === "tất cả") {
+        throw new AppError("Group name must be 2–80 characters", 400, "VALIDATION_ERROR");
+    }
+    return value.trim();
 }
