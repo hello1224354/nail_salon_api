@@ -11,6 +11,7 @@ export type Offer = {
     details: string;
     validDates: string;
     image: string;
+    instagramPostUrl?: string | null;
 };
 
 type CurrentOffersProps = {
@@ -149,6 +150,20 @@ export function CurrentOffers({ offers, instagramHandle }: CurrentOffersProps) {
                                             <p className="mt-6 max-w-[44ch] whitespace-pre-line border-l-2 border-[#ba9882] pl-4 text-sm leading-7 text-[#55473f] sm:text-[15px]">
                                                 {offer.details}
                                             </p>
+                                            {offer.instagramPostUrl?.startsWith("https://www.instagram.com/") ? (
+                                                <a
+                                                    href={offer.instagramPostUrl}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="focus-ring mt-6 inline-flex w-fit items-center gap-2.5 border-b border-[#96705d] pb-1.5 text-sm font-semibold text-[#49372c] transition-colors hover:border-[#2f2621] hover:text-[#2f2621]"
+                                                    aria-label={`Xem chi tiết ưu đãi ${offer.name} trên Instagram (mở tab mới)`}
+                                                >
+                                                    <span>Xem chi tiết ưu đãi</span>
+                                                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="size-4 shrink-0">
+                                                        <path d="M7 17 17 7M8 7h9v9" />
+                                                    </svg>
+                                                </a>
+                                            ) : null}
                                         </div>
 
                                         <div className="flex items-start gap-3 border-t border-[#c6ae9d]/80 pt-5">
