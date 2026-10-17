@@ -18,6 +18,9 @@ export class AppointmentStaffAssignment {
     @Column({ type: "int", default: 0 })
     position: number;
 
+    @Column({ type: "datetime", precision: 3, nullable: true })
+    completed_at: Date | null;
+
     @ManyToOne(() => Appointment, appointment => appointment.staff_assignments, { onDelete: "CASCADE" })
     @JoinColumn({ name: "appointment_id" })
     appointment: Appointment;
