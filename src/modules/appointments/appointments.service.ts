@@ -115,10 +115,14 @@ async function allocateBookingStaff(
     startTime: Date,
     endTime: Date,
     partySize: number,
-    preferredStaffIds: string[] = [],
+    preferredStaffIds: Array<string | null> = [],
     excludedAppointmentId?: string,
 ) {
-    if (preferredStaffIds.length > partySize || new Set(preferredStaffIds).size !== preferredStaffIds.length) {
+    const selections = preferredStaffIds.length === 0
+        ? Array.from<string | null>({ length: partySize }).fill(null)
+        : preferredStaffIds;
+    const specified = selections.filter((id): id is string => id !== null);
+    if (selections.length !== partySize || new Set(specified).size !== specified.length) {
         throw new AppError("Invalid staff selection for group size", 400, "VALIDATION_ERROR");
     }
 
@@ -153,7 +157,7 @@ async function allocateBookingStaff(
             eligible.set(staff.user_id, { ...staff, work_start_time: current.work_start_time, work_end_time: current.work_end_time });
         }
     }
-    if (preferredStaffIds.some(id => !eligible.has(id))) {
+    if (specified.some(id => !eligible.has(id))) {
         throw new AppError("Selected staff is not in this branch or shift", 409, "SLOT_UNAVAILABLE");
     }
     if (eligible.size < partySize) {
@@ -201,41 +205,48 @@ async function allocateBookingStaff(
     }
 
     const requiredSlots = getRequiredSlotStarts(startTime, endTime);
-    const chosen: typeof roster = [];
+    // The array index represents a guest's assignment position, not ranking order.
+    const chosen: Array<(typeof roster)[number] | null> = Array.from({ length: partySize }, () => null);
     const used = new Set<string>();
     const duration = (endTime.getTime() - startTime.getTime()) / 60000;
 
-    // Explicit admin picks are mandatory and kept in the selected order.
-    for (const id of preferredStaffIds) {
+    // Reserve every explicitly chosen employee at their exact guest position.
+    for (let index = 0; index < selections.length; index++) {
+        const id = selections[index];
+        if (id === null) continue;
         if (!await tryReserveStaffSlots(manager, id, requiredSlots)) {
             throw new AppError("Selected employee is not available", 409, "SLOT_UNAVAILABLE");
         }
-        chosen.push(eligible.get(id)!);
+        chosen[index] = eligible.get(id)!;
         used.add(id);
         addAssignedMinutes(loads.get(id)!, duration);
     }
 
     let lastAutomatic = rotation.last_staff_id;
     const conflicts = new Set<string>();
-    while (chosen.length < partySize) {
-        const available = rosterIds.filter(id => eligible.has(id) && !used.has(id) && !conflicts.has(id));
-        const candidateId = chooseFairStaff(rosterIds, available, loads, lastAutomatic);
-        if (!candidateId) throw new AppError("Not enough free employees for this booking", 409, "SLOT_UNAVAILABLE");
-        if (!await tryReserveStaffSlots(manager, candidateId, requiredSlots)) {
-            conflicts.add(candidateId);
-            continue;
+    for (let position = 0; position < partySize; position++) {
+        if (chosen[position]) continue;
+        while (!chosen[position]) {
+            const available = rosterIds.filter(id => eligible.has(id) && !used.has(id) && !conflicts.has(id));
+            const candidateId = chooseFairStaff(rosterIds, available, loads, lastAutomatic);
+            if (!candidateId) throw new AppError("Not enough free employees for this booking", 409, "SLOT_UNAVAILABLE");
+            if (!await tryReserveStaffSlots(manager, candidateId, requiredSlots)) {
+                conflicts.add(candidateId);
+                continue;
+            }
+            chosen[position] = eligible.get(candidateId)!;
+            used.add(candidateId);
+            addAssignedMinutes(loads.get(candidateId)!, duration);
+            lastAutomatic = candidateId;
         }
-        chosen.push(eligible.get(candidateId)!);
-        used.add(candidateId);
-        addAssignedMinutes(loads.get(candidateId)!, duration);
-        lastAutomatic = candidateId;
     }
 
     if (lastAutomatic !== rotation.last_staff_id) {
         rotation.last_staff_id = lastAutomatic;
         await rotationRepo.save(rotation);
     }
-    return chosen;
+    if (chosen.some(staff => !staff)) throw new Error("Incomplete group staff allocation");
+    return chosen as (typeof roster);
 }
 
 async function resolveBookingResources(serviceIds: string[]) {
@@ -815,9 +826,11 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
                 throw new AppError("Appointment is outside business hours", 409, "OUTSIDE_BUSINESS_HOURS");
             }
             const staffCandidates = await staffService.getAllStaffs({ branch_id: targetBranchId });
-            const preferred = data.staff_ids ?? (data.staff_id === undefined ? [] : [data.staff_id]);
-            if (preferred.length > appointment.party_size ||
-                preferred.some(id => !staffCandidates.some(staff => staff.user_id === id))) {
+            const preferred = data.staff_ids ??
+                (data.staff_id === undefined ? [] :
+                    [data.staff_id, ...Array.from<string | null>({ length: appointment.party_size - 1 }).fill(null)]);
+            if ((preferred.length !== 0 && preferred.length !== appointment.party_size) ||
+                preferred.some(id => id !== null && !staffCandidates.some(staff => staff.user_id === id))) {
                 throw new AppError("Selected employees must be distinct and belong to this branch", 400, "BRANCH_MISMATCH");
             }
 
