@@ -132,15 +132,13 @@ export function CurrentOffers({ offers, instagramHandle }: CurrentOffersProps) {
                         >
                             <div className="grid min-w-0 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
                                 <div className="relative isolate order-2 flex min-w-0 flex-col overflow-hidden bg-[linear-gradient(145deg,#eddfd3_0%,#e7d6c8_100%)] px-7 pb-9 pt-9 sm:px-10 sm:pb-10 sm:pt-10 lg:order-1 lg:min-h-[30rem] lg:px-[clamp(2.5rem,4.3vw,5.25rem)] lg:py-12">
-                                    <div aria-hidden="true" className="pointer-events-none absolute -bottom-40 -right-40 size-[26rem] rounded-full border border-[#bd9d88]/30" />
-                                    <div aria-hidden="true" className="pointer-events-none absolute -bottom-28 -right-28 size-[20rem] rounded-full border border-[#bd9d88]/25" />
                                     <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 w-1 bg-[#aa806d]/70" />
 
                                     <div className="relative z-10 flex min-h-0 flex-1 flex-col">
                                         <div className="flex items-center gap-3">
                                             <span aria-hidden="true" className="size-2 shrink-0 rounded-full bg-[#946e59]" />
                                             <p className="text-[10px] font-semibold uppercase tracking-[0.19em] text-[#795949] sm:text-[11px]">
-                                                Serpente <span aria-hidden="true" className="mx-1.5 text-[#b29480]">/</span> Ưu đãi đang áp dụng
+                                                Ưu đãi đang áp dụng
                                             </p>
                                         </div>
 
@@ -148,7 +146,6 @@ export function CurrentOffers({ offers, instagramHandle }: CurrentOffersProps) {
                                             <h1 className="max-w-[16ch] font-serif text-[clamp(2.75rem,4.4vw,4.75rem)] font-medium leading-[1.06] tracking-[-0.045em] text-[#302823] [overflow-wrap:anywhere]">
                                                 {offer.name}
                                             </h1>
-                                            <div aria-hidden="true" className="mt-7 h-[2px] w-20 bg-[#a47b64]/75" />
                                             <p className="mt-6 max-w-[44ch] whitespace-pre-line border-l-2 border-[#ba9882] pl-4 text-sm leading-7 text-[#55473f] sm:text-[15px]">
                                                 {offer.details}
                                             </p>
