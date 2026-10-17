@@ -1,37 +1,35 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { SERVICE_CATEGORIES, parseServiceCategory } from "./service-categories";
+import { parseServiceCategory, parseNewServiceGroup } from "./service-categories";
 import { parseCreateServiceDto, parseUpdateServiceDto } from "./services.dto";
 
 const validService = {
-    branch_id: 1,
-    name: "Sơn gel cơ bản",
-    price: 100000,
-    duration_minutes: 30,
-    booking_enabled: true,
-    category: SERVICE_CATEGORIES[0],
+    branch_id: 1, name: "Sơn gel cơ bản", price: 100000,
+    duration_minutes: 30, booking_enabled: true,
+    category: "Chăm sóc cơ bản",
 };
 
-test("the Admin options exactly match six supported groups", () => {
-    assert.equal(SERVICE_CATEGORIES.length, 6);
-    assert.equal(new Set(SERVICE_CATEGORIES).size, 6);
-    for (const name of SERVICE_CATEGORIES) assert.equal(parseServiceCategory(name), name);
-});
-
-test("new service needs a selected existing group", () => {
-    assert.equal(parseCreateServiceDto(validService).category, SERVICE_CATEGORIES[0]);
-    for (const value of [undefined, null, "", "Tùy ý", "combo", " Combo "]) {
-        assert.throws(() => parseCreateServiceDto({ ...validService, category: value }));
+test("service must reference a nonempty group label", () => {
+    assert.equal(parseCreateServiceDto(validService).category, "Chăm sóc cơ bản");
+    for (const name of [null, "", "  ", " leading", "trailing ", 9]) {
+        assert.throws(() => parseCreateServiceDto({ ...validService, category: name }));
     }
 });
 
-test("edits can change to another existing group but cannot invent one", () => {
-    assert.equal(parseUpdateServiceDto({ category: SERVICE_CATEGORIES[2] }).category, SERVICE_CATEGORIES[2]);
-    assert.throws(() => parseUpdateServiceDto({ category: "Nhóm mới nhập tay" }));
-    assert.throws(() => parseUpdateServiceDto({ category: null }));
+test("new group labels are controlled and validated", () => {
+    assert.equal(parseNewServiceGroup("  Nail Art Mới  "), "Nail Art Mới");
+    for (const value of ["", " ", "a", "Tất cả", "x".repeat(81), null, 42]) {
+        assert.throws(() => parseNewServiceGroup(value));
+    }
+    assert.equal(parseServiceCategory("Tên nhóm mới từ database"), "Tên nhóm mới từ database");
 });
 
-test("subgroups are no longer accepted on create or edit", () => {
-    assert.throws(() => parseCreateServiceDto({ ...validService, subcategory: "Tùy ý" }));
-    assert.throws(() => parseUpdateServiceDto({ subcategory: "Tùy ý" }));
+test("update accepts a group label, rejecting deprecated subgroup", () => {
+    assert.equal(parseUpdateServiceDto({ category: "Combo" }).category, "Combo");
+    assert.throws(() => parseUpdateServiceDto({ category: null }));
+    assert.throws(() => parseUpdateServiceDto({ subcategory: "Nhóm nhập tùy ý" }));
+});
+
+test("create rejects deprecated subgroup", () => {
+    assert.throws(() => parseCreateServiceDto({ ...validService, subcategory: "Nhóm cũ" }));
 });
