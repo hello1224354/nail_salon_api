@@ -22,7 +22,7 @@ export function CurrentOffers({ offers, instagramHandle }: CurrentOffersProps) {
     const [autoplay] = useState(() =>
         Autoplay({
             delay: 4800,
-            playOnInit: true,
+            playOnInit: false,
             stopOnInteraction: false,
             stopOnMouseEnter: false,
         })
@@ -49,16 +49,20 @@ export function CurrentOffers({ offers, instagramHandle }: CurrentOffersProps) {
 
         const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
         const syncMotionPreference = () => {
-            if (mediaQuery.matches) autoplay.stop();
+            // Embla does not initialize Autoplay when there is only one scroll snap.
+            // Calling play() in that state can throw inside the plugin.
+            if (mediaQuery.matches || emblaApi.scrollSnapList().length <= 1) autoplay.stop();
             else autoplay.play();
         };
 
         syncMotionPreference();
+        emblaApi.on("reInit", syncMotionPreference);
         mediaQuery.addEventListener("change", syncMotionPreference);
 
         return () => {
             emblaApi.off("select", syncSelectedIndex);
             emblaApi.off("reInit", syncSelectedIndex);
+            emblaApi.off("reInit", syncMotionPreference);
             mediaQuery.removeEventListener("change", syncMotionPreference);
             autoplay.stop();
         };
