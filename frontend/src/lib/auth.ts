@@ -115,6 +115,7 @@ async function performRefresh() {
                 ? result.body.error?.code
                 : undefined;
             const expired = result.response.status === 401 && (
+                code === "SESSION_INVALID" ||
                 code === "INVALID_REFRESH_SESSION" ||
                 code === "REFRESH_TOKEN_REUSE" ||
                 code === "TOKEN_REVOKED"

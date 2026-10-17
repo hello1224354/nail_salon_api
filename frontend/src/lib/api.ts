@@ -93,6 +93,7 @@ export async function apiRequest<T>(
     if (
         response.status === 401 &&
         responseErrorCode !== "INVALID_CURRENT_PASSWORD" &&
+        responseErrorCode !== "CREDENTIAL_CHECK_FAILED" &&
         canAttemptSessionRefresh(path)
     ) {
         const restored = await refreshSession();
@@ -116,26 +117,38 @@ export async function apiRequest<T>(
 }
 
 const errorMessagesByCode: Record<string, string> = {
-    // Login, identity, OTP and permissions.
-    INVALID_CREDENTIALS: "Email hoặc mật khẩu không đúng. Hãy kiểm tra lại thông tin đăng nhập.",
-    AUTHENTICATION_REQUIRED: "Bạn cần đăng nhập để tiếp tục thao tác này.",
-    INVALID_TOKEN: "Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại.",
-    TOKEN_REVOKED: "Phiên đăng nhập đã bị thu hồi. Hãy đăng nhập lại.",
-    INVALID_REFRESH_SESSION: "Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại.",
-    REFRESH_TOKEN_REUSE: "Phiên đăng nhập không còn an toàn. Hãy đăng nhập lại.",
-    INVALID_CURRENT_PASSWORD: "Mật khẩu hiện tại không đúng. Hãy nhập lại mật khẩu.",
-    INVALID_RESET_CODE: "Mã đặt lại mật khẩu không đúng hoặc đã hết hạn. Hãy xin mã mới.",
-    INVALID_VERIFICATION_CODE: "Mã xác minh email không đúng hoặc đã hết hạn. Hãy kiểm tra mã hoặc xin gửi lại.",
-    INVALID_PASSWORD_CHANGE_CODE: "Mã OTP đổi mật khẩu không đúng hoặc đã hết hạn. Hãy xin mã mới.",
-    INVALID_MFA_CODE: "Mã OTP không đúng hoặc đã hết hạn. Hãy kiểm tra email và nhập mã mới nhất.",
-    EMAIL_REQUIRED: "Tài khoản chưa có email để nhận mã xác minh.",
-    MFA_EMAIL_REQUIRED: "Tài khoản quản trị chưa có email để nhận mã xác minh.",
-    MFA_NOT_CONFIGURED: "Hệ thống chưa cấu hình gửi OTP quản trị. Hãy liên hệ người vận hành.",
-    REGISTRATION_UNAVAILABLE: "Không thể tạo tài khoản với thông tin đã nhập. Hãy kiểm tra email, số điện thoại và thử lại.",
-    USER_NOT_FOUND: "Không tìm thấy tài khoản. Hãy kiểm tra lại thông tin.",
-    EMAIL_ALREADY_EXISTS: "Email này đã được sử dụng. Hãy nhập email khác.",
-    PHONE_ALREADY_EXISTS: "Số điện thoại này đã được sử dụng. Hãy nhập số khác.",
-    FORBIDDEN: "Tài khoản của bạn không có quyền thực hiện thao tác này. Hãy kiểm tra vai trò đăng nhập.",
+    // Security-sensitive failures are intentionally grouped: never reveal
+    // whether an account exists, why a token failed, or why an OTP was rejected.
+    SESSION_INVALID: "Phiên đăng nhập không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.",
+    AUTHENTICATION_REQUIRED: "Vui lòng đăng nhập để tiếp tục.",
+    INVALID_TOKEN: "Phiên đăng nhập không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.",
+    TOKEN_REVOKED: "Phiên đăng nhập không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.",
+    INVALID_REFRESH_SESSION: "Phiên đăng nhập không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.",
+    REFRESH_TOKEN_REUSE: "Phiên đăng nhập không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.",
+    AUTHENTICATION_RESTART_REQUIRED: "Không thể xác thực phiên đăng nhập. Vui lòng đăng nhập lại.",
+    INVALID_CREDENTIALS: "Không thể xác minh thông tin đăng nhập. Vui lòng kiểm tra và thử lại.",
+    CREDENTIAL_CHECK_FAILED: "Không thể xác minh yêu cầu. Vui lòng kiểm tra thông tin và thử lại.",
+    INVALID_CURRENT_PASSWORD: "Không thể xác minh yêu cầu. Vui lòng kiểm tra thông tin và thử lại.",
+    VERIFICATION_FAILED: "Không thể xác minh mã. Vui lòng kiểm tra hoặc yêu cầu mã mới.",
+    INVALID_RESET_CODE: "Không thể xác minh mã. Vui lòng kiểm tra hoặc yêu cầu mã mới.",
+    INVALID_VERIFICATION_CODE: "Không thể xác minh mã. Vui lòng kiểm tra hoặc yêu cầu mã mới.",
+    INVALID_PASSWORD_CHANGE_CODE: "Không thể xác minh mã. Vui lòng kiểm tra hoặc yêu cầu mã mới.",
+    INVALID_MFA_CODE: "Không thể xác minh mã. Vui lòng kiểm tra hoặc yêu cầu mã mới.",
+    AUTH_INPUT_INVALID: "Thông tin gửi lên chưa hợp lệ. Vui lòng kiểm tra biểu mẫu và thử lại.",
+    VERIFICATION_UNAVAILABLE: "Tạm thời không thể gửi hoặc xác minh mã. Vui lòng thử lại sau.",
+    MFA_NOT_CONFIGURED: "Tạm thời không thể xác minh tài khoản. Vui lòng thử lại sau.",
+    EMAIL_NOT_CONFIGURED: "Tạm thời không thể gửi hoặc xác minh mã. Vui lòng thử lại sau.",
+    EMAIL_DELIVERY_FAILED: "Tạm thời không thể gửi hoặc xác minh mã. Vui lòng thử lại sau.",
+    EMAIL_REQUIRED: "Tạm thời không thể xác minh tài khoản. Vui lòng liên hệ hỗ trợ.",
+    MFA_EMAIL_REQUIRED: "Tạm thời không thể xác minh tài khoản. Vui lòng liên hệ hỗ trợ.",
+    REGISTRATION_UNAVAILABLE: "Không thể hoàn tất đăng ký với thông tin này. Vui lòng kiểm tra và thử lại.",
+    FORBIDDEN: "Yêu cầu không được phép thực hiện bằng tài khoản hiện tại.",
+    UNTRUSTED_ORIGIN: "Yêu cầu không được chấp nhận. Vui lòng sử dụng website chính thức.",
+    RATE_LIMIT_EXCEEDED: "Đã có quá nhiều yêu cầu. Vui lòng đợi một lúc trước khi thử lại.",
+    REFRESH_RACE: "Phiên đăng nhập đang được làm mới. Vui lòng thử lại.",
+    USER_NOT_FOUND: "Không tìm thấy tài khoản hoặc tài khoản không còn khả dụng.",
+    EMAIL_ALREADY_EXISTS: "Email này đã được sử dụng. Vui lòng nhập email khác.",
+    PHONE_ALREADY_EXISTS: "Số điện thoại này đã được sử dụng. Vui lòng nhập số khác.",
     // Bookings, employee assignments and business rules.
     BRANCH_NOT_FOUND: "Không tìm thấy chi nhánh. Hãy tải lại danh sách chi nhánh.",
     SERVICE_NOT_FOUND: "Không tìm thấy dịch vụ đã chọn. Hãy tải lại bảng dịch vụ.",
@@ -172,6 +185,12 @@ const errorMessagesByCode: Record<string, string> = {
     INVALID_MEDIA_TYPE: "Ảnh không hợp lệ. Chỉ dùng JPEG, PNG hoặc WebP.",
     INVALID_INSTAGRAM_POST_URL: "Liên kết Instagram phải là bài đăng hoặc Reel hợp lệ (/p/, /reel/ hoặc /tv/).",
     SERVICE_MISMATCH: "Không thể thay dịch vụ của lượt khách vãng lai đã lưu. Bạn chỉ có thể sửa giá thực tế.",
+    APPOINTMENT_NOT_FOUND: "Lịch hẹn không còn tồn tại. Vui lòng tải lại danh sách trước khi tiếp tục.",
+    OFFER_NOT_FOUND: "Ưu đãi không còn tồn tại. Vui lòng tải lại danh sách ưu đãi.",
+    WALK_IN_NOT_FOUND: "Không tìm thấy lượt khách vãng lai. Vui lòng tải lại danh sách.",
+    TREND_NOT_FOUND: "Mẫu Hot Trend không còn tồn tại. Vui lòng tải lại danh sách.",
+    SALON_CONTENT_NOT_FOUND: "Không tìm thấy nội dung salon. Vui lòng tải lại trang quản trị.",
+    MEDIA_TOO_LARGE: "Ảnh vượt quá 5 MiB. Vui lòng chọn ảnh nhỏ hơn hoặc tối ưu ảnh trước khi tải lên.",
     DUPLICATE_RESOURCE: "Thông tin này đã tồn tại. Hãy kiểm tra danh sách hoặc dùng giá trị khác.",
     RESOURCE_IN_USE: "Không thể xóa vì mục này vẫn đang được dữ liệu khác sử dụng (lịch hẹn, nhân viên hoặc dịch vụ). Hãy xử lý các liên kết trước, không xóa dữ liệu lịch sử.",
     INVALID_JSON: "Dữ liệu gửi lên không đúng định dạng. Hãy tải lại trang và thử lại.",
@@ -181,6 +200,22 @@ const errorMessagesByCode: Record<string, string> = {
 
 function validationHint(message: string): string {
     const text = message.toLowerCase();
+    // Business-rule details are safe to show; validation of credentials or
+    // identifiers used by authentication is redacted by the API instead.
+    if (/at least 3 hours/.test(text)) return "Lịch phải được đặt trước giờ hẹn ít nhất 3 giờ.";
+    if (/more than 14 days/.test(text)) return "Chỉ được đặt lịch trong vòng 14 ngày tới.";
+    if (/end_date.*start_date|end date.*start date/.test(text)) return "Ngày kết thúc không được trước ngày bắt đầu.";
+    if (/at least one service|service_ids must be a non.empty/.test(text)) return "Vui lòng chọn ít nhất một dịch vụ.";
+    if (/duplicate services|service_ids must not contain duplicates/.test(text)) return "Không được chọn trùng dịch vụ.";
+    if (/subgroup/.test(text)) return "Hệ thống không còn hỗ trợ nhóm dịch vụ phụ. Vui lòng chọn nhóm chính.";
+    if (/customer name/.test(text)) return "Vui lòng nhập tên khách, tối đa 255 ký tự.";
+    if (/valid actual price/.test(text)) return "Giá thực tế phải là số nguyên VND không âm.";
+    if (/between 1 and 40 services/.test(text)) return "Mỗi lượt khách vãng lai được chọn từ 1 đến 40 dịch vụ.";
+    if (/status cannot be updated together/.test(text)) return "Không thể cập nhật trạng thái và chỉnh sửa chi tiết trong cùng một lần lưu.";
+    if (/staff_ids must be an array of distinct/.test(text)) return "Mỗi người trong nhóm chỉ được chỉ định một nhân viên khác nhau.";
+    if (/booking_code/.test(text)) return "Mã lịch cần 1–8 ký tự gồm số và chữ A–F.";
+    if (/from must be earlier than to/.test(text)) return "Ngày bắt đầu phải trước ngày kết thúc.";
+    if (/opening hours/.test(text)) return "Hãy nhập giờ mở cửa theo định dạng HH:mm–HH:mm và mốc 15 phút.";
     if (/category|group name|service group/.test(text)) return "Hãy chọn nhóm dịch vụ có sẵn hoặc thêm nhóm hợp lệ (2–80 ký tự).";
     if (/duration/.test(text)) return "Dịch vụ đặt trực tuyến phải có thời lượng là số phút dương.";
     if (/staff|employee/.test(text)) return "Hãy kiểm tra nhân viên được chọn, chi nhánh và số người trong nhóm.";
