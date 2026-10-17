@@ -1,16 +1,8 @@
 import { AppDataSource } from "../../config/database";
 import { WebsiteVisit } from "./website-visit.entity";
-import { AppError } from "../../common/errors";
+export { parseVisitSessionId } from "./visit-session-id";
 
 /** A visit is one browser-tab session, not a page view. */
-export function parseVisitSessionId(value: unknown): string {
-    if (typeof value !== "string" ||
-        !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)) {
-        throw new AppError("Invalid visit session", 400, "VALIDATION_ERROR");
-    }
-    return value.toLowerCase();
-}
-
 export async function recordVisit(sessionId: string): Promise<void> {
     await AppDataSource.getRepository(WebsiteVisit).query(
         "INSERT INTO website_visits (session_id, first_seen_at, last_seen_at) " +
