@@ -6,7 +6,7 @@ import { AppError } from "./errors";
 // account existence, OTP expiry/attempts, provider configuration or rate-limit causes.
 // Preserve only client protocol distinctions needed to refresh sessions safely.
 const sessionCodes = new Set([
-    "AUTHENTICATION_REQUIRED", "INVALID_TOKEN", "TOKEN_REVOKED",
+    "INVALID_TOKEN", "TOKEN_REVOKED",
     "INVALID_REFRESH_SESSION", "REFRESH_TOKEN_REUSE", "AUTHENTICATION_RESTART_REQUIRED",
 ]);
 const verificationCodes = new Set([
@@ -22,6 +22,9 @@ function publicApplicationError(error: AppError, req: Request) {
     const authRoute = req.baseUrl === "/api/users" &&
         /^\/(?:login|register|password|session)(?:\/|$)/.test(req.path);
 
+    if (error.code === "AUTHENTICATION_REQUIRED") {
+        return { code: "AUTHENTICATION_REQUIRED", message: "Sign in to continue." };
+    }
     if (sessionCodes.has(error.code)) {
         return { code: "SESSION_INVALID", message: "Authentication required. Please sign in again." };
     }
