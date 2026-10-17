@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { Appointment, Branch } from "@/lib/api";
 import { formatAppointmentStatus, shortBranchName } from "@/lib/studio-data";
 
@@ -36,6 +37,7 @@ export function AdminAppointmentsPanel({
     onDelete: (appointment: Appointment) => void;
     submitting: boolean;
 }) {
+    const [statusMenuId, setStatusMenuId] = useState<string | null>(null);
     return (
         <section className="overflow-hidden rounded-[22px] border border-line bg-white">
             <div className="border-b border-line p-5">
@@ -128,22 +130,33 @@ export function AdminAppointmentsPanel({
                                 </td>
                                 <td className="px-4 py-4">
                                     <div className="flex flex-wrap items-center gap-2">
-                                        {["pending", "confirmed"].includes(appointment.status) ?
-                                            <button type="button" disabled={submitting} onClick={() => onEdit(appointment)}
-                                                className="font-semibold text-accent disabled:opacity-40">Sửa</button>
-                                            : <span className="text-muted/60">Sửa</span>}
-                                        <select value="" aria-label={"Cập nhật trạng thái " + appointment.id}
-                                            disabled={submitting || allowed.length === 0}
-                                            onChange={event => {
-                                                const status = event.target.value;
-                                                if (status) onUpdate(appointment, status);
-                                            }}
-                                            className="max-w-[124px] rounded-lg border border-line bg-white px-2 py-2 text-[10px] disabled:opacity-40">
-                                            <option value="">Trạng thái</option>
-                                            {allowed.map(status => <option key={status} value={status}>
-                                                {formatAppointmentStatus(status)}
-                                            </option>)}
-                                        </select>
+                                        <button type="button"
+                                            disabled={submitting || !["pending", "confirmed"].includes(appointment.status)}
+                                            onClick={() => onEdit(appointment)}
+                                            className="font-semibold text-accent disabled:opacity-35">Sửa</button>
+                                        <div className="min-w-[100px]">
+                                            <button type="button" disabled={submitting || allowed.length === 0}
+                                                aria-expanded={statusMenuId === appointment.id}
+                                                onClick={() => setStatusMenuId(id => id === appointment.id ? null : appointment.id)}
+                                                className="rounded-lg border border-line bg-cream px-2.5 py-2 font-semibold text-ink disabled:opacity-35">
+                                                Cập nhật trạng thái
+                                            </button>
+                                            {statusMenuId === appointment.id ? (
+                                                <div className="mt-2 grid gap-1 rounded-lg border border-line bg-white p-1.5">
+                                                    {allowed.map(status => (
+                                                        <button type="button" key={status}
+                                                            disabled={submitting}
+                                                            onClick={() => {
+                                                                setStatusMenuId(null);
+                                                                onUpdate(appointment, status);
+                                                            }}
+                                                            className="rounded-md px-2 py-1.5 text-left text-[11px] hover:bg-cream">
+                                                            {formatAppointmentStatus(status)}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            ) : null}
+                                        </div>
                                         <button type="button" disabled={submitting} onClick={() => onDelete(appointment)}
                                             className="font-semibold text-[#8a5147] disabled:opacity-40">Xóa</button>
                                     </div>
