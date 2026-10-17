@@ -261,6 +261,7 @@ export function AdminWalkInsPanel({ branches }: { branches: Branch[] }) {
             </Popup> : null}
             {selected && mode === "edit" ? <Popup title="Sửa khách vãng lai" onClose={() => setSelected(null)}>
                 <form key={selected.id} onSubmit={event => void saveChanges(event)} className="space-y-4">
+                    {error ? <p role="alert" className="rounded-xl border border-[#ddbcb4] bg-[#faeeeb] p-3 text-xs text-[#854d42]">{error}</p> : null}
                     <label className="block text-xs font-semibold">Tên khách
                         <input className={control} name="customer_name" defaultValue={selected.customer_name} required maxLength={255} />
                     </label>
