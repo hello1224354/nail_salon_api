@@ -21,6 +21,8 @@ import { Branch } from "../branches/branches.entity";
 import { isWithinStaffWorkingHours } from "../staffs/staff-working-hours";
 import { getVietnamMinuteOfDay } from "./booking-time";
 import { parseBranchOpeningHours } from "../branches/branch-opening-hours";
+import { StaffAssignmentRotation } from "./staff-assignment-rotation.entity";
+import { addAssignedMinutes, chooseFairStaff, type StaffWorkload } from "./staff-allocation";
 
 const appointmentRepo = AppDataSource.getRepository(Appointment);
 
@@ -98,6 +100,140 @@ async function releaseStaffSlots(manager: EntityManager, staffId: string, slotSt
         staff_id: staffId,
         slot_start: In(slotStarts),
     });
+}
+
+/**
+ * Select fair staff for one booking. A short-lived, per-branch cursor row lock
+ * makes load-based ranking and the round-robin tie-break atomic across requests.
+ * Slot uniqueness remains the source of truth for schedule conflicts.
+ * No specialization/capability checks are applied.
+ */
+async function allocateBookingStaff(
+    manager: EntityManager,
+    branchId: number,
+    candidates: Awaited<ReturnType<typeof staffService.getAllStaffs>>,
+    startTime: Date,
+    endTime: Date,
+    partySize: number,
+    preferredStaffIds: string[] = [],
+    excludedAppointmentId?: string,
+) {
+    if (preferredStaffIds.length > partySize || new Set(preferredStaffIds).size !== preferredStaffIds.length) {
+        throw new AppError("Invalid staff selection for group size", 400, "VALIDATION_ERROR");
+    }
+
+    const rotationRepo = manager.getRepository(StaffAssignmentRotation);
+    // Create a cursor lazily for branches opened after the migration.
+    await rotationRepo.createQueryBuilder().insert().values({ branch_id: branchId, last_staff_id: null })
+        .orIgnore().execute();
+    const rotation = await rotationRepo.findOne({
+        where: { branch_id: branchId },
+        lock: { mode: "pessimistic_write" },
+    });
+    if (!rotation) throw new Error("Failed to lock staff assignment cursor");
+
+    const roster = [...candidates].sort((a, b) => {
+        const created = a.created_at.getTime() - b.created_at.getTime();
+        return created || a.user_id.localeCompare(b.user_id);
+    });
+    const rosterIds = roster.map(staff => staff.user_id);
+    const beginMinute = getBusinessMinuteOfDay(startTime);
+    const finishMinute = getBusinessMinuteOfDay(endTime);
+    const eligible = new Map<string, (typeof roster)[number]>();
+    const staffRepo = manager.getRepository(Staff);
+
+    // All shift checks happen against live locked staff rows.
+    for (const staff of roster) {
+        const current = await staffRepo.findOne({
+            where: { user_id: staff.user_id },
+            lock: { mode: "pessimistic_read" },
+        });
+        if (current && isWithinStaffWorkingHours(current, beginMinute, finishMinute)) {
+            eligible.set(staff.user_id, staff);
+        }
+    }
+    if (preferredStaffIds.some(id => !eligible.has(id))) {
+        throw new AppError("Selected staff is not in this branch or shift", 409, "SLOT_UNAVAILABLE");
+    }
+    if (eligible.size < partySize) {
+        throw new AppError("Not enough staff on shift", 409, "SLOT_UNAVAILABLE");
+    }
+
+    const parts = new Intl.DateTimeFormat("en-CA", {
+        timeZone: BUSINESS_TIMEZONE, year: "numeric", month: "2-digit", day: "2-digit",
+    }).formatToParts(startTime);
+    const value = (type: "year" | "month" | "day") => Number(parts.find(part => part.type === type)?.value);
+    const dayStart = new Date(Date.UTC(value("year"), value("month") - 1, value("day")) - 7 * 60 * 60 * 1000);
+    const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+    const windowStart = new Date(dayStart.getTime() - 13 * 24 * 60 * 60 * 1000);
+    const related = await manager.getRepository(Appointment).find({
+        where: {
+            branch_id: branchId,
+            merged_into_id: IsNull(),
+            status: In([AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED,
+                AppointmentStatus.IN_PROGRESS, AppointmentStatus.COMPLETED]),
+            start_time: Between(windowStart, new Date(dayEnd.getTime() - 1)),
+        },
+        relations: { staff_assignments: true },
+    });
+    const loads = new Map<string, StaffWorkload>();
+    for (const staff of roster) {
+        const shift = (value: string) => Number(value.slice(0, 2)) * 60 + Number(value.slice(3, 5));
+        loads.set(staff.user_id, {
+            dayMinutes: 0,
+            trailing14DaysMinutes: 0,
+            shiftMinutes: shift(staff.work_end_time) - shift(staff.work_start_time),
+        });
+    }
+    for (const appointment of related) {
+        if (appointment.id === excludedAppointmentId) continue;
+        const duration = (appointment.end_time.getTime() - appointment.start_time.getTime()) / 60000;
+        for (const assigned of appointment.staff_assignments) {
+            const load = loads.get(assigned.staff_id);
+            if (!load) continue;
+            load.trailing14DaysMinutes += duration;
+            if (appointment.start_time >= dayStart && appointment.start_time < dayEnd) {
+                load.dayMinutes += duration;
+            }
+        }
+    }
+
+    const requiredSlots = getRequiredSlotStarts(startTime, endTime);
+    const chosen: typeof roster = [];
+    const used = new Set<string>();
+    const duration = (endTime.getTime() - startTime.getTime()) / 60000;
+
+    // Explicit admin picks are mandatory and kept in the selected order.
+    for (const id of preferredStaffIds) {
+        if (!await tryReserveStaffSlots(manager, id, requiredSlots)) {
+            throw new AppError("Selected employee is not available", 409, "SLOT_UNAVAILABLE");
+        }
+        chosen.push(eligible.get(id)!);
+        used.add(id);
+        addAssignedMinutes(loads.get(id)!, duration);
+    }
+
+    let lastAutomatic = rotation.last_staff_id;
+    const conflicts = new Set<string>();
+    while (chosen.length < partySize) {
+        const available = rosterIds.filter(id => eligible.has(id) && !used.has(id) && !conflicts.has(id));
+        const candidateId = chooseFairStaff(rosterIds, available, loads, lastAutomatic);
+        if (!candidateId) throw new AppError("Not enough free employees for this booking", 409, "SLOT_UNAVAILABLE");
+        if (!await tryReserveStaffSlots(manager, candidateId, requiredSlots)) {
+            conflicts.add(candidateId);
+            continue;
+        }
+        chosen.push(eligible.get(candidateId)!);
+        used.add(candidateId);
+        addAssignedMinutes(loads.get(candidateId)!, duration);
+        lastAutomatic = candidateId;
+    }
+
+    if (lastAutomatic !== rotation.last_staff_id) {
+        rotation.last_staff_id = lastAutomatic;
+        await rotationRepo.save(rotation);
+    }
+    return chosen;
 }
 
 async function resolveBookingResources(serviceIds: string[]) {
@@ -328,41 +464,9 @@ export const createAppointment = async (actorId: string, actorRole: UserRole, da
             );
         }
 
-        const slotStarts = getRequiredSlotStarts(data.start_time, endTime);
-        const reservedStaffs: typeof candidateStaffs = [];
-        const transactionStaffRepo = manager.getRepository(Staff);
-
-        for (const staff of candidateStaffs) {
-            // A locking read ensures ADMIN shift edits cannot race this assignment.
-            const liveSchedule = await transactionStaffRepo.findOne({
-                where: { user_id: staff.user_id },
-                lock: { mode: "pessimistic_read" },
-            });
-            if (!liveSchedule || !isWithinStaffWorkingHours(liveSchedule, businessStartMinute, businessEndMinute)) continue;
-            // The unique (staff_id, slot_start) key checks the real inventory
-            // across all appointments, including legacy reservations.
-            const reserved = await tryReserveStaffSlots(
-                manager,
-                staff.user_id,
-                slotStarts
-            );
-
-            if (!reserved) continue;
-
-            reservedStaffs.push(staff);
-
-            if (reservedStaffs.length === data.party_size) {
-                break;
-            }
-        }
-
-        if (reservedStaffs.length < data.party_size) {
-            throw new AppError(
-                "Not enough staff is available for this group size at this time",
-                409,
-                "SLOT_UNAVAILABLE"
-            );
-        }
+        const reservedStaffs = await allocateBookingStaff(
+            manager, branchId, candidateStaffs, data.start_time, endTime, data.party_size
+        );
 
         const bookingGroupId = randomUUID();
         const primary = reservedStaffs[0];
@@ -599,7 +703,7 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
             if (!appointment.staff_assignments.some(assigned => assigned.staff_id === userId)) {
                 throw new AppError("Staff cannot update an unassigned appointment", 403, "FORBIDDEN");
             }
-            if (data.staff_id !== undefined || data.branch_id !== undefined ||
+            if (data.staff_id !== undefined || data.staff_ids !== undefined || data.branch_id !== undefined ||
                 data.service_ids !== undefined || data.start_time !== undefined ||
                 data.customer_phone !== undefined) {
                 throw new AppError("Staff can only update assigned appointment status", 403, "FORBIDDEN");
@@ -610,7 +714,7 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
         }
 
         const scheduleChanged = data.branch_id !== undefined || data.staff_id !== undefined ||
-            data.service_ids !== undefined || data.start_time !== undefined;
+            data.staff_ids !== undefined || data.service_ids !== undefined || data.start_time !== undefined;
         if (scheduleChanged && ![AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED].includes(appointment.status)) {
             throw new AppError("In-progress, completed, or cancelled appointments cannot be modified", 409, "APPOINTMENT_NOT_EDITABLE");
         }
@@ -706,34 +810,20 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
                 throw new AppError("Appointment is outside business hours", 409, "OUTSIDE_BUSINESS_HOURS");
             }
             const staffCandidates = await staffService.getAllStaffs({ branch_id: targetBranchId });
-            if (data.staff_id !== undefined && !staffCandidates.some(staff => staff.user_id === data.staff_id)) {
-                throw new AppError("Selected staff is not in this branch", 400, "BRANCH_MISMATCH");
+            const preferred = data.staff_ids ?? (data.staff_id === undefined ? [] : [data.staff_id]);
+            if (preferred.length > appointment.party_size ||
+                preferred.some(id => !staffCandidates.some(staff => staff.user_id === id))) {
+                throw new AppError("Selected employees must be distinct and belong to this branch", 400, "BRANCH_MISMATCH");
             }
-            const sortedCandidates = data.staff_id === undefined
-                ? staffCandidates
-                : [...staffCandidates].sort((a, b) => Number(b.user_id === data.staff_id) - Number(a.user_id === data.staff_id));
+
             const oldSlots = getRequiredSlotStarts(appointment.start_time, appointment.end_time);
             for (const assignment of appointment.staff_assignments) {
                 await releaseStaffSlots(manager, assignment.staff_id, oldSlots);
             }
-            const newSlots = getRequiredSlotStarts(startTime, endTime);
-            const assigned: typeof staffCandidates = [];
-            for (const candidate of sortedCandidates) {
-                // Keep ADMIN shift edits and booking allocations serializable.
-                const locked = await manager.getRepository(Staff).findOne({
-                    where: { user_id: candidate.user_id },
-                    lock: { mode: "pessimistic_read" },
-                });
-                if (!locked || !isWithinStaffWorkingHours(locked, startMinute, endMinute)) continue;
-                if (!await tryReserveStaffSlots(manager, candidate.user_id, newSlots)) continue;
-                assigned.push(candidate);
-                if (assigned.length === appointment.party_size) break;
-            }
-            // An explicitly selected employee must be part of the assignment.
-            if (assigned.length !== appointment.party_size ||
-                (data.staff_id !== undefined && !assigned.some(s => s.user_id === data.staff_id))) {
-                throw new AppError("Not enough available staff for the appointment", 409, "SLOT_UNAVAILABLE");
-            }
+            const assigned = await allocateBookingStaff(
+                manager, targetBranchId, staffCandidates, startTime, endTime,
+                appointment.party_size, preferred, appointment.id
+            );
             // Price ownership is tied to each assigned staff member and service.
             // A reschedule/reassignment clears stale actual entries before new assignments.
             await manager.getRepository(AppointmentActualPrice).delete({ appointment_id: appointment.id });
