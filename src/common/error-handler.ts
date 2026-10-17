@@ -41,6 +41,19 @@ export const errorHandler = (error: unknown, req: Request, res: Response, next: 
                 }
             });
         }
+
+        if (driverError.code === "ER_ROW_IS_REFERENCED_2" ||
+            driverError.code === "ER_ROW_IS_REFERENCED") {
+            // Do not expose table names, SQL queries or customer data in responses.
+            console.warn(`[${res.locals.requestId}] Blocked deletion of referenced resource: ${req.method} ${req.path}`);
+            return res.status(409).json({
+                error: {
+                    code: "RESOURCE_IN_USE",
+                    message: "Cannot delete this item because other records still reference it",
+                    request_id: res.locals.requestId,
+                }
+            });
+        }
     }
 
     console.error(`[${res.locals.requestId}]`, error);

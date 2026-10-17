@@ -5,18 +5,21 @@ export type ApiErrorPayload = {
     error?: {
         code?: string;
         message?: string;
+        request_id?: string;
     };
 };
 
 export class ApiError extends Error {
     code?: string;
     status: number;
+    requestId?: string;
 
-    constructor(message: string, status: number, code?: string) {
+    constructor(message: string, status: number, code?: string, requestId?: string) {
         super(message);
         this.name = "ApiError";
         this.status = status;
         this.code = code;
+        this.requestId = requestId;
     }
 }
 
@@ -104,7 +107,8 @@ export async function apiRequest<T>(
         throw new ApiError(
             errorBody?.error?.message || `Yêu cầu thất bại với mã ${response.status}`,
             response.status,
-            errorBody?.error?.code
+            errorBody?.error?.code,
+            errorBody?.error?.request_id || response.headers.get("X-Request-Id") || undefined
         );
     }
 
@@ -112,58 +116,117 @@ export async function apiRequest<T>(
 }
 
 const errorMessagesByCode: Record<string, string> = {
-    INVALID_CREDENTIALS: "Email hoặc mật khẩu không đúng.",
-    AUTHENTICATION_REQUIRED: "Vui lòng đăng nhập để tiếp tục.",
-    INVALID_TOKEN: "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
-    TOKEN_REVOKED: "Phiên đăng nhập đã bị thu hồi. Vui lòng đăng nhập lại.",
-    INVALID_REFRESH_SESSION: "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
-    REFRESH_TOKEN_REUSE: "Phiên đăng nhập không còn an toàn. Vui lòng đăng nhập lại.",
-    INVALID_CURRENT_PASSWORD: "Mật khẩu hiện tại không đúng.",
-    INVALID_RESET_CODE: "Mã xác nhận không đúng hoặc đã hết hạn.",
-    INVALID_VERIFICATION_CODE: "Mã xác minh email không đúng hoặc đã hết hạn.",
-    INVALID_PASSWORD_CHANGE_CODE: "Mã OTP đổi mật khẩu không đúng hoặc đã hết hạn.",
-    INVALID_MFA_CODE: "Mã OTP không đúng hoặc đã hết hạn.",
-    EMAIL_REQUIRED: "Tài khoản cần có email để nhận mã OTP.",
-    MFA_EMAIL_REQUIRED: "Tài khoản quản trị chưa có email để nhận OTP.",
-    MFA_NOT_CONFIGURED: "Hệ thống OTP quản trị chưa được cấu hình.",
-    REGISTRATION_UNAVAILABLE: "Chưa tạo được tài khoản với thông tin này.",
-    USER_NOT_FOUND: "Không tìm thấy tài khoản.",
-    FORBIDDEN: "Bạn không có quyền thực hiện thao tác này.",
-    VALIDATION_ERROR: "Thông tin chưa hợp lệ. Vui lòng kiểm tra lại.",
-    BRANCH_NOT_FOUND: "Không tìm thấy chi nhánh.",
-    SERVICE_NOT_FOUND: "Không tìm thấy một hoặc nhiều dịch vụ.",
-    SERVICE_NOT_BOOKABLE: "Dịch vụ này chưa có thời lượng chính thức nên chưa thể đặt trực tuyến.",
-    BRANCH_MISMATCH: "Các dịch vụ đã chọn không thuộc cùng một chi nhánh.",
-    SLOT_UNAVAILABLE: "Khung giờ này vừa hết chỗ. Vui lòng chọn khung giờ khác.",
-    CUSTOMER_APPOINTMENT_CONFLICT: "Bạn đã có lịch hẹn trùng với khung giờ này.",
-    INVALID_INSTAGRAM_POST_URL: "Link phải là bài đăng hoặc Reel trên Instagram (https://www.instagram.com/p/... hoặc /reel/...).",
-    TOO_MANY_PENDING_APPOINTMENTS: "Bạn đã có quá nhiều lịch hẹn đang chờ xác nhận.",
-    INVALID_APPOINTMENT_TIME: "Giờ bắt đầu phải nằm trên mốc 15 phút.",
-    OUTSIDE_BUSINESS_HOURS: "Khung giờ đã chọn nằm ngoài giờ mở cửa của tiệm.",
-    BRANCH_HOURS_NOT_CONFIGURED: "Chi nhánh chưa cấu hình giờ mở cửa để nhận lịch trực tuyến.",
-    INVALID_BRANCH_HOURS: "Giờ mở cửa phải có dạng 09:00–20:30 và theo mốc 15 phút.",
-    STAFF_BRANCH_CONFLICT: "Nhân viên còn lịch hẹn tương lai ở chi nhánh cũ.",
-    APPOINTMENT_CONFLICT: "Khung giờ này không còn khả dụng.",
-    ACTUAL_PRICES_INCOMPLETE: "Mọi nhân viên trong nhóm phải nhập đủ giá thực tế trước khi hoàn thành.",
-    APPOINTMENT_NOT_STARTED_YET: "Lịch hẹn chưa đến giờ bắt đầu. Vui lòng kiểm tra lại ngày và giờ đã hẹn.",
-    INVALID_STATUS_TRANSITION: "Không thể chuyển sang trạng thái này. Vui lòng tải lại danh sách lịch hẹn.",
+    // Login, identity, OTP and permissions.
+    INVALID_CREDENTIALS: "Email hoặc mật khẩu không đúng. Hãy kiểm tra lại thông tin đăng nhập.",
+    AUTHENTICATION_REQUIRED: "Bạn cần đăng nhập để tiếp tục thao tác này.",
+    INVALID_TOKEN: "Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại.",
+    TOKEN_REVOKED: "Phiên đăng nhập đã bị thu hồi. Hãy đăng nhập lại.",
+    INVALID_REFRESH_SESSION: "Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại.",
+    REFRESH_TOKEN_REUSE: "Phiên đăng nhập không còn an toàn. Hãy đăng nhập lại.",
+    INVALID_CURRENT_PASSWORD: "Mật khẩu hiện tại không đúng. Hãy nhập lại mật khẩu.",
+    INVALID_RESET_CODE: "Mã đặt lại mật khẩu không đúng hoặc đã hết hạn. Hãy xin mã mới.",
+    INVALID_VERIFICATION_CODE: "Mã xác minh email không đúng hoặc đã hết hạn. Hãy kiểm tra mã hoặc xin gửi lại.",
+    INVALID_PASSWORD_CHANGE_CODE: "Mã OTP đổi mật khẩu không đúng hoặc đã hết hạn. Hãy xin mã mới.",
+    INVALID_MFA_CODE: "Mã OTP không đúng hoặc đã hết hạn. Hãy kiểm tra email và nhập mã mới nhất.",
+    EMAIL_REQUIRED: "Tài khoản chưa có email để nhận mã xác minh.",
+    MFA_EMAIL_REQUIRED: "Tài khoản quản trị chưa có email để nhận mã xác minh.",
+    MFA_NOT_CONFIGURED: "Hệ thống chưa cấu hình gửi OTP quản trị. Hãy liên hệ người vận hành.",
+    REGISTRATION_UNAVAILABLE: "Không thể tạo tài khoản với thông tin đã nhập. Hãy kiểm tra email, số điện thoại và thử lại.",
+    USER_NOT_FOUND: "Không tìm thấy tài khoản. Hãy kiểm tra lại thông tin.",
+    EMAIL_ALREADY_EXISTS: "Email này đã được sử dụng. Hãy nhập email khác.",
+    PHONE_ALREADY_EXISTS: "Số điện thoại này đã được sử dụng. Hãy nhập số khác.",
+    FORBIDDEN: "Tài khoản của bạn không có quyền thực hiện thao tác này. Hãy kiểm tra vai trò đăng nhập.",
+    // Bookings, employee assignments and business rules.
+    BRANCH_NOT_FOUND: "Không tìm thấy chi nhánh. Hãy tải lại danh sách chi nhánh.",
+    SERVICE_NOT_FOUND: "Không tìm thấy dịch vụ đã chọn. Hãy tải lại bảng dịch vụ.",
+    SERVICE_NOT_BOOKABLE: "Dịch vụ chưa bật đặt trực tuyến hoặc chưa có thời lượng. Hãy chọn dịch vụ khác.",
+    BRANCH_MISMATCH: "Nhân viên hoặc dịch vụ không thuộc chi nhánh đã chọn. Hãy chọn lại cho đúng chi nhánh.",
+    SLOT_UNAVAILABLE: "Không còn đủ nhân viên trống trong khung giờ này. Hãy chọn giờ khác và thử lại.",
+    CUSTOMER_APPOINTMENT_CONFLICT: "Bạn đã có lịch hẹn trùng khung giờ. Hãy chọn một giờ khác.",
+    TOO_MANY_PENDING_APPOINTMENTS: "Bạn đã có tối đa 3 nhóm lịch chờ xác nhận. Hãy đợi xác nhận hoặc liên hệ tiệm trước khi đặt thêm.",
+    INVALID_APPOINTMENT_TIME: "Giờ hẹn phải theo mốc 15 phút. Hãy chọn lại khung giờ.",
+    OUTSIDE_BUSINESS_HOURS: "Thời gian đã chọn nằm ngoài giờ hoạt động. Hãy chọn giờ khác.",
+    BRANCH_HOURS_NOT_CONFIGURED: "Chi nhánh chưa có giờ hoạt động hợp lệ. Hãy liên hệ ADMIN để cấu hình.",
+    INVALID_BRANCH_HOURS: "Giờ mở cửa phải hợp lệ, trong khoảng 09:00–20:30 và theo mốc 15 phút.",
+    INVALID_STAFF_WORK_HOURS: "Giờ làm nhân viên không hợp lệ. Hãy nhập mốc 15 phút trong khoảng 09:00–20:30.",
+    STAFF_BRANCH_CONFLICT: "Nhân viên còn lịch hẹn tương lai ở chi nhánh cũ. Hãy xử lý các lịch này trước khi chuyển chi nhánh.",
+    STAFF_SCHEDULE_CONFLICT: "Giờ làm mới xung đột với lịch hẹn tương lai. Hãy giữ ca hiện tại hoặc xử lý lịch trước.",
+    STAFF_OUTSIDE_WORK_HOURS: "Lịch hẹn nằm ngoài giờ làm nhân viên. Hãy chọn giờ hoặc nhân viên khác.",
+    STAFF_NOT_FOUND: "Không tìm thấy nhân viên. Hãy tải lại danh sách.",
+    STAFF_HAS_APPOINTMENTS: "Không thể xóa nhân viên vì đã được phân công vào lịch hẹn (kể cả lịch sử). Hệ thống giữ lại dữ liệu lịch và doanh thu; hãy xử lý lịch còn hoạt động và liên hệ quản trị kỹ thuật nếu cần ngừng sử dụng tài khoản.",
+    BRANCH_HAS_ASSIGNED_STAFF: "Không thể xóa chi nhánh vì nhân viên tại đây còn được liên kết với lịch hẹn. Hãy xử lý các lịch đang hoạt động và giữ lại lịch sử.",
+    BRANCH_HAS_OFFERS: "Chi nhánh đang có ưu đãi. Hãy chuyển chi nhánh áp dụng hoặc xóa ưu đãi trước.",
+    APPOINTMENT_CONFLICT: "Khung giờ này đã bị giữ bởi một lịch khác. Hãy chọn giờ hoặc nhân viên khác.",
+    APPOINTMENT_NOT_EDITABLE: "Lịch đang thực hiện, đã hoàn thành hoặc đã hủy nên không thể đổi lịch, nhân viên hay dịch vụ.",
+    APPOINTMENT_NOT_STARTED_YET: "Chưa đến giờ hẹn. Chỉ được bắt đầu hoặc hoàn thành từ thời điểm hẹn trở đi.",
+    INVALID_STATUS_TRANSITION: "Không thể chuyển trực tiếp sang trạng thái này. Hãy tải lại lịch và chọn trạng thái tiếp theo hợp lệ.",
+    STAFF_COMPLETION_REQUIRED: "ADMIN không thể hoàn thành thay nhân viên. Nhân viên được phân công phải tự nhấn Hoàn thành.",
+    STAFF_ALREADY_COMPLETED: "Bạn đã hoàn thành phần việc này. Không thể hoàn thành lần nữa.",
+    ACTUAL_PRICES_INCOMPLETE: "Bạn phải lưu giá thực tế cho từng dịch vụ mình thực hiện trước khi nhấn Hoàn thành.",
+    // Service catalog, media, offers and walk-ins.
+    CATEGORY_EXISTS: "Nhóm dịch vụ này đã tồn tại. Hãy chọn nhóm có sẵn hoặc đặt tên khác.",
+    CATEGORY_NOT_FOUND: "Nhóm dịch vụ không còn tồn tại. Hãy chọn lại hoặc thêm nhóm mới.",
+    MEDIA_NOT_FOUND: "Không tìm thấy ảnh. Hãy chọn lại một ảnh còn trong thư viện.",
+    MEDIA_IN_USE: "Ảnh đang được ưu đãi hoặc Hot Trend sử dụng. Hãy thay ảnh tại các mục đó trước khi xóa.",
+    MEDIA_STORAGE_ERROR: "Không đọc được ảnh đã lưu. Hãy thử lại hoặc báo người vận hành.",
+    INVALID_MEDIA_TYPE: "Ảnh không hợp lệ. Chỉ dùng JPEG, PNG hoặc WebP.",
+    INVALID_INSTAGRAM_POST_URL: "Liên kết Instagram phải là bài đăng hoặc Reel hợp lệ (/p/, /reel/ hoặc /tv/).",
+    SERVICE_MISMATCH: "Không thể thay dịch vụ của lượt khách vãng lai đã lưu. Bạn chỉ có thể sửa giá thực tế.",
+    DUPLICATE_RESOURCE: "Thông tin này đã tồn tại. Hãy kiểm tra danh sách hoặc dùng giá trị khác.",
+    RESOURCE_IN_USE: "Không thể xóa vì mục này vẫn đang được dữ liệu khác sử dụng (lịch hẹn, nhân viên hoặc dịch vụ). Hãy xử lý các liên kết trước, không xóa dữ liệu lịch sử.",
+    INVALID_JSON: "Dữ liệu gửi lên không đúng định dạng. Hãy tải lại trang và thử lại.",
+    PAYLOAD_TOO_LARGE: "Dữ liệu gửi lên quá lớn. Hãy giảm kích thước tệp hoặc nội dung.",
+    ROUTE_NOT_FOUND: "Chức năng này chưa có trên máy chủ. Hãy tải lại trang hoặc liên hệ người vận hành.",
 };
 
-export function getApiErrorMessage(error: unknown, fallback: string) {
+function validationHint(message: string): string {
+    const text = message.toLowerCase();
+    if (/category|group name|service group/.test(text)) return "Hãy chọn nhóm dịch vụ có sẵn hoặc thêm nhóm hợp lệ (2–80 ký tự).";
+    if (/duration/.test(text)) return "Dịch vụ đặt trực tuyến phải có thời lượng là số phút dương.";
+    if (/staff|employee/.test(text)) return "Hãy kiểm tra nhân viên được chọn, chi nhánh và số người trong nhóm.";
+    if (/start_time|datetime|time zone|time.*future|15.minute/.test(text)) return "Hãy chọn thời gian trong tương lai theo mốc 15 phút.";
+    if (/price|amount/.test(text)) return "Hãy kiểm tra giá tiền: phải là số nguyên VND không âm.";
+    if (/phone/.test(text)) return "Hãy kiểm tra lại định dạng số điện thoại.";
+    if (/email/.test(text)) return "Hãy kiểm tra lại định dạng email.";
+    if (/party_size/.test(text)) return "Hãy chọn số người phù hợp với số nhân viên có thể phục vụ.";
+    if (/start_date|end_date/.test(text)) return "Ngày kết thúc không được trước ngày bắt đầu.";
+    if (/branch/.test(text)) return "Hãy chọn chi nhánh hợp lệ.";
+    return "Hãy kiểm tra các trường bắt buộc và giá trị đã nhập, rồi thử lại.";
+}
+
+export function getApiErrorMessage(error: unknown, fallback: string): string {
     if (error instanceof ApiError) {
+        if (error.code === "VALIDATION_ERROR") {
+            return `${fallback} ${validationHint(error.message)}`;
+        }
         if (error.code && errorMessagesByCode[error.code]) {
             return errorMessagesByCode[error.code];
         }
-
-        if (error.status === 400) return "Thông tin chưa hợp lệ. Vui lòng kiểm tra lại.";
-        if (error.status === 401) return "Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại.";
-        if (error.status === 403) return "Bạn không có quyền thực hiện thao tác này.";
-        if (error.status === 404) return "Không tìm thấy dữ liệu được yêu cầu.";
-        if (error.status === 409) return "Dữ liệu vừa thay đổi hoặc đang bị trùng. Vui lòng thử lại.";
-        if (error.status === 429) return "Bạn thao tác quá nhiều lần. Vui lòng thử lại sau.";
-        if (error.status >= 500) return "Hệ thống đang gặp sự cố. Vui lòng thử lại sau.";
+        if (error.status === 400 || error.status === 422) {
+            return `${fallback} ${validationHint(error.message)}`;
+        }
+        if (error.status === 401) return "Phiên đăng nhập đã hết hạn hoặc không hợp lệ. Hãy đăng nhập lại.";
+        if (error.status === 403) return "Tài khoản hiện tại không có quyền thực hiện thao tác này.";
+        if (error.status === 404) return `${fallback} Dữ liệu không còn tồn tại. Hãy tải lại trang.`;
+        if (error.status === 409) return `${fallback} Dữ liệu đang được sử dụng hoặc đã thay đổi. Hãy tải lại danh sách và kiểm tra các liên kết trước khi thử lại.`;
+        if (error.status === 413) return `${fallback} Dữ liệu gửi lên quá lớn. Hãy giảm kích thước.`;
+        if (error.status === 429) return `${fallback} Bạn đã thao tác quá nhiều lần. Hãy đợi một lúc rồi thử lại.`;
+        if (error.status >= 500) {
+            const reference = error.requestId ? ` Mã yêu cầu: ${error.requestId}.` : "";
+            return `${fallback} Máy chủ chưa xử lý được yêu cầu. Dữ liệu có thể chưa được lưu; hãy tải lại để kiểm tra trước khi thử lại.${reference}`;
+        }
+        return `${fallback} Máy chủ trả về mã HTTP ${error.status}. Hãy tải lại và thử lại.`;
     }
-
+    if (error instanceof Error && error.name === "AbortError") {
+        return `${fallback} Yêu cầu đã bị ngắt hoặc quá thời gian. Hãy thử lại khi kết nối ổn định.`;
+    }
+    if (error instanceof TypeError) {
+        return `${fallback} Không kết nối được máy chủ. Hãy kiểm tra mạng, sau đó thử lại.`;
+    }
+    if (error instanceof Error && error.message && !/^Invalid paginated response/.test(error.message)) {
+        // Local, user-facing form validation messages are already written in Vietnamese.
+        if (/[À-ỹ]/.test(error.message)) return error.message;
+    }
     return fallback;
 }
 

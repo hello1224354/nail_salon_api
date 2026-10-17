@@ -11,6 +11,7 @@ import { AppError } from "../../common/errors";
 import * as branchService from "../branches/branches.service";
 import { Branch } from "../branches/branches.entity";
 import { Appointment, AppointmentStatus } from "../appointments/appointments.entity";
+import { AppointmentStaffAssignment } from "../appointments/appointment-staff-assignment.entity";
 import { isWithinStaffWorkingHours, assertValidWorkingHours } from "./staff-working-hours";
 
 const staffRepo = AppDataSource.getRepository(Staff);
@@ -152,11 +153,33 @@ export const updateStaff = async (userId: string, data: UpdateStaffDto) => {
 };
 
 export const deleteStaff = async (userId: string) => {
-    const staff = await getStaff(userId);
-    if (!staff) return null;
+    return AppDataSource.transaction(async (manager) => {
+        // Lock the parent account while checking references and deleting it.
+        // Never cascade-delete bookings to make a staff deletion succeed.
+        const account = await manager.getRepository(User).findOne({
+            where: { id: userId, role: UserRole.STAFF },
+            lock: { mode: "pessimistic_write" },
+        });
+        if (!account) return null;
 
-    const user = await userService.deleteUser(userId);
-    if (!user) return null;
+        const staff = await manager.getRepository(Staff).findOne({
+            where: { user_id: userId },
+            relations: { user: true, branch: true },
+        });
+        if (!staff) return null;
 
-    return staff;
+        const assignedCount = await manager.getRepository(AppointmentStaffAssignment).count({
+            where: { staff_id: userId },
+        });
+        if (assignedCount > 0) {
+            throw new AppError(
+                "This employee has assigned appointments. Keep the history; resolve active bookings before removing this employee.",
+                409,
+                "STAFF_HAS_APPOINTMENTS",
+            );
+        }
+
+        await userService.deleteUser(userId, manager);
+        return staff;
+    });
 };

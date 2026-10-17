@@ -4,6 +4,7 @@ import { Staff } from "../staffs/staffs.entity";
 import { User } from "../users/users.entity";
 import { Branch } from "./branches.entity";
 import { Offer } from "../offers/offer.entity";
+import { AppointmentStaffAssignment } from "../appointments/appointment-staff-assignment.entity";
 import { AppError } from "../../common/errors";
 import { CreateBranchDto, GetBranchesQueryDto, UpdateBranchDto } from "./branches.dto";
 
@@ -72,6 +73,16 @@ export const deleteBranch = async (id: number) => {
         const staffUserIds = staffs.map((staff) => staff.user_id);
 
         if (staffUserIds.length > 0) {
+            const linkedAppointments = await manager.getRepository(AppointmentStaffAssignment).count({
+                where: { staff_id: In(staffUserIds) },
+            });
+            if (linkedAppointments > 0) {
+                throw new AppError(
+                    "This branch has employees assigned to appointments. Reassign active work and retain historical records.",
+                    409,
+                    "BRANCH_HAS_ASSIGNED_STAFF",
+                );
+            }
             await transactionUserRepo.delete({
                 id: In(staffUserIds),
             });

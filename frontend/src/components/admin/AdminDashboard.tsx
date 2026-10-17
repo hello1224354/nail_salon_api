@@ -354,7 +354,7 @@ export function AdminDashboard() {
 
     useEffect(() => {
         if (!toast) return;
-        const timer = window.setTimeout(() => setToast(""), 3200);
+        const timer = window.setTimeout(() => setToast(""), toast.startsWith("Đã ") ? 5000 : 14000);
         return () => window.clearTimeout(timer);
     }, [toast]);
 
@@ -466,7 +466,7 @@ export function AdminDashboard() {
     }
 
     async function deleteBranch(branch: Branch) {
-        if (!window.confirm(`Xóa vĩnh viễn chi nhánh “${branch.name}”? Dịch vụ và nhân viên thuộc chi nhánh này cũng sẽ bị xóa. Thông tin trên lịch hẹn cũ vẫn được giữ lại.`)) return;
+        if (!window.confirm(`Xóa chi nhánh “${branch.name}”? Các dữ liệu liên quan có thể bị ảnh hưởng. Nếu còn ưu đãi hoặc nhân viên có lịch hẹn, hệ thống sẽ từ chối xóa để bảo vệ lịch sử.`)) return;
 
         setSubmitting(true);
         try {
@@ -552,14 +552,14 @@ export function AdminDashboard() {
             setEditingStaff(null);
             await refresh(editingStaff ? "Đã cập nhật nhân viên." : "Đã thêm nhân viên.");
         } catch (saveError) {
-            setToast(getApiErrorMessage(saveError, "Chưa thêm được nhân viên."));
+            setToast(getApiErrorMessage(saveError, editingStaff ? "Chưa cập nhật được nhân viên." : "Chưa thêm được nhân viên."));
         } finally {
             setSubmitting(false);
         }
     }
 
     async function deleteStaff(staff: AdminStaff) {
-        if (!window.confirm(`Xóa vĩnh viễn nhân viên “${staff.full_name}”? Tài khoản của nhân viên này cũng sẽ bị xóa. Thông tin trên lịch hẹn cũ vẫn được giữ lại.`)) return;
+        if (!window.confirm(`Xóa nhân viên “${staff.full_name}” và tài khoản đăng nhập? Chỉ xóa được nếu chưa có lịch hẹn được phân công; hệ thống không xóa lịch sử đặt lịch để thực hiện thao tác này.`)) return;
 
         setSubmitting(true);
         try {
@@ -700,12 +700,17 @@ export function AdminDashboard() {
 
                     <div className="px-4 py-5 sm:px-6 sm:py-7 lg:px-8 lg:py-8">
                         {toast ? (
-                            <p role="status" className="mb-5 rounded-2xl border border-line bg-[#2d2926] px-5 py-4 text-xs leading-5 text-white">
-                                {toast}
-                            </p>
+                            <div role={toast.startsWith("Đã ") ? "status" : "alert"}
+                                className={`mb-5 flex items-start justify-between gap-4 rounded-2xl border px-5 py-4 text-sm leading-6 ${toast.startsWith("Đã ")
+                                    ? "border-line bg-[#2d2926] text-white"
+                                    : "border-[#d8aaa0] bg-[#faeeeb] text-[#854d42]"}`}>
+                                <p className="min-w-0">{toast}</p>
+                                <button type="button" onClick={() => setToast("")} aria-label="Đóng thông báo"
+                                    className="shrink-0 rounded border border-current/25 px-2 py-0.5 text-xs">Đóng</button>
+                            </div>
                         ) : null}
                         {error ? (
-                            <div className="mb-5 rounded-2xl border border-[#d8aaa0] bg-[#faeeeb] px-5 py-4 text-xs text-[#854d42]">
+                            <div role="alert" className="mb-5 rounded-2xl border border-[#d8aaa0] bg-[#faeeeb] px-5 py-4 text-sm leading-6 text-[#854d42]">
                                 {error}
                             </div>
                         ) : null}
