@@ -219,7 +219,6 @@ export type Service = {
     name: string;
     display_name?: string | null;
     category?: string | null;
-    subcategory?: string | null;
     description?: string | null;
     price: number;
     price_min?: number | null;
