@@ -15,7 +15,7 @@ export interface CreateAppointmentDto {
 export interface UpdateAppointmentDto {
     branch_id?: number;
     staff_id?: string;
-    staff_ids?: string[];
+    staff_ids?: Array<string | null>;
     service_ids?: string[];
     start_time?: Date;
     customer_phone?: string;
@@ -239,10 +239,11 @@ export function parseUpdateAppointmentDto(body: unknown): UpdateAppointmentDto {
     }
     if (data.staff_ids !== undefined && (
         !Array.isArray(data.staff_ids) ||
-        !data.staff_ids.every((id: unknown) => typeof id === "string" && isUuid(id)) ||
-        new Set(data.staff_ids).size !== data.staff_ids.length
+        !data.staff_ids.every((id: unknown) => id === null || (typeof id === "string" && isUuid(id))) ||
+        new Set(data.staff_ids.filter((id: string | null) => id !== null)).size !==
+            data.staff_ids.filter((id: string | null) => id !== null).length
     )) {
-        throw new AppError("Staff_ids must be a unique array of staff UUIDs", 400, "VALIDATION_ERROR");
+        throw new AppError("Staff_ids must be an array of distinct staff UUIDs or null positions", 400, "VALIDATION_ERROR");
     }
 
     if (data.service_ids !== undefined && !Array.isArray(data.service_ids)) throw new AppError("Service_ids must be an array", 400, "VALIDATION_ERROR");
@@ -266,7 +267,7 @@ export function parseUpdateAppointmentDto(body: unknown): UpdateAppointmentDto {
     return {
         branch_id: data.branch_id === undefined ? undefined : parsePositiveIntegerBody(data.branch_id, "Branch_id", 1),
         staff_id: data.staff_id as string | undefined,
-        staff_ids: data.staff_ids as string[] | undefined,
+        staff_ids: data.staff_ids as Array<string | null> | undefined,
         service_ids: data.service_ids as string[] | undefined,
         start_time: startTime,
         customer_phone: data.customer_phone === undefined ? undefined : parseVietnamesePhone(data.customer_phone, "Customer_phone"),
