@@ -246,6 +246,7 @@ export type Offer = {
     end_date: string;
     image: string;
     instagram_post_url?: string | null;
+    branch_id: number | null;
     sort_order: number;
 };
 
