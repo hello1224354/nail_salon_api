@@ -22,9 +22,6 @@ export class Service {
     @Column({ type: "varchar", nullable: true })
     category: string | null;
 
-    @Column({ type: "varchar", nullable: true })
-    subcategory: string | null;
-
     @Column({ type: "text", nullable: true })
     description: string | null;
 
