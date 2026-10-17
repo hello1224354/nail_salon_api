@@ -84,6 +84,8 @@ export function AdminAppointmentDetails({
                         const amount = workerEntries.reduce((sum, entry) => sum + (entry.row?.actual_price ?? 0), 0);
                         return <div key={person.id} className="rounded-xl bg-cream p-4">
                             <p className="text-xs font-semibold">Khách {index + 1} · {person.full_name}</p>
+                            {appointment.status === "in_progress" && person.completed_at ?
+                                <p className="mt-1 text-xs font-semibold text-accent">Đã hoàn thành phần việc</p> : null}
                             {complete ? (
                                 <>
                                     <div className="mt-3 space-y-2">
