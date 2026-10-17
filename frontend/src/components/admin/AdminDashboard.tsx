@@ -559,7 +559,7 @@ export function AdminDashboard() {
     }
 
     async function deleteStaff(staff: AdminStaff) {
-        if (!window.confirm(`Xóa nhân viên “${staff.full_name}” và tài khoản đăng nhập? Chỉ xóa được nếu chưa có lịch hẹn được phân công; hệ thống không xóa lịch sử đặt lịch để thực hiện thao tác này.`)) return;
+        if (!window.confirm(`Xóa nhân viên “${staff.full_name}” và tài khoản đăng nhập? Các lịch đã hoàn thành/hủy vẫn được giữ nguyên; chỉ không thể xóa khi nhân viên còn lịch đang chờ xác nhận, đã xác nhận hoặc đang thực hiện.`)) return;
 
         setSubmitting(true);
         try {

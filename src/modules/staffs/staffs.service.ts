@@ -154,8 +154,14 @@ export const updateStaff = async (userId: string, data: UpdateStaffDto) => {
 
 export const deleteStaff = async (userId: string) => {
     return AppDataSource.transaction(async (manager) => {
-        // Lock the parent account while checking references and deleting it.
-        // Never cascade-delete bookings to make a staff deletion succeed.
+        // Booking allocation locks the staff row; obtain an exclusive lock so
+        // no booking can assign this employee during the delete transaction.
+        const lockedStaff = await manager.getRepository(Staff).findOne({
+            where: { user_id: userId },
+            lock: { mode: "pessimistic_write" },
+        });
+        if (!lockedStaff) return null;
+
         const account = await manager.getRepository(User).findOne({
             where: { id: userId, role: UserRole.STAFF },
             lock: { mode: "pessimistic_write" },
@@ -168,17 +174,26 @@ export const deleteStaff = async (userId: string) => {
         });
         if (!staff) return null;
 
-        const assignedCount = await manager.getRepository(AppointmentStaffAssignment).count({
-            where: { staff_id: userId },
-        });
-        if (assignedCount > 0) {
+        const activeAssignments = await manager.getRepository(AppointmentStaffAssignment)
+            .createQueryBuilder("assigned")
+            .innerJoin("assigned.appointment", "appointment")
+            .where("assigned.staff_id = :userId", { userId })
+            .andWhere("appointment.merged_into_id IS NULL")
+            .andWhere("appointment.status IN (:...statuses)", {
+                statuses: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED, AppointmentStatus.IN_PROGRESS],
+            })
+            .getCount();
+
+        if (activeAssignments > 0) {
             throw new AppError(
-                "This employee has assigned appointments. Keep the history; resolve active bookings before removing this employee.",
+                "Employee has pending, confirmed, or in-progress appointments. Resolve or reassign them before deletion.",
                 409,
-                "STAFF_HAS_APPOINTMENTS",
+                "STAFF_HAS_ACTIVE_APPOINTMENTS",
             );
         }
 
+        // Snapshot staff_id / staff_full_name and historical actual prices
+        // remain after the employee account is deleted (FK removed by migration).
         await userService.deleteUser(userId, manager);
         return staff;
     });
