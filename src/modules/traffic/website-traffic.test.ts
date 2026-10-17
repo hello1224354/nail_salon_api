@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseVisitSessionId } from "./website-traffic.service";
+import { parseVisitSessionId } from "./visit-session-id";
 
 test("accepts tab-scoped v4 UUID and rejects arbitrary input", () => {
     const uuid = "550e8400-e29b-41d4-a716-446655440000";
