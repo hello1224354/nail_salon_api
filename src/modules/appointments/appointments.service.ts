@@ -119,7 +119,7 @@ async function allocateBookingStaff(
     excludedAppointmentId?: string,
 ) {
     const selections = preferredStaffIds.length === 0
-        ? Array.from<string | null>({ length: partySize }).fill(null)
+        ? Array.from({ length: partySize }, (): string | null => null)
         : preferredStaffIds;
     const specified = selections.filter((id): id is string => id !== null);
     if (selections.length !== partySize || new Set(specified).size !== specified.length) {
@@ -828,7 +828,7 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
             const staffCandidates = await staffService.getAllStaffs({ branch_id: targetBranchId });
             const preferred = data.staff_ids ??
                 (data.staff_id === undefined ? [] :
-                    [data.staff_id, ...Array.from<string | null>({ length: appointment.party_size - 1 }).fill(null)]);
+                    [data.staff_id, ...Array.from({ length: appointment.party_size - 1 }, (): string | null => null)]);
             if ((preferred.length !== 0 && preferred.length !== appointment.party_size) ||
                 preferred.some(id => id !== null && !staffCandidates.some(staff => staff.user_id === id))) {
                 throw new AppError("Selected employees must be distinct and belong to this branch", 400, "BRANCH_MISMATCH");
