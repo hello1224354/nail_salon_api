@@ -12,6 +12,7 @@ import siteContentRoutes from "./modules/site-content/site-content.routes";
 import mediaRoutes from "./modules/media/media.routes";
 import siteContentAdminRoutes from "./modules/site-content/site-content-admin.routes";
 import walkInRoutes from "./modules/walk-ins/walk-ins.routes";
+import websiteTrafficRoutes from "./modules/traffic/website-traffic.routes";
 import { errorHandler } from "./common/error-handler";
 import { auditMutation } from "./common/middleware/audit.middleware";
 import { trustedOrigins } from "./common/middleware/trusted-origins";
@@ -55,6 +56,7 @@ app.get("/health", (req, res) => {
     });
 });
 
+app.use("/api/traffic", websiteTrafficRoutes);
 app.use("/api/services", serviceRoutes);
 app.use("/api/staffs", staffRoutes);
 app.use("/api/appointments", appointmentRoutes);
