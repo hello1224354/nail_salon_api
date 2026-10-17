@@ -2,7 +2,7 @@ import { AppError } from "../../common/errors";
 
 /** Inclusive beginning/exclusive ending of a Vietnamese calendar month. */
 export function monthWindow(month: string): { start: Date; end: Date } {
-    if (!/^\\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
         throw new AppError("Month must use YYYY-MM format", 400, "VALIDATION_ERROR");
     }
     const [year, number] = month.split("-").map(Number);
