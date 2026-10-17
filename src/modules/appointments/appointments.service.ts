@@ -616,6 +616,53 @@ export const getAdminTodaySummary = async () => {
  * actual completion date, plus walk-in visits served in the chosen month.
  * SQL aggregates return 0 for a month without data.
  */
+/**
+ * Lifetime booking totals and actual revenue, across all branches.
+ * Revenue uses recorded completed appointment charges, never quoted prices.
+ */
+export const getAdminLifetimeSummary = async () => {
+    const counts = await appointmentRepo.createQueryBuilder("appointment")
+        .select("COUNT(*)", "total")
+        .addSelect("COALESCE(SUM(CASE WHEN appointment.status = :pending THEN 1 ELSE 0 END), 0)", "pending")
+        .addSelect("COALESCE(SUM(CASE WHEN appointment.status = :confirmed THEN 1 ELSE 0 END), 0)", "confirmed")
+        .addSelect("COALESCE(SUM(CASE WHEN appointment.status = :inProgress THEN 1 ELSE 0 END), 0)", "in_progress")
+        .addSelect("COALESCE(SUM(CASE WHEN appointment.status = :completed THEN 1 ELSE 0 END), 0)", "completed")
+        .addSelect("COALESCE(SUM(CASE WHEN appointment.status = :cancelled THEN 1 ELSE 0 END), 0)", "cancelled")
+        .where("appointment.merged_into_id IS NULL")
+        .setParameters({
+            pending: AppointmentStatus.PENDING, confirmed: AppointmentStatus.CONFIRMED,
+            inProgress: AppointmentStatus.IN_PROGRESS,
+            completed: AppointmentStatus.COMPLETED, cancelled: AppointmentStatus.CANCELLED,
+        })
+        .getRawOne<Record<string, string | null>>();
+    const online = await AppDataSource.getRepository(AppointmentActualPrice)
+        .createQueryBuilder("price")
+        .innerJoin(Appointment, "appointment", "appointment.id = price.appointment_id")
+        .select("COALESCE(SUM(price.actual_price), 0)", "revenue")
+        .where("appointment.status = :completed", { completed: AppointmentStatus.COMPLETED })
+        .andWhere("appointment.merged_into_id IS NULL")
+        .getRawOne<{ revenue: string }>();
+    const walkIns = await AppDataSource.getRepository(WalkInVisitService)
+        .createQueryBuilder("price")
+        .select("COALESCE(SUM(price.actual_price), 0)", "revenue")
+        .getRawOne<{ revenue: string }>();
+    const walkInCount = await AppDataSource.getRepository(WalkInVisit).count();
+    const onlineRevenue = Number(online?.revenue ?? 0);
+    const walkInRevenue = Number(walkIns?.revenue ?? 0);
+    return {
+        total: Number(counts?.total ?? 0),
+        pending: Number(counts?.pending ?? 0),
+        confirmed: Number(counts?.confirmed ?? 0),
+        in_progress: Number(counts?.in_progress ?? 0),
+        completed: Number(counts?.completed ?? 0),
+        cancelled: Number(counts?.cancelled ?? 0),
+        walk_ins: walkInCount,
+        online_revenue: onlineRevenue,
+        walk_in_revenue: walkInRevenue,
+        revenue: onlineRevenue + walkInRevenue,
+    };
+};
+
 export const getAdminMonthSummary = async (month: string) => {
     const { start, end } = monthWindow(month);
     const counts = await appointmentRepo.createQueryBuilder("appointment")
