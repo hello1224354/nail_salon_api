@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { apiRequest, getApiErrorMessage, type AppointmentTransferRequest } from "@/lib/api";
-import { formatVnd } from "@/lib/studio-data";
 
 const action = "rounded-full bg-ink px-4 py-2.5 text-xs font-semibold text-white disabled:opacity-50";
 type Transfers = { incoming: AppointmentTransferRequest[]; outgoing: AppointmentTransferRequest[] };
