@@ -101,6 +101,14 @@ async function tryReserveStaffSlots(manager: EntityManager, staffId: string, slo
     }
 }
 
+// A no-show releases its original slots. Never release them a second time after
+// another booking may have reserved the same staff and 15-minute start.
+function mayHaveReleasedNoShowSlots(appointment: Appointment): boolean {
+    return appointment.status === AppointmentStatus.NO_SHOW ||
+        Boolean(appointment.actual_started_at &&
+            appointment.actual_started_at.getTime() >= appointment.start_time.getTime() + 15 * 60_000);
+}
+
 async function releaseStaffSlots(manager: EntityManager, staffId: string, slotStarts: Date[]) {
     if (slotStarts.length === 0) return;
 
@@ -943,9 +951,11 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
                     where: { appointment_id: appointment.id,
                         status: TransferStatus.ACCEPTED },
                 })).map(row => row.to_staff_id));
-                for (const assignment of appointment.staff_assignments) {
-                    if (!logicalWorkers.has(assignment.staff_id)) {
-                        await releaseStaffSlots(manager, assignment.staff_id, slots);
+                if (!mayHaveReleasedNoShowSlots(appointment)) {
+                    for (const assignment of appointment.staff_assignments) {
+                        if (!logicalWorkers.has(assignment.staff_id)) {
+                            await releaseStaffSlots(manager, assignment.staff_id, slots);
+                        }
                     }
                 }
             }
@@ -1073,9 +1083,17 @@ export const deleteAppointment = async (id: string) => {
         const assignments = await manager.getRepository(AppointmentStaffAssignment).findBy({
             appointment_id: appointment.id,
         });
-        for (const assignment of assignments) {
-            await releaseStaffSlots(manager, assignment.staff_id,
-                getRequiredSlotStarts(appointment.start_time, appointment.end_time));
+        if (!mayHaveReleasedNoShowSlots(appointment)) {
+            const acceptedTransfers = await manager.getRepository(AppointmentTransferRequest).find({
+                where: { appointment_id: appointment.id, status: TransferStatus.ACCEPTED },
+            });
+            const logicalWorkers = new Set(acceptedTransfers.map(row => row.to_staff_id));
+            for (const assignment of assignments) {
+                if (!logicalWorkers.has(assignment.staff_id)) {
+                    await releaseStaffSlots(manager, assignment.staff_id,
+                        getRequiredSlotStarts(appointment.start_time, appointment.end_time));
+                }
+            }
         }
 
         await appointmentServiceRepo.delete({
