@@ -87,12 +87,12 @@ export async function listTransferPeers(staffId: string) {
         .map(peer => ({ id: peer.user_id, name: peer.user.full_name }));
 }
 
-export async function listTransferRequests(staffId: string) {
+export async function listTransferRequests(staffId: string | null) {
     await expireTransferRequests();
     const repo = AppDataSource.getRepository(AppointmentTransferRequest);
     const [incoming, outgoing] = await Promise.all([
-        repo.find({ where: { to_staff_id: staffId }, order: { created_at: "DESC" }, take: 60 }),
-        repo.find({ where: { from_staff_id: staffId }, order: { created_at: "DESC" }, take: 60 }),
+        repo.find({ where: staffId ? { to_staff_id: staffId } : {}, order: { created_at: "DESC" }, take: 60 }),
+        repo.find({ where: staffId ? { from_staff_id: staffId } : {}, order: { created_at: "DESC" }, take: 60 }),
     ]);
     const relatedIds = [...new Set([...incoming, ...outgoing].map(row => row.appointment_id))];
     const bookings = relatedIds.length ? await AppDataSource.getRepository(Appointment).find({
