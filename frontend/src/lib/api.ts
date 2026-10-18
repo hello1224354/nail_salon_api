@@ -435,6 +435,7 @@ export type AdminLifetimeSummary = {
     total: number;
     pending: number;
     confirmed: number;
+    no_show: number;
     in_progress: number;
     completed: number;
     cancelled: number;
@@ -454,6 +455,7 @@ export type AdminMonthSummary = {
     total: number;
     pending: number;
     confirmed: number;
+    no_show: number;
     in_progress: number;
     completed: number;
     cancelled: number;
@@ -467,6 +469,7 @@ export type AdminTodaySummary = {
     total: number;
     pending: number;
     confirmed: number;
+    no_show: number;
     completed: number;
     cancelled: number;
     revenue: number;
