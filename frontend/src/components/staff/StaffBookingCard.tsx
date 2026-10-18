@@ -26,7 +26,6 @@ export function StaffBookingCard({
     const mine = appt.assigned_staff?.find(worker => worker.id === staffId);
     const completed = Boolean(mine?.completed_at);
     const started = Boolean(mine?.started_at);
-    const oldActual = useMemo(() => (appt.actual_prices ?? []).filter(row => row.staff_id === staffId), [appt.actual_prices]);
     const [prices, setPrices] = useState<Record<string, string>>({});
     const [extras, setExtras] = useState<Extra[]>([]);
     const [dirty, setDirty] = useState(false);
