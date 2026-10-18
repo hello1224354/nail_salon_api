@@ -7,6 +7,7 @@ import { getAuthUser, restoreSession } from "@/lib/auth";
 import { formatVnd, formatServicePrice } from "@/lib/studio-data";
 import { StaffBookingCard } from "@/components/staff/StaffBookingCard";
 import { StaffTransfersPanel } from "@/components/staff/StaffTransfersPanel";
+import { StaffReceptionLookup } from "@/components/staff/StaffReceptionLookup";
 
 const inputClass = "w-full rounded-xl border border-line bg-white px-4 py-3 text-sm outline-none focus:border-accent";
 const actionClass = "rounded-full bg-ink px-5 py-3 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50";
@@ -196,6 +197,7 @@ export default function StaffPage() {
                 </div>}
             </section>
         </> : <section className="mt-6 space-y-5">
+            <StaffReceptionLookup />
             <StaffTransfersPanel reload={() => load(profile)} />
             <p className="rounded-xl border border-[#e5c0a6] bg-[#fff1e6] p-4 text-xs leading-5">
                 Booking nhóm giữ một mã chung. Mỗi nhân viên ghi giá và dịch vụ phát sinh cho phần việc của mình.
