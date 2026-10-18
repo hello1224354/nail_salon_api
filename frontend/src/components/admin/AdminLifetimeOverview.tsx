@@ -5,7 +5,7 @@ import { apiRequest, getApiErrorMessage, type AdminLifetimeSummary, type AdminWe
 import { formatVnd } from "@/lib/studio-data";
 
 const blank: AdminLifetimeSummary = {
-    total: 0, pending: 0, confirmed: 0, in_progress: 0, completed: 0,
+    total: 0, pending: 0, confirmed: 0, no_show: 0, in_progress: 0, completed: 0,
     cancelled: 0, walk_ins: 0, online_revenue: 0, walk_in_revenue: 0, revenue: 0,
 };
 const noTraffic: AdminWebsiteTraffic = { total_visits: 0, online_visits: 0 };
@@ -46,6 +46,7 @@ export function AdminLifetimeOverview() {
         ["Hoàn thành", stats.completed],
         ["Chờ xác nhận", stats.pending],
         ["Đã xác nhận", stats.confirmed],
+        ["Chưa đến", stats.no_show],
         ["Đang phục vụ", stats.in_progress],
         ["Đã hủy", stats.cancelled],
         ["Khách vãng lai", stats.walk_ins],
