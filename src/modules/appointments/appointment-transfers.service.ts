@@ -94,7 +94,22 @@ export async function listTransferRequests(staffId: string) {
         repo.find({ where: { to_staff_id: staffId }, order: { created_at: "DESC" }, take: 60 }),
         repo.find({ where: { from_staff_id: staffId }, order: { created_at: "DESC" }, take: 60 }),
     ]);
-    return { incoming, outgoing };
+    const relatedIds = [...new Set([...incoming, ...outgoing].map(row => row.appointment_id))];
+    const bookings = relatedIds.length ? await AppDataSource.getRepository(Appointment).find({
+        where: { id: In(relatedIds) }, relations: { appointment_services: true },
+    }) : [];
+    const byId = new Map(bookings.map(booking => [booking.id, booking]));
+    const present = (row: AppointmentTransferRequest) => {
+        const booking = byId.get(row.appointment_id);
+        return {
+            ...row,
+            booking_code: ((booking?.booking_group_id ?? booking?.id) || row.appointment_id).slice(0, 8).toUpperCase(),
+            customer_name: booking?.customer_full_name ?? null,
+            service_names: booking?.appointment_services
+                .filter(service => service.duration_minutes > 0).map(service => service.service_name) ?? [],
+        };
+    };
+    return { incoming: incoming.map(present), outgoing: outgoing.map(present) };
 }
 
 export async function requestTransfer(appointmentId: string, fromStaffId: string, toStaffId: string) {
