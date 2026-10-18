@@ -404,7 +404,7 @@ export type Appointment = {
     booking_group_id?: string | null;
     party_size: number;
     staff_id: string;
-    assigned_staff?: Array<{ id: string; full_name: string; completed_at?: string | null }>;
+    assigned_staff?: Array<{ id: string; full_name: string; started_at?: string | null; completed_at?: string | null }>;
     branch_id: number;
     start_time: string;
     end_time: string;
@@ -470,6 +470,20 @@ export type AdminTodaySummary = {
     completed: number;
     cancelled: number;
     revenue: number;
+};
+
+export type AppointmentTransferRequest = {
+    id: string;
+    appointment_id: string;
+    from_staff_id: string;
+    to_staff_id: string;
+    from_staff_name: string;
+    to_staff_name: string;
+    status: "pending" | "accepted" | "declined" | "canceled" | "expired";
+    reserved_start: string;
+    reserved_end: string;
+    expires_at: string;
+    created_at: string;
 };
 
 export type AppointmentList = {
