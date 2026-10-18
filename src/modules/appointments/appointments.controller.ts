@@ -175,6 +175,8 @@ export const setActualPrice = async (req: Request, res: Response) => {
     if (!body || !validActualPrice(body.actual_price)) {
         throw new AppError("Actual price must be a non-negative whole VND amount", 400, "VALIDATION_ERROR");
     }
-    const result = await setActualPriceForStaff(appointmentId, serviceId, req.user.id, body.actual_price);
+    const staffId = resolveWorkStaff(req.user, body.staff_id);
+    const result = await setActualPriceForStaff(appointmentId, serviceId, staffId, body.actual_price);
+    await auditAdminWork(req, res, staffId, "SET_ACTUAL_PRICE", appointmentId);
     return res.status(200).json({ success: { data: result, message: "Actual price saved" } });
 };
