@@ -40,7 +40,7 @@ export default function StaffPage() {
             apiRequest<ServiceList>("/api/services?branch_id=" + staff.branch_id + "&page=1&limit=100"),
             apiRequest<AppointmentList>("/api/appointments?page=1&limit=100"),
             apiRequest<WalkInList>("/api/walk-ins"),
-            apiRequest<Array<{ id: string; name: string }>>("/api/appointments/transfers/peers"),
+            apiRequest<Array<{ id: string; name: string }>>("/api/appointments/transfers/peers").catch(() => []),
         ]);
         setServices(svc.services);
         setAppointments(appts.appointments);
