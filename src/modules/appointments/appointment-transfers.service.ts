@@ -124,6 +124,13 @@ export async function requestTransfer(appointmentId: string, fromStaffId: string
         if (!appointment) throw new AppError("Booking not found", 404, "APPOINTMENT_NOT_FOUND");
         await lockBranch(manager, appointment.branch_id);
         if (!TRANSFERABLE.includes(appointment.status)) throw new AppError("Booking cannot be transferred", 409, "APPOINTMENT_NOT_EDITABLE");
+        // Before per-worker started_at was introduced, shared in_progress cannot prove
+        // which worker had already started. Do not permit an unsafe handoff of legacy work.
+        if (appointment.status === AppointmentStatus.IN_PROGRESS &&
+            appointment.actual_started_at &&
+            !appointment.staff_assignments.some(row => row.started_at)) {
+            throw new AppError("Cannot transfer legacy work with unknown start state", 409, "TRANSFER_INVALIDATED");
+        }
         const mine = appointment.staff_assignments.find(row => row.staff_id === fromStaffId);
         if (!mine) throw new AppError("You do not own this work", 403, "FORBIDDEN");
         if (mine.started_at || mine.completed_at) throw new AppError("Work already started", 409, "APPOINTMENT_NOT_EDITABLE");
