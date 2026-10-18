@@ -46,14 +46,17 @@ export async function getActiveTransferHolds(manager: EntityManager, staffId: st
     const byId = new Map(appointments.map(row => [row.id, row]));
     return candidates.filter(row => {
         const appointment = byId.get(row.appointment_id);
-        if (!appointment || !ACTIVE.includes(appointment.status)) return false;
+        if (!appointment || ![...ACTIVE, AppointmentStatus.NO_SHOW].includes(appointment.status)) return false;
         if (row.status === TransferStatus.PENDING) {
             return row.expires_at > now &&
                 appointment.staff_assignments.some(assigned => assigned.staff_id === row.from_staff_id && !assigned.started_at && !assigned.completed_at) &&
                 appointment.start_time.getTime() === row.scheduled_start.getTime() &&
                 appointment.end_time.getTime() === row.scheduled_end.getTime();
         }
-        return appointment.staff_assignments.some(assigned => assigned.staff_id === staffId && !assigned.completed_at);
+        return ACTIVE.includes(appointment.status) &&
+            appointment.start_time.getTime() === row.scheduled_start.getTime() &&
+            appointment.end_time.getTime() === row.scheduled_end.getTime() &&
+            appointment.staff_assignments.some(assigned => assigned.staff_id === staffId && !assigned.completed_at);
     });
 }
 
@@ -234,9 +237,12 @@ export async function respondToTransfer(requestId: string, actorId: string, acti
                 appointment_id: appointment.id, service_id: In(extraIds),
             });
         }
+        const fromLogicalTransfer = await manager.getRepository(AppointmentTransferRequest).exists({
+            where: { appointment_id: appointment.id, to_staff_id: from.staff_id, status: TransferStatus.ACCEPTED },
+        });
         const oldSlots: Date[] = [];
         for (let ms = appointment.start_time.getTime(); ms < appointment.end_time.getTime(); ms += SLOT_MS) oldSlots.push(new Date(ms));
-        if (oldSlots.length) {
+        if (oldSlots.length && !fromLogicalTransfer) {
             await manager.getRepository(StaffBookingSlot).delete({ staff_id: from.staff_id, slot_start: In(oldSlots) });
         }
         await manager.getRepository(AppointmentStaffAssignment).delete({
