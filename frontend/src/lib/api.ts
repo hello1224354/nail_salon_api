@@ -1,5 +1,5 @@
 import { config } from "@/lib/config";
-import { getAccessToken, refreshSession } from "@/lib/auth";
+import { getAccessToken, getAuthUser, refreshSession } from "@/lib/auth";
 
 export type ApiErrorPayload = {
     error?: {
@@ -83,6 +83,7 @@ export async function apiRequest<T>(
     accessToken?: string | null
 ): Promise<T> {
     const token = accessToken === undefined ? getAccessToken() : accessToken;
+    const originalUser = getAuthUser();
     let { response, body } = await executeRequest<T>(path, init, token);
 
     const responseErrorCode =
@@ -99,6 +100,18 @@ export async function apiRequest<T>(
         const restored = await refreshSession();
 
         if (restored) {
+            const currentUser = getAuthUser();
+            const method = (init.method ?? "GET").toUpperCase();
+            if (!["GET", "HEAD", "OPTIONS"].includes(method) &&
+                (!originalUser || !currentUser ||
+                    originalUser.id !== currentUser.id ||
+                    originalUser.role.toLowerCase() !== currentUser.role.toLowerCase())) {
+                throw new ApiError(
+                    "The signed-in account changed during the request",
+                    409,
+                    "SESSION_IDENTITY_CHANGED"
+                );
+            }
             ({ response, body } = await executeRequest<T>(path, init, getAccessToken()));
         }
     }
@@ -120,6 +133,7 @@ const errorMessagesByCode: Record<string, string> = {
     // Security-sensitive failures are intentionally grouped: never reveal
     // whether an account exists, why a token failed, or why an OTP was rejected.
     SESSION_INVALID: "Phiên đăng nhập không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.",
+    SESSION_IDENTITY_CHANGED: "Tài khoản đăng nhập đã thay đổi. Yêu cầu chưa được gửi lại; vui lòng mở đúng trang của tài khoản hiện tại và kiểm tra dữ liệu trước khi thao tác.",
     AUTHENTICATION_REQUIRED: "Vui lòng đăng nhập để tiếp tục.",
     INVALID_TOKEN: "Phiên đăng nhập không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.",
     TOKEN_REVOKED: "Phiên đăng nhập không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.",
