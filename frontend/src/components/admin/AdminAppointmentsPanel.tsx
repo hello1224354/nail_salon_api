@@ -102,9 +102,9 @@ export function AdminAppointmentsPanel({
                     <tbody className="divide-y divide-line">
                         {appointments.map(appointment => {
                             const allowed = appointment.status === "pending" ? ["confirmed", "cancelled"]
-                                : appointment.status === "confirmed" ? ["in_progress", "cancelled"]
+                                : appointment.status === "confirmed" ? ["cancelled"]
                                 : appointment.status === "in_progress" ? ["cancelled"]
-                                : appointment.status === "no_show" ? ["in_progress", "cancelled"] : [];
+                                : appointment.status === "no_show" ? ["cancelled"] : [];
                             return <tr key={appointment.id} className="align-top">
                                 <td className="px-4 py-4 font-mono font-semibold tracking-wide">
                                     {(appointment.booking_group_id ?? appointment.id).slice(0, 8).toUpperCase()}
