@@ -26,6 +26,7 @@ import { StaffAssignmentRotation } from "./staff-assignment-rotation.entity";
 import { addAssignedMinutes, chooseFairStaff, type StaffWorkload } from "./staff-allocation";
 import { isGroupComplete } from "./staff-completion";
 import { fillUnenteredReferencePrices } from "./booking-work.service";
+import { AppointmentTransferRequest, TransferStatus } from "./appointment-transfer-request.entity";
 import { hasHeldTransferOverlap, getActiveTransferHolds } from "./appointment-transfers.service";
 
 const appointmentRepo = AppDataSource.getRepository(Appointment);
@@ -71,11 +72,11 @@ function getRequiredSlotStarts(startTime: Date, endTime: Date) {
     return slotStarts;
 }
 
-async function tryReserveStaffSlots(manager: EntityManager, staffId: string, slotStarts: Date[]) {
+async function tryReserveStaffSlots(manager: EntityManager, staffId: string, slotStarts: Date[], excludedAppointmentId?: string) {
     // Pending requests and accepted short-overlap transfers reserve capacity logically.
     // All callers hold the per-branch allocation cursor lock.
     if (slotStarts.length && await hasHeldTransferOverlap(
-        manager, staffId, slotStarts[0], new Date(slotStarts[slotStarts.length - 1].getTime() + BOOKING_SLOT_MS)
+        manager, staffId, slotStarts[0], new Date(slotStarts[slotStarts.length - 1].getTime() + BOOKING_SLOT_MS), excludedAppointmentId
     )) return false;
     const staffBookingSlotRepo = manager.getRepository(StaffBookingSlot);
 
@@ -223,7 +224,7 @@ async function allocateBookingStaff(
     for (let index = 0; index < selections.length; index++) {
         const id = selections[index];
         if (id === null) continue;
-        if (!await tryReserveStaffSlots(manager, id, requiredSlots)) {
+        if (!await tryReserveStaffSlots(manager, id, requiredSlots, excludedAppointmentId)) {
             throw new AppError("Selected employee is not available", 409, "SLOT_UNAVAILABLE");
         }
         chosen[index] = eligible.get(id)!;
@@ -239,7 +240,7 @@ async function allocateBookingStaff(
             const available = rosterIds.filter(id => eligible.has(id) && !used.has(id) && !conflicts.has(id));
             const candidateId = chooseFairStaff(rosterIds, available, loads, lastAutomatic);
             if (!candidateId) throw new AppError("Not enough free employees for this booking", 409, "SLOT_UNAVAILABLE");
-            if (!await tryReserveStaffSlots(manager, candidateId, requiredSlots)) {
+            if (!await tryReserveStaffSlots(manager, candidateId, requiredSlots, excludedAppointmentId)) {
                 conflicts.add(candidateId);
                 continue;
             }
@@ -918,11 +919,9 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
             }
             if (data.status === AppointmentStatus.COMPLETED || data.status === AppointmentStatus.CANCELLED) {
                 const slots = getRequiredSlotStarts(appointment.start_time, appointment.end_time);
-                const logicalWorkers = new Set((await manager.getRepository(
-                    (await import("./appointment-transfer-request.entity")).AppointmentTransferRequest
-                ).find({
+                const logicalWorkers = new Set((await manager.getRepository(AppointmentTransferRequest).find({
                     where: { appointment_id: appointment.id,
-                        status: (await import("./appointment-transfer-request.entity")).TransferStatus.ACCEPTED },
+                        status: TransferStatus.ACCEPTED },
                 })).map(row => row.to_staff_id));
                 for (const assignment of appointment.staff_assignments) {
                     if (!logicalWorkers.has(assignment.staff_id)) {
@@ -986,9 +985,7 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
             }
 
             const oldSlots = getRequiredSlotStarts(appointment.start_time, appointment.end_time);
-            const previousLogicalWorkers = new Set((await manager.getRepository(
-                (await import("./appointment-transfer-request.entity")).AppointmentTransferRequest
-            ).find({
+            const previousLogicalWorkers = new Set((await manager.getRepository(AppointmentTransferRequest).find({
                 where: { appointment_id: appointment.id,
                     status: (await import("./appointment-transfer-request.entity")).TransferStatus.ACCEPTED },
             })).map(row => row.to_staff_id));
