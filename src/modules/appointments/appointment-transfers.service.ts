@@ -61,10 +61,11 @@ export async function getActiveTransferHolds(manager: EntityManager, staffId: st
 }
 
 export async function hasHeldTransferOverlap(
-    manager: EntityManager, staffId: string, start: Date, end: Date,
+    manager: EntityManager, staffId: string, start: Date, end: Date, excludeAppointmentId?: string,
 ): Promise<boolean> {
     const holds = await getActiveTransferHolds(manager, staffId);
-    return holds.some(row => overlaps(start, end, row.reserved_start, row.reserved_end) > 0);
+    return holds.some(row => row.appointment_id !== excludeAppointmentId &&
+        overlaps(start, end, row.reserved_start, row.reserved_end) > 0);
 }
 
 export async function expireTransferRequests() {
