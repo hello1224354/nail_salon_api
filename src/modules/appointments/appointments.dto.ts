@@ -179,7 +179,6 @@ export function parseGetAppointmentsQuery(query: unknown): GetAppointmentsQueryD
         branch_id: branchId,
         staff_id: data.staff_id as string | undefined,
         status: status === undefined ? undefined : AppointmentStatus[status as keyof typeof AppointmentStatus],
-        acting_staff_id: data.acting_staff_id as string | undefined,
         booking_code: bookingCode,
         from,
         to,
