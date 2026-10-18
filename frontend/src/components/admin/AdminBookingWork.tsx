@@ -16,6 +16,7 @@ export function AdminBookingWork({
     const [requests, setRequests] = useState<AppointmentTransferRequest[]>([]);
     const [error, setError] = useState("");
     const [busy, setBusy] = useState(false);
+    const [nowMs, setNowMs] = useState(0);
     const assignedIds = workers.map(person => person.id).join(",");
     const selectedId = workers.some(person => person.id === selected) ? selected : (workers[0]?.id ?? "");
     const availablePeers = useMemo(() => staff
@@ -36,7 +37,14 @@ export function AdminBookingWork({
         }
     }, [appointment.id]);
     useEffect(() => {
-        void loadRequests();
+        const fetchTimer = window.setTimeout(() => void loadRequests(), 0);
+        const clockTimer = window.setTimeout(() => setNowMs(Date.now()), 0);
+        const clock = window.setInterval(() => setNowMs(Date.now()), 30_000);
+        return () => {
+            window.clearTimeout(fetchTimer);
+            window.clearTimeout(clockTimer);
+            window.clearInterval(clock);
+        };
     }, [loadRequests, assignedIds]);
 
     async function refresh() {
@@ -92,7 +100,7 @@ export function AdminBookingWork({
         </label>
         {selectedId ? <StaffBookingCard key={appointment.id + ":" + selectedId} appt={appointment}
             staffId={selectedId} peers={availablePeers}
-            nowMs={Date.now()} reload={refresh} updateStatus={updateStatus} adminMode /> : null}
+            nowMs={nowMs} reload={refresh} updateStatus={updateStatus} adminMode /> : null}
         {requests.length ? <div className="rounded-xl border border-line bg-cream p-4">
             <h4 className="text-sm font-semibold">Yêu cầu chuyển lịch đang chờ xác nhận</h4>
             <p className="mt-1 text-xs text-muted">Chỉ nhân viên nhận lịch được đồng ý hoặc từ chối. Quản lý có thể hủy yêu cầu chưa được xác nhận.</p>
