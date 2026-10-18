@@ -182,8 +182,17 @@ export async function requestTransfer(appointmentId: string, fromStaffId: string
 
 export async function respondToTransfer(requestId: string, actorId: string, action: "accept" | "decline" | "cancel") {
     return AppDataSource.transaction("READ COMMITTED", async manager => {
-        // Lock request before appointment, so two responses cannot both win.
+        // Lock order must match transfer creation: appointment -> branch cursor -> request.
+        // The final request-row lock ensures only one accept/decline/cancel wins.
         const requestRepo = manager.getRepository(AppointmentTransferRequest);
+        const preview = await requestRepo.findOneBy({ id: requestId });
+        if (!preview) throw new AppError("Transfer request not found", 404, "TRANSFER_NOT_FOUND");
+        const appointment = await manager.getRepository(Appointment).findOne({
+            where: { id: preview.appointment_id, merged_into_id: IsNull() },
+            relations: { staff_assignments: true, appointment_services: true, actual_prices: true },
+            lock: { mode: "pessimistic_write" },
+        });
+        if (appointment) await lockBranch(manager, appointment.branch_id);
         const request = await requestRepo.findOne({ where: { id: requestId }, lock: { mode: "pessimistic_write" } });
         if (!request) throw new AppError("Transfer request not found", 404, "TRANSFER_NOT_FOUND");
         if (action === "cancel" ? request.from_staff_id !== actorId : request.to_staff_id !== actorId) {
@@ -203,17 +212,11 @@ export async function respondToTransfer(requestId: string, actorId: string, acti
             request.decided_at = now;
             return requestRepo.save(request);
         }
-        const appointment = await manager.getRepository(Appointment).findOne({
-            where: { id: request.appointment_id, merged_into_id: IsNull() },
-            relations: { staff_assignments: true, appointment_services: true, actual_prices: true },
-            lock: { mode: "pessimistic_write" },
-        });
         if (!appointment || !TRANSFERABLE.includes(appointment.status) ||
             appointment.start_time.getTime() !== request.scheduled_start.getTime() ||
             appointment.end_time.getTime() !== request.scheduled_end.getTime()) {
             throw new AppError("Booking changed; transfer invalid", 409, "TRANSFER_INVALIDATED");
         }
-        await lockBranch(manager, appointment.branch_id);
         const from = appointment.staff_assignments.find(row => row.staff_id === request.from_staff_id);
         if (!from || from.started_at || from.completed_at ||
             appointment.staff_assignments.some(row => row.staff_id === request.to_staff_id)) {
