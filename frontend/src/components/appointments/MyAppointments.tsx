@@ -259,11 +259,14 @@ export function MyAppointments() {
                     <div className="grid gap-4 lg:grid-cols-2">
                         {visibleAppointments.map((appointment) => {
                             const status = appointment.status.toLowerCase();
-                            const services = appointment.appointment_services ?? [];
+                            const services = (appointment.appointment_services ?? []).filter(service => service.duration_minutes > 0);
+                            const customServices = (appointment.appointment_services ?? []).filter(service => service.duration_minutes === 0);
                             const total = services.reduce((sum, service) => sum + service.price, 0);
                             const actual = appointment.actual_prices ?? [];
                             const totalActual = actual.reduce((sum, item) => sum + item.actual_price, 0);
-                            const allPriced = actual.length === appointment.party_size * services.length && services.length > 0;
+                            const allPriced = services.length > 0 &&
+                                actual.filter(item => services.some(service => service.service_id === item.service_id)).length >=
+                                    appointment.party_size * services.length;
                             const duration = services.reduce((sum, service) => sum + service.duration_minutes, 0);
 
                             return (
@@ -313,7 +316,8 @@ export function MyAppointments() {
                                         <div className="mt-3 rounded-lg border border-line bg-white p-3 text-xs">
                                             <p className="font-semibold">Giá thực tế nhân viên đã nhập</p>
                                             {actual.map(item => <p key={item.staff_id + ":" + item.service_id} className="mt-1">
-                                                {services.find(s => s.service_id === item.service_id)?.service_name ?? "Dịch vụ"}
+                                                {services.find(s => s.service_id === item.service_id)?.service_name ??
+                                                    customServices.find(s => s.service_id === item.service_id)?.service_name ?? "Dịch vụ"}{customServices.some(s => s.service_id === item.service_id) ? " (phát sinh)" : ""}
                                                 {": "}<strong>{formatVnd(item.actual_price)} VND</strong>
                                             </p>)}
                                             <p className="mt-2 font-semibold">{allPriced ? "Tổng giá thực tế: " + formatVnd(totalActual) + " VND" : "Đang chờ các nhân viên cập nhật đủ giá thực tế."}</p>
