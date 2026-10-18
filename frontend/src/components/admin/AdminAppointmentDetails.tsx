@@ -15,7 +15,8 @@ export function AdminAppointmentDetails({
 }: {
     appointment: Appointment;
 }) {
-    const services = appointment.appointment_services ?? [];
+    const services = (appointment.appointment_services ?? []).filter(service => service.duration_minutes > 0);
+    const additional = (appointment.appointment_services ?? []).filter(service => service.duration_minutes === 0);
     const workers = appointment.assigned_staff?.length
         ? appointment.assigned_staff
         : [{ id: appointment.staff_id, full_name: appointment.staff?.full_name ?? "Nhân viên" }];
@@ -78,7 +79,9 @@ export function AdminAppointmentDetails({
                 <h3 className="font-serif text-xl">Nhân viên theo từng khách</h3>
                 <div className="mt-3 space-y-3">
                     {workers.map((person, index) => {
-                        const workerEntries = services.map(service => ({
+                        const ownedAdditional = additional.filter(service =>
+                            actual.some(price => price.staff_id === person.id && price.service_id === service.service_id));
+                        const workerEntries = [...services, ...ownedAdditional].map(service => ({
                             service, row: actual.find(item => item.staff_id === person.id && item.service_id === service.service_id),
                         }));
                         const amount = workerEntries.reduce((sum, entry) => sum + (entry.row?.actual_price ?? 0), 0);
@@ -91,9 +94,9 @@ export function AdminAppointmentDetails({
                                     <div className="mt-3 space-y-2">
                                         {workerEntries.map(({ service, row }) => (
                                             <div key={service.service_id} className="flex items-start justify-between gap-3 text-xs">
-                                                <span>{service.service_name}</span>
+                                                <span>{service.service_name}{service.duration_minutes === 0 ? " (Phát sinh)" : ""}</span>
                                                 <span className="shrink-0 font-semibold">
-                                                    {row ? money(row.actual_price) : "Chưa có giá"}
+                                                    {row ? money(row.actual_price) : money(service.price)}
                                                 </span>
                                             </div>
                                         ))}
