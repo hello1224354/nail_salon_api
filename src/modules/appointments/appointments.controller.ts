@@ -37,6 +37,7 @@ function toAppointmentResponse(appointment: Appointment) {
             .map(assignment => ({
                 id: assignment.staff_id,
                 full_name: assignment.staff_full_name,
+                started_at: assignment.started_at,
                 completed_at: assignment.completed_at,
             })),
         branch: {
