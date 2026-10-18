@@ -6,6 +6,7 @@ import { Appointment } from "./appointments.entity";
 import { parseUuidParam } from "../../common/validators";
 import { setActualPriceForStaff } from "./appointments.prices";
 import { validActualPrice } from "../walk-ins/walk-ins.dto";
+import { resolveWorkStaff, auditAdminWork } from "./admin-staff-actor";
 
 function toAppointmentResponse(appointment: Appointment) {
     const {
@@ -138,7 +139,9 @@ export const updateAppointment = async (req: Request, res: Response) => {
 
     const appointmentId = parseUuidParam(req.params.id, "Appointment id");
 
-    const data = await appointmentService.updateAppointment(appointmentId, req.user.id, req.user.role, parseUpdateAppointmentDto(req.body));
+    const payload = parseUpdateAppointmentDto(req.body);
+    const data = await appointmentService.updateAppointment(appointmentId, req.user.id, req.user.role, payload);
+    if (payload.acting_staff_id) await auditAdminWork(req, res, payload.acting_staff_id, "WORK_" + payload.status, appointmentId);
 
     if (!data) throw new AppError("Appointment not found", 404, "APPOINTMENT_NOT_FOUND");
 
