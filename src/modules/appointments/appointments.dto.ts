@@ -279,6 +279,7 @@ export function parseUpdateAppointmentDto(body: unknown): UpdateAppointmentDto {
         start_time: startTime,
         customer_phone: data.customer_phone === undefined ? undefined : parseVietnamesePhone(data.customer_phone, "Customer_phone"),
         status: status === undefined ? undefined : AppointmentStatus[status as keyof typeof AppointmentStatus],
+        acting_staff_id: data.acting_staff_id as string | undefined,
     };
 }
 
