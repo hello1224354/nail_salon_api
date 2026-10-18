@@ -839,7 +839,7 @@ export function AdminDashboard() {
                                     />
                                 ) : null}
                                 {tab === "media" ? <MediaPanel /> : null}
-                                 {tab === "walkins" ? <AdminWalkInsPanel branches={data.branches} /> : null}
+                                 {tab === "walkins" ? <AdminWalkInsPanel branches={data.branches} staff={data.staff} services={data.services} /> : null}
                                 {tab === "trends" ? <TrendsPanel /> : null}
                             </>
                         )}
@@ -870,7 +870,15 @@ export function AdminDashboard() {
                     title="Chi tiết lịch hẹn"
                     onClose={() => { setModal(null); setViewingAppointment(null); }}
                 >
-                    <AdminAppointmentDetails appointment={viewingAppointment} />
+                    <AdminAppointmentDetails
+                        appointment={viewingAppointment}
+                        staff={data.staff}
+                        onWorkChanged={async () => {
+                            const fresh = await apiRequest<Appointment>("/api/appointments/" + viewingAppointment.id);
+                            setViewingAppointment(fresh);
+                            await Promise.all([loadAppointments(), loadTodayStats()]);
+                        }}
+                    />
                 </Modal>
             ) : null}
 
