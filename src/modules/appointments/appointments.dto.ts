@@ -148,7 +148,7 @@ export function parseGetAppointmentsQuery(query: unknown): GetAppointmentsQueryD
 
     const status = typeof data.status === "string" ? data.status.toUpperCase() : undefined;
 
-    if (status !== undefined && !(status in AppointmentStatus)) throw new AppError("Status must be pending, confirmed, in_progress, completed, or cancelled", 400, "VALIDATION_ERROR");
+    if (status !== undefined && !(status in AppointmentStatus)) throw new AppError("Status must be pending, confirmed, in_progress, no_show, completed, or cancelled", 400, "VALIDATION_ERROR");
 
     let bookingCode: string | undefined;
     if (data.booking_code !== undefined) {
