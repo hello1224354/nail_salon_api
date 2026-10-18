@@ -51,7 +51,7 @@ const emptyState: LoadState = {
     offers: [],
     appointments: [],
     appointmentTotal: 0,
-    todayStats: { total: 0, pending: 0, confirmed: 0, completed: 0, cancelled: 0, revenue: 0 },
+    todayStats: { total: 0, pending: 0, confirmed: 0, no_show: 0, completed: 0, cancelled: 0, revenue: 0 },
 };
 
 const tabItems: Array<{ key: TabKey; label: string; short: string }> = [
@@ -66,7 +66,7 @@ const tabItems: Array<{ key: TabKey; label: string; short: string }> = [
     { key: "media", label: "Thư viện ảnh", short: "Ảnh" },
 ];
 
-const statusOrder = ["pending", "confirmed", "in_progress", "completed", "cancelled"];
+const statusOrder = ["pending", "confirmed", "in_progress", "no_show", "completed", "cancelled"];
 
 function formatDateTime(value: string) {
     return new Intl.DateTimeFormat("vi-VN", {
@@ -110,6 +110,7 @@ function badgeClass(status: string) {
             return "border-[#9abed0] bg-[#eaf4f9] text-[#356274]";
         case "completed":
             return "border-[#bfc5cb] bg-[#f1f3f4] text-[#4e5962]";
+        case "no_show":
         case "cancelled":
         case "Đã hết hạn":
             return "border-[#d8aaa0] bg-[#faeeeb] text-[#854d42]";
@@ -838,7 +839,7 @@ export function AdminDashboard() {
                                     />
                                 ) : null}
                                 {tab === "media" ? <MediaPanel /> : null}
-                                 {tab === "walkins" ? <AdminWalkInsPanel branches={data.branches} /> : null}
+                                 {tab === "walkins" ? <AdminWalkInsPanel branches={data.branches} staff={data.staff} services={data.services} /> : null}
                                 {tab === "trends" ? <TrendsPanel /> : null}
                             </>
                         )}
@@ -869,7 +870,15 @@ export function AdminDashboard() {
                     title="Chi tiết lịch hẹn"
                     onClose={() => { setModal(null); setViewingAppointment(null); }}
                 >
-                    <AdminAppointmentDetails appointment={viewingAppointment} />
+                    <AdminAppointmentDetails
+                        appointment={viewingAppointment}
+                        staff={data.staff}
+                        onWorkChanged={async () => {
+                            const fresh = await apiRequest<Appointment>("/api/appointments/" + viewingAppointment.id);
+                            setViewingAppointment(fresh);
+                            await Promise.all([loadAppointments(), loadTodayStats()]);
+                        }}
+                    />
                 </Modal>
             ) : null}
 
@@ -1168,6 +1177,7 @@ function Overview({
                             ["Tổng lịch", todayStats.total],
                             ["Chờ xác nhận", todayStats.pending],
                             ["Đã xác nhận", todayStats.confirmed],
+                            ["Chưa đến", todayStats.no_show],
                             ["Hoàn thành", todayStats.completed],
                             ["Đã hủy", todayStats.cancelled],
                         ].map(([label, value]) => (

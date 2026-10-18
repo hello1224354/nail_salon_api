@@ -6,6 +6,7 @@ import { Appointment } from "./appointments.entity";
 import { parseUuidParam } from "../../common/validators";
 import { setActualPriceForStaff } from "./appointments.prices";
 import { validActualPrice } from "../walk-ins/walk-ins.dto";
+import { resolveWorkStaff, auditAdminWork } from "./admin-staff-actor";
 
 function toAppointmentResponse(appointment: Appointment) {
     const {
@@ -37,6 +38,7 @@ function toAppointmentResponse(appointment: Appointment) {
             .map(assignment => ({
                 id: assignment.staff_id,
                 full_name: assignment.staff_full_name,
+                started_at: assignment.started_at,
                 completed_at: assignment.completed_at,
             })),
         branch: {
@@ -137,7 +139,9 @@ export const updateAppointment = async (req: Request, res: Response) => {
 
     const appointmentId = parseUuidParam(req.params.id, "Appointment id");
 
-    const data = await appointmentService.updateAppointment(appointmentId, req.user.id, req.user.role, parseUpdateAppointmentDto(req.body));
+    const payload = parseUpdateAppointmentDto(req.body);
+    const data = await appointmentService.updateAppointment(appointmentId, req.user.id, req.user.role, payload);
+    if (payload.acting_staff_id) await auditAdminWork(req, res, payload.acting_staff_id, "WORK_" + payload.status, appointmentId);
 
     if (!data) throw new AppError("Appointment not found", 404, "APPOINTMENT_NOT_FOUND");
 
@@ -171,6 +175,8 @@ export const setActualPrice = async (req: Request, res: Response) => {
     if (!body || !validActualPrice(body.actual_price)) {
         throw new AppError("Actual price must be a non-negative whole VND amount", 400, "VALIDATION_ERROR");
     }
-    const result = await setActualPriceForStaff(appointmentId, serviceId, req.user.id, body.actual_price);
+    const staffId = resolveWorkStaff(req.user, body.staff_id);
+    const result = await setActualPriceForStaff(appointmentId, serviceId, staffId, body.actual_price);
+    await auditAdminWork(req, res, staffId, "SET_ACTUAL_PRICE", appointmentId);
     return res.status(200).json({ success: { data: result, message: "Actual price saved" } });
 };

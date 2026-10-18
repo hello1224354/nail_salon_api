@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { apiRequest, getApiErrorMessage, type Branch, type WalkInVisit, type WalkInList } from "@/lib/api";
+import { apiRequest, getApiErrorMessage, type Branch, type AdminStaff, type Service, type WalkInVisit, type WalkInList } from "@/lib/api";
 import { vietnamMonthNow } from "@/lib/admin-month";
+import { AdminWalkInCreate } from "./AdminWalkInCreate";
 import { formatVnd, shortBranchName } from "@/lib/studio-data";
 
 const dateVN = (date: string) => new Intl.DateTimeFormat("vi-VN", {
@@ -35,7 +36,7 @@ function Popup({ title, onClose, children }: {
     );
 }
 
-export function AdminWalkInsPanel({ branches }: { branches: Branch[] }) {
+export function AdminWalkInsPanel({ branches, staff, services }: { branches: Branch[]; staff: AdminStaff[]; services: Service[] }) {
     const [month, setMonth] = useState("");
     const [branchId, setBranchId] = useState("");
     const [from, setFrom] = useState("");
@@ -139,6 +140,7 @@ export function AdminWalkInsPanel({ branches }: { branches: Branch[] }) {
             <div className="border-b border-line p-5">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-accent">Quản lý hoạt động</p>
                 <h2 className="mt-1 font-serif text-3xl">Khách vãng lai</h2>
+                <div className="mt-5"><AdminWalkInCreate staff={staff} services={services} onCreated={() => { setPage(1); setVersion(v => v + 1); setMessage("Đã ghi nhận khách vãng lai cho nhân viên được chọn."); }} /></div>
                 <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                     <div>
                         <label htmlFor="walkin-month-mode" className="text-[10px] font-semibold uppercase tracking-wide text-muted">Tháng</label>

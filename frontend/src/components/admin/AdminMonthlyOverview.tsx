@@ -5,7 +5,7 @@ import { apiRequest, getApiErrorMessage, type AdminMonthSummary } from "@/lib/ap
 import { formatVnd } from "@/lib/studio-data";
 
 const zero: AdminMonthSummary = {
-    month: "", total: 0, pending: 0, confirmed: 0, in_progress: 0, completed: 0,
+    month: "", total: 0, pending: 0, confirmed: 0, no_show: 0, in_progress: 0, completed: 0,
     cancelled: 0, walk_ins: 0, online_revenue: 0, walk_in_revenue: 0, revenue: 0,
 };
 export function AdminMonthlyOverview({ month, setMonth }: {
@@ -39,7 +39,7 @@ export function AdminMonthlyOverview({ month, setMonth }: {
     }, [refresh]);
     const entries = [
         ["Tổng lịch hẹn", stats.total], ["Chờ xác nhận", stats.pending],
-        ["Đã xác nhận", stats.confirmed], ["Đang phục vụ", stats.in_progress],
+        ["Đã xác nhận", stats.confirmed], ["Chưa đến", stats.no_show], ["Đang phục vụ", stats.in_progress],
         ["Hoàn thành", stats.completed], ["Đã hủy", stats.cancelled],
         ["Khách vãng lai", stats.walk_ins],
     ] as const;

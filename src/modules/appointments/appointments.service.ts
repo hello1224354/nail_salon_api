@@ -24,7 +24,10 @@ import { parseBranchOpeningHours } from "../branches/branch-opening-hours";
 import { monthWindow } from "./admin-month-summary";
 import { StaffAssignmentRotation } from "./staff-assignment-rotation.entity";
 import { addAssignedMinutes, chooseFairStaff, type StaffWorkload } from "./staff-allocation";
-import { hasAllStaffPrices, isGroupComplete } from "./staff-completion";
+import { isGroupComplete } from "./staff-completion";
+import { fillUnenteredReferencePrices } from "./booking-work.service";
+import { AppointmentTransferRequest, TransferStatus } from "./appointment-transfer-request.entity";
+import { hasHeldTransferOverlap, getActiveTransferHolds } from "./appointment-transfers.service";
 
 const appointmentRepo = AppDataSource.getRepository(Appointment);
 
@@ -69,7 +72,12 @@ function getRequiredSlotStarts(startTime: Date, endTime: Date) {
     return slotStarts;
 }
 
-async function tryReserveStaffSlots(manager: EntityManager, staffId: string, slotStarts: Date[]) {
+async function tryReserveStaffSlots(manager: EntityManager, staffId: string, slotStarts: Date[], excludedAppointmentId?: string) {
+    // Pending requests and accepted short-overlap transfers reserve capacity logically.
+    // All callers hold the per-branch allocation cursor lock.
+    if (slotStarts.length && await hasHeldTransferOverlap(
+        manager, staffId, slotStarts[0], new Date(slotStarts[slotStarts.length - 1].getTime() + BOOKING_SLOT_MS), excludedAppointmentId
+    )) return false;
     const staffBookingSlotRepo = manager.getRepository(StaffBookingSlot);
 
     const slots = slotStarts.map((slotStart) => {
@@ -91,6 +99,14 @@ async function tryReserveStaffSlots(manager: EntityManager, staffId: string, slo
 
         throw error;
     }
+}
+
+// A no-show releases its original slots. Never release them a second time after
+// another booking may have reserved the same staff and 15-minute start.
+function mayHaveReleasedNoShowSlots(appointment: Appointment): boolean {
+    return appointment.status === AppointmentStatus.NO_SHOW ||
+        Boolean(appointment.actual_started_at &&
+            appointment.actual_started_at.getTime() >= appointment.start_time.getTime() + 15 * 60_000);
 }
 
 async function releaseStaffSlots(manager: EntityManager, staffId: string, slotStarts: Date[]) {
@@ -216,7 +232,7 @@ async function allocateBookingStaff(
     for (let index = 0; index < selections.length; index++) {
         const id = selections[index];
         if (id === null) continue;
-        if (!await tryReserveStaffSlots(manager, id, requiredSlots)) {
+        if (!await tryReserveStaffSlots(manager, id, requiredSlots, excludedAppointmentId)) {
             throw new AppError("Selected employee is not available", 409, "SLOT_UNAVAILABLE");
         }
         chosen[index] = eligible.get(id)!;
@@ -232,7 +248,7 @@ async function allocateBookingStaff(
             const available = rosterIds.filter(id => eligible.has(id) && !used.has(id) && !conflicts.has(id));
             const candidateId = chooseFairStaff(rosterIds, available, loads, lastAutomatic);
             if (!candidateId) throw new AppError("Not enough free employees for this booking", 409, "SLOT_UNAVAILABLE");
-            if (!await tryReserveStaffSlots(manager, candidateId, requiredSlots)) {
+            if (!await tryReserveStaffSlots(manager, candidateId, requiredSlots, excludedAppointmentId)) {
                 conflicts.add(candidateId);
                 continue;
             }
@@ -343,6 +359,9 @@ export const getAvailability = async (data: GetAvailabilityQueryDto) => {
         },
     });
     const occupied = new Set(reservedSlots.map(slot => slot.staff_id + ":" + slot.slot_start.getTime()));
+    const held = new Map(await Promise.all(staffIds.map(async staffId =>
+        [staffId, await getActiveTransferHolds(AppDataSource.manager, staffId)] as const
+    )));
 
     const slots: Date[] = [];
 
@@ -363,7 +382,10 @@ export const getAvailability = async (data: GetAvailabilityQueryDto) => {
         for (const staff of staffs) {
             if (!isWithinStaffWorkingHours(staff, getBusinessMinuteOfDay(startTime), getBusinessMinuteOfDay(endTime))) continue;
             const hasOverlap = getRequiredSlotStarts(startTime, endTime)
-                .some(slot => occupied.has(staff.user_id + ":" + slot.getTime()));
+                .some(slot => occupied.has(staff.user_id + ":" + slot.getTime())) ||
+                (held.get(staff.user_id) ?? []).some(hold =>
+                    startTime < hold.reserved_end && endTime > hold.reserved_start
+                );
 
             if (!hasOverlap) {
                 availableStaffCount += 1;
@@ -572,6 +594,7 @@ export const getAdminTodaySummary = async () => {
         .select("COUNT(*)", "total")
         .addSelect("SUM(CASE WHEN appointment.status = :pending THEN 1 ELSE 0 END)", "pending")
         .addSelect("SUM(CASE WHEN appointment.status = :confirmed THEN 1 ELSE 0 END)", "confirmed")
+        .addSelect("SUM(CASE WHEN appointment.status = :noShow THEN 1 ELSE 0 END)", "no_show")
         .addSelect("SUM(CASE WHEN appointment.status = :completed THEN 1 ELSE 0 END)", "completed")
         .addSelect("SUM(CASE WHEN appointment.status = :cancelled THEN 1 ELSE 0 END)", "cancelled")
         .where("appointment.start_time >= :start AND appointment.start_time < :end", { start, end })
@@ -579,6 +602,7 @@ export const getAdminTodaySummary = async () => {
         .setParameters({
             pending: AppointmentStatus.PENDING,
             confirmed: AppointmentStatus.CONFIRMED,
+            noShow: AppointmentStatus.NO_SHOW,
             completed: AppointmentStatus.COMPLETED,
             cancelled: AppointmentStatus.CANCELLED,
         })
@@ -605,6 +629,7 @@ export const getAdminTodaySummary = async () => {
         total: Number(counts?.total ?? 0),
         pending: Number(counts?.pending ?? 0),
         confirmed: Number(counts?.confirmed ?? 0),
+        no_show: Number(counts?.no_show ?? 0),
         completed: Number(counts?.completed ?? 0),
         cancelled: Number(counts?.cancelled ?? 0),
         revenue: Number(revenue?.revenue ?? 0) + Number(walkInRevenue?.revenue ?? 0),
@@ -625,12 +650,14 @@ export const getAdminLifetimeSummary = async () => {
         .select("COUNT(*)", "total")
         .addSelect("COALESCE(SUM(CASE WHEN appointment.status = :pending THEN 1 ELSE 0 END), 0)", "pending")
         .addSelect("COALESCE(SUM(CASE WHEN appointment.status = :confirmed THEN 1 ELSE 0 END), 0)", "confirmed")
+        .addSelect("COALESCE(SUM(CASE WHEN appointment.status = :noShow THEN 1 ELSE 0 END), 0)", "no_show")
         .addSelect("COALESCE(SUM(CASE WHEN appointment.status = :inProgress THEN 1 ELSE 0 END), 0)", "in_progress")
         .addSelect("COALESCE(SUM(CASE WHEN appointment.status = :completed THEN 1 ELSE 0 END), 0)", "completed")
         .addSelect("COALESCE(SUM(CASE WHEN appointment.status = :cancelled THEN 1 ELSE 0 END), 0)", "cancelled")
         .where("appointment.merged_into_id IS NULL")
         .setParameters({
             pending: AppointmentStatus.PENDING, confirmed: AppointmentStatus.CONFIRMED,
+            noShow: AppointmentStatus.NO_SHOW,
             inProgress: AppointmentStatus.IN_PROGRESS,
             completed: AppointmentStatus.COMPLETED, cancelled: AppointmentStatus.CANCELLED,
         })
@@ -653,6 +680,7 @@ export const getAdminLifetimeSummary = async () => {
         total: Number(counts?.total ?? 0),
         pending: Number(counts?.pending ?? 0),
         confirmed: Number(counts?.confirmed ?? 0),
+        no_show: Number(counts?.no_show ?? 0),
         in_progress: Number(counts?.in_progress ?? 0),
         completed: Number(counts?.completed ?? 0),
         cancelled: Number(counts?.cancelled ?? 0),
@@ -669,6 +697,7 @@ export const getAdminMonthSummary = async (month: string) => {
         .select("COUNT(*)", "total")
         .addSelect("SUM(CASE WHEN appointment.status = :pending THEN 1 ELSE 0 END)", "pending")
         .addSelect("SUM(CASE WHEN appointment.status = :confirmed THEN 1 ELSE 0 END)", "confirmed")
+        .addSelect("SUM(CASE WHEN appointment.status = :noShow THEN 1 ELSE 0 END)", "no_show")
         .addSelect("SUM(CASE WHEN appointment.status = :inProgress THEN 1 ELSE 0 END)", "in_progress")
         .addSelect("SUM(CASE WHEN appointment.status = :completed THEN 1 ELSE 0 END)", "completed")
         .addSelect("SUM(CASE WHEN appointment.status = :cancelled THEN 1 ELSE 0 END)", "cancelled")
@@ -676,6 +705,7 @@ export const getAdminMonthSummary = async (month: string) => {
         .andWhere("appointment.merged_into_id IS NULL")
         .setParameters({
             pending: AppointmentStatus.PENDING, confirmed: AppointmentStatus.CONFIRMED,
+            noShow: AppointmentStatus.NO_SHOW,
             inProgress: AppointmentStatus.IN_PROGRESS,
             completed: AppointmentStatus.COMPLETED, cancelled: AppointmentStatus.CANCELLED,
         }).getRawOne<Record<string, string | null>>();
@@ -700,6 +730,7 @@ export const getAdminMonthSummary = async (month: string) => {
         month, total: Number(counts?.total ?? 0),
         pending: Number(counts?.pending ?? 0),
         confirmed: Number(counts?.confirmed ?? 0),
+        no_show: Number(counts?.no_show ?? 0),
         in_progress: Number(counts?.in_progress ?? 0),
         completed: Number(counts?.completed ?? 0),
         cancelled: Number(counts?.cancelled ?? 0),
@@ -830,6 +861,17 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
             }
         }
 
+        // ADMIN chooses the actual worker; STAFF always acts as their own account.
+        if (role === UserRole.STAFF && data.acting_staff_id !== undefined) {
+            throw new AppError("Staff cannot act for another worker", 403, "FORBIDDEN");
+        }
+        const workActorId = role === UserRole.ADMIN ? data.acting_staff_id : userId;
+        if (role === UserRole.ADMIN &&
+            (data.status === AppointmentStatus.IN_PROGRESS || data.status === AppointmentStatus.COMPLETED) &&
+            !workActorId) {
+            throw new AppError("Choose the assigned employee to start or complete their work", 400, "VALIDATION_ERROR");
+        }
+
         const scheduleChanged = data.branch_id !== undefined || data.staff_id !== undefined ||
             data.staff_ids !== undefined || data.service_ids !== undefined || data.start_time !== undefined;
         if (scheduleChanged && ![AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED].includes(appointment.status)) {
@@ -846,12 +888,16 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
             const allowed: Record<AppointmentStatus, AppointmentStatus[]> = {
                 [AppointmentStatus.PENDING]: [AppointmentStatus.CONFIRMED, AppointmentStatus.CANCELLED],
                 [AppointmentStatus.CONFIRMED]: [AppointmentStatus.IN_PROGRESS, AppointmentStatus.CANCELLED],
+                [AppointmentStatus.NO_SHOW]: [AppointmentStatus.IN_PROGRESS, AppointmentStatus.CANCELLED],
                 [AppointmentStatus.IN_PROGRESS]: [AppointmentStatus.COMPLETED, AppointmentStatus.CANCELLED],
                 [AppointmentStatus.COMPLETED]: [],
                 [AppointmentStatus.CANCELLED]: [],
             };
             // A worker's COMPLETED command marks only their assignment, not the group.
-            if (!allowed[appointment.status].includes(data.status)) {
+            // Other group workers can start after the first worker changed the shared booking to in_progress.
+            const startingOwnWork = Boolean(workActorId) && data.status === AppointmentStatus.IN_PROGRESS &&
+                appointment.status === AppointmentStatus.IN_PROGRESS;
+            if (!allowed[appointment.status].includes(data.status) && !startingOwnWork) {
                 throw new AppError("Invalid appointment status transition", 409, "INVALID_STATUS_TRANSITION");
             }
             if (data.status === AppointmentStatus.CONFIRMED) {
@@ -864,20 +910,30 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
                 if (Date.now() < appointment.start_time.getTime()) {
                     throw new AppError("Appointment cannot start or complete before its scheduled time", 409, "APPOINTMENT_NOT_STARTED_YET");
                 }
-                if (data.status === AppointmentStatus.IN_PROGRESS) appointment.actual_started_at = new Date();
-                if (data.status === AppointmentStatus.COMPLETED) {
-                    if (role !== UserRole.STAFF) {
-                        throw new AppError("Only assigned staff can mark their work complete", 403, "STAFF_COMPLETION_REQUIRED");
+                if (data.status === AppointmentStatus.IN_PROGRESS) {
+                    if (workActorId) {
+                        const assignment = appointment.staff_assignments.find(row => row.staff_id === workActorId);
+                        if (!assignment || assignment.started_at || assignment.completed_at) {
+                            throw new AppError("Work already started or completed", 409, "APPOINTMENT_NOT_EDITABLE");
+                        }
+                        assignment.started_at = new Date();
+                        await assignmentRepo.save(assignment);
                     }
-                    const assignment = appointment.staff_assignments.find(row => row.staff_id === userId);
+                    if (!appointment.actual_started_at) appointment.actual_started_at = new Date();
+                    if (startingOwnWork) return appointments.save(appointment);
+                }
+                if (data.status === AppointmentStatus.COMPLETED) {
+                    if (!workActorId) {
+                        throw new AppError("Choose the assigned employee to complete", 400, "VALIDATION_ERROR");
+                    }
+                    const assignment = appointment.staff_assignments.find(row => row.staff_id === workActorId);
                     if (!assignment) throw new AppError("Staff not assigned", 403, "FORBIDDEN");
                     if (assignment.completed_at !== null) {
                         throw new AppError("Work already completed by this employee", 409, "STAFF_ALREADY_COMPLETED");
                     }
-                    const prices = await manager.getRepository(AppointmentActualPrice).findBy({ appointment_id: appointment.id });
-                    if (!hasAllStaffPrices(userId, appointment.appointment_services.map(s => s.service_id), prices)) {
-                        throw new AppError("Enter your actual price for each service before completion", 409, "ACTUAL_PRICES_INCOMPLETE");
-                    }
+                    // Unedited booked services use their immutable reference-price snapshot.
+                    await fillUnenteredReferencePrices(manager, appointment, workActorId);
+                    if (!assignment.started_at) assignment.started_at = new Date();
                     const finishedAt = new Date();
                     assignment.completed_at = finishedAt;
                     await assignmentRepo.save(assignment);
@@ -891,8 +947,16 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
             }
             if (data.status === AppointmentStatus.COMPLETED || data.status === AppointmentStatus.CANCELLED) {
                 const slots = getRequiredSlotStarts(appointment.start_time, appointment.end_time);
-                for (const assignment of appointment.staff_assignments) {
-                    await releaseStaffSlots(manager, assignment.staff_id, slots);
+                const logicalWorkers = new Set((await manager.getRepository(AppointmentTransferRequest).find({
+                    where: { appointment_id: appointment.id,
+                        status: TransferStatus.ACCEPTED },
+                })).map(row => row.to_staff_id));
+                if (!mayHaveReleasedNoShowSlots(appointment)) {
+                    for (const assignment of appointment.staff_assignments) {
+                        if (!logicalWorkers.has(assignment.staff_id)) {
+                            await releaseStaffSlots(manager, assignment.staff_id, slots);
+                        }
+                    }
                 }
             }
             appointment.status = data.status;
@@ -951,8 +1015,14 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
             }
 
             const oldSlots = getRequiredSlotStarts(appointment.start_time, appointment.end_time);
+            const previousLogicalWorkers = new Set((await manager.getRepository(AppointmentTransferRequest).find({
+                where: { appointment_id: appointment.id,
+                    status: (await import("./appointment-transfer-request.entity")).TransferStatus.ACCEPTED },
+            })).map(row => row.to_staff_id));
             for (const assignment of appointment.staff_assignments) {
-                await releaseStaffSlots(manager, assignment.staff_id, oldSlots);
+                if (!previousLogicalWorkers.has(assignment.staff_id)) {
+                    await releaseStaffSlots(manager, assignment.staff_id, oldSlots);
+                }
             }
             const assigned = await allocateBookingStaff(
                 manager, targetBranchId, staffCandidates, startTime, endTime,
@@ -961,12 +1031,16 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
             // Price ownership is tied to each assigned staff member and service.
             // A reschedule/reassignment clears stale actual entries before new assignments.
             await manager.getRepository(AppointmentActualPrice).delete({ appointment_id: appointment.id });
+            // Custom per-worker snapshot lines must not survive an admin re-assignment.
+            await appointmentServicesRepo.delete({ appointment_id: appointment.id, duration_minutes: 0 });
             await assignmentRepo.delete({ appointment_id: appointment.id });
             appointment.staff_assignments = await assignmentRepo.save(assigned.map((staff, position) => ({
                 appointment_id: appointment.id,
                 staff_id: staff.user_id,
                 staff_full_name: staff.user.full_name,
                 position,
+                started_at: null,
+                completed_at: null,
             })));
             appointment.staff_id = assigned[0].user_id;
             appointment.staff_full_name = assigned[0].user.full_name;
@@ -1009,9 +1083,17 @@ export const deleteAppointment = async (id: string) => {
         const assignments = await manager.getRepository(AppointmentStaffAssignment).findBy({
             appointment_id: appointment.id,
         });
-        for (const assignment of assignments) {
-            await releaseStaffSlots(manager, assignment.staff_id,
-                getRequiredSlotStarts(appointment.start_time, appointment.end_time));
+        if (!mayHaveReleasedNoShowSlots(appointment)) {
+            const acceptedTransfers = await manager.getRepository(AppointmentTransferRequest).find({
+                where: { appointment_id: appointment.id, status: TransferStatus.ACCEPTED },
+            });
+            const logicalWorkers = new Set(acceptedTransfers.map(row => row.to_staff_id));
+            for (const assignment of assignments) {
+                if (!logicalWorkers.has(assignment.staff_id)) {
+                    await releaseStaffSlots(manager, assignment.staff_id,
+                        getRequiredSlotStarts(appointment.start_time, appointment.end_time));
+                }
+            }
         }
 
         await appointmentServiceRepo.delete({

@@ -20,6 +20,7 @@ export interface UpdateAppointmentDto {
     start_time?: Date;
     customer_phone?: string;
     status?: AppointmentStatus;
+    acting_staff_id?: string;
 }
 
 export interface GetAppointmentsQueryDto {
@@ -148,7 +149,7 @@ export function parseGetAppointmentsQuery(query: unknown): GetAppointmentsQueryD
 
     const status = typeof data.status === "string" ? data.status.toUpperCase() : undefined;
 
-    if (status !== undefined && !(status in AppointmentStatus)) throw new AppError("Status must be pending, confirmed, in_progress, completed, or cancelled", 400, "VALIDATION_ERROR");
+    if (status !== undefined && !(status in AppointmentStatus)) throw new AppError("Status must be pending, confirmed, in_progress, no_show, completed, or cancelled", 400, "VALIDATION_ERROR");
 
     let bookingCode: string | undefined;
     if (data.booking_code !== undefined) {
@@ -225,6 +226,12 @@ export function parseUpdateAppointmentDto(body: unknown): UpdateAppointmentDto {
 
     const data = body as Record<string, unknown>;
 
+    if (data.acting_staff_id !== undefined && (typeof data.acting_staff_id !== "string" || !isUuid(data.acting_staff_id))) {
+        throw new AppError("Acting_staff_id must be a valid staff UUID", 400, "VALIDATION_ERROR");
+    }
+    if (data.acting_staff_id !== undefined && data.status === undefined) {
+        throw new AppError("Acting_staff_id requires a status update", 400, "VALIDATION_ERROR");
+    }
     const hasDetailChanges = data.branch_id !== undefined || data.staff_id !== undefined || data.staff_ids !== undefined || data.service_ids !== undefined || data.start_time !== undefined || data.customer_phone !== undefined;
 
     if (data.status !== undefined && hasDetailChanges) throw new AppError("Status cannot be updated together with appointment details", 400, "VALIDATION_ERROR");
@@ -272,6 +279,7 @@ export function parseUpdateAppointmentDto(body: unknown): UpdateAppointmentDto {
         start_time: startTime,
         customer_phone: data.customer_phone === undefined ? undefined : parseVietnamesePhone(data.customer_phone, "Customer_phone"),
         status: status === undefined ? undefined : AppointmentStatus[status as keyof typeof AppointmentStatus],
+        acting_staff_id: data.acting_staff_id as string | undefined,
     };
 }
 

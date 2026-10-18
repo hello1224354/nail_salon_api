@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { Appointment, Branch } from "@/lib/api";
 import { formatAppointmentStatus, shortBranchName } from "@/lib/studio-data";
 
-const statuses = ["pending", "confirmed", "in_progress", "completed", "cancelled"];
+const statuses = ["pending", "confirmed", "in_progress", "no_show", "completed", "cancelled"];
 const dateVN = (value: string) => new Intl.DateTimeFormat("vi-VN", {
     timeZone: "Asia/Ho_Chi_Minh", day: "2-digit", month: "2-digit", year: "numeric",
     hour: "2-digit", minute: "2-digit", hourCycle: "h23",
@@ -102,8 +102,9 @@ export function AdminAppointmentsPanel({
                     <tbody className="divide-y divide-line">
                         {appointments.map(appointment => {
                             const allowed = appointment.status === "pending" ? ["confirmed", "cancelled"]
-                                : appointment.status === "confirmed" ? ["in_progress", "cancelled"]
-                                : appointment.status === "in_progress" ? ["cancelled"] : [];
+                                : appointment.status === "confirmed" ? ["cancelled"]
+                                : appointment.status === "in_progress" ? ["cancelled"]
+                                : appointment.status === "no_show" ? ["cancelled"] : [];
                             return <tr key={appointment.id} className="align-top">
                                 <td className="px-4 py-4 font-mono font-semibold tracking-wide">
                                     {(appointment.booking_group_id ?? appointment.id).slice(0, 8).toUpperCase()}

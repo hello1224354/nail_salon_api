@@ -27,6 +27,7 @@ import { WalkInVisitService } from "../modules/walk-ins/walk-in-visit-service.en
 import { AppointmentActualPrice } from "../modules/appointments/appointment-actual-price.entity";
 import { NotificationOutbox } from "../modules/appointments/notification-outbox.entity";
 import { StaffAssignmentRotation } from "../modules/appointments/staff-assignment-rotation.entity";
+import { AppointmentTransferRequest } from "../modules/appointments/appointment-transfer-request.entity";
 
 export const AppDataSource = new DataSource({
     type: "mysql",
@@ -65,6 +66,7 @@ export const AppDataSource = new DataSource({
         AppointmentActualPrice,
         NotificationOutbox,
         StaffAssignmentRotation,
+        AppointmentTransferRequest,
     ],
     migrations: [__dirname + "/../migrations/**/*{.js,.ts}"],
     timezone: "Z",
