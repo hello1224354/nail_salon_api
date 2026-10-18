@@ -1,9 +1,8 @@
 import type { Request, Response } from "express";
 import { AppError } from "../../common/errors";
+import { isUuid } from "../../common/validators";
 import { UserRole } from "../users/users.entity";
 import { createAuditLog } from "../audit/audit-log.service";
-
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** The employee who owns the work is separate from the authenticated operator. */
 export function resolveWorkStaff(
@@ -14,7 +13,7 @@ export function resolveWorkStaff(
         return actor.id;
     }
     if (actor.role === UserRole.ADMIN) {
-        if (typeof selected !== "string" || !UUID.test(selected)) {
+        if (!isUuid(selected)) {
             throw new AppError("ADMIN must select a valid employee", 400, "VALIDATION_ERROR");
         }
         return selected;
