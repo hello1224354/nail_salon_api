@@ -853,6 +853,17 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
             }
         }
 
+        // ADMIN chooses the actual worker; STAFF always acts as their own account.
+        if (role === UserRole.STAFF && data.acting_staff_id !== undefined) {
+            throw new AppError("Staff cannot act for another worker", 403, "FORBIDDEN");
+        }
+        const workActorId = role === UserRole.ADMIN ? data.acting_staff_id : userId;
+        if (role === UserRole.ADMIN &&
+            (data.status === AppointmentStatus.IN_PROGRESS || data.status === AppointmentStatus.COMPLETED) &&
+            !workActorId) {
+            throw new AppError("Choose the assigned employee to start or complete their work", 400, "VALIDATION_ERROR");
+        }
+
         const scheduleChanged = data.branch_id !== undefined || data.staff_id !== undefined ||
             data.staff_ids !== undefined || data.service_ids !== undefined || data.start_time !== undefined;
         if (scheduleChanged && ![AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED].includes(appointment.status)) {
@@ -876,7 +887,7 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
             };
             // A worker's COMPLETED command marks only their assignment, not the group.
             // Other group workers can start after the first worker changed the shared booking to in_progress.
-            const startingOwnWork = role === UserRole.STAFF && data.status === AppointmentStatus.IN_PROGRESS &&
+            const startingOwnWork = Boolean(workActorId) && data.status === AppointmentStatus.IN_PROGRESS &&
                 appointment.status === AppointmentStatus.IN_PROGRESS;
             if (!allowed[appointment.status].includes(data.status) && !startingOwnWork) {
                 throw new AppError("Invalid appointment status transition", 409, "INVALID_STATUS_TRANSITION");
@@ -892,8 +903,8 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
                     throw new AppError("Appointment cannot start or complete before its scheduled time", 409, "APPOINTMENT_NOT_STARTED_YET");
                 }
                 if (data.status === AppointmentStatus.IN_PROGRESS) {
-                    if (role === UserRole.STAFF) {
-                        const assignment = appointment.staff_assignments.find(row => row.staff_id === userId);
+                    if (workActorId) {
+                        const assignment = appointment.staff_assignments.find(row => row.staff_id === workActorId);
                         if (!assignment || assignment.started_at || assignment.completed_at) {
                             throw new AppError("Work already started or completed", 409, "APPOINTMENT_NOT_EDITABLE");
                         }
@@ -904,16 +915,16 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
                     if (startingOwnWork) return appointments.save(appointment);
                 }
                 if (data.status === AppointmentStatus.COMPLETED) {
-                    if (role !== UserRole.STAFF) {
-                        throw new AppError("Only assigned staff can mark their work complete", 403, "STAFF_COMPLETION_REQUIRED");
+                    if (!workActorId) {
+                        throw new AppError("Choose the assigned employee to complete", 400, "VALIDATION_ERROR");
                     }
-                    const assignment = appointment.staff_assignments.find(row => row.staff_id === userId);
+                    const assignment = appointment.staff_assignments.find(row => row.staff_id === workActorId);
                     if (!assignment) throw new AppError("Staff not assigned", 403, "FORBIDDEN");
                     if (assignment.completed_at !== null) {
                         throw new AppError("Work already completed by this employee", 409, "STAFF_ALREADY_COMPLETED");
                     }
                     // Unedited booked services use their immutable reference-price snapshot.
-                    await fillUnenteredReferencePrices(manager, appointment, userId);
+                    await fillUnenteredReferencePrices(manager, appointment, workActorId);
                     if (!assignment.started_at) assignment.started_at = new Date();
                     const finishedAt = new Date();
                     assignment.completed_at = finishedAt;
