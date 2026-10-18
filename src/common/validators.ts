@@ -1,7 +1,13 @@
 import { AppError } from "./errors";
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function isUuid(value: unknown): value is string {
+    return typeof value === "string" && UUID_PATTERN.test(value);
+}
+
 export function parseUuidParam(value: unknown, fieldName: string): string {
-    if (typeof value !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)) {
+    if (!isUuid(value)) {
         throw new AppError(`${fieldName} must be a valid UUID`, 400, "VALIDATION_ERROR");
     }
 
