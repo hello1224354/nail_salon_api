@@ -586,6 +586,7 @@ export const getAdminTodaySummary = async () => {
         .select("COUNT(*)", "total")
         .addSelect("SUM(CASE WHEN appointment.status = :pending THEN 1 ELSE 0 END)", "pending")
         .addSelect("SUM(CASE WHEN appointment.status = :confirmed THEN 1 ELSE 0 END)", "confirmed")
+        .addSelect("SUM(CASE WHEN appointment.status = :noShow THEN 1 ELSE 0 END)", "no_show")
         .addSelect("SUM(CASE WHEN appointment.status = :completed THEN 1 ELSE 0 END)", "completed")
         .addSelect("SUM(CASE WHEN appointment.status = :cancelled THEN 1 ELSE 0 END)", "cancelled")
         .where("appointment.start_time >= :start AND appointment.start_time < :end", { start, end })
@@ -593,6 +594,7 @@ export const getAdminTodaySummary = async () => {
         .setParameters({
             pending: AppointmentStatus.PENDING,
             confirmed: AppointmentStatus.CONFIRMED,
+            noShow: AppointmentStatus.NO_SHOW,
             completed: AppointmentStatus.COMPLETED,
             cancelled: AppointmentStatus.CANCELLED,
         })
@@ -619,6 +621,7 @@ export const getAdminTodaySummary = async () => {
         total: Number(counts?.total ?? 0),
         pending: Number(counts?.pending ?? 0),
         confirmed: Number(counts?.confirmed ?? 0),
+        no_show: Number(counts?.no_show ?? 0),
         completed: Number(counts?.completed ?? 0),
         cancelled: Number(counts?.cancelled ?? 0),
         revenue: Number(revenue?.revenue ?? 0) + Number(walkInRevenue?.revenue ?? 0),
@@ -639,12 +642,14 @@ export const getAdminLifetimeSummary = async () => {
         .select("COUNT(*)", "total")
         .addSelect("COALESCE(SUM(CASE WHEN appointment.status = :pending THEN 1 ELSE 0 END), 0)", "pending")
         .addSelect("COALESCE(SUM(CASE WHEN appointment.status = :confirmed THEN 1 ELSE 0 END), 0)", "confirmed")
+        .addSelect("COALESCE(SUM(CASE WHEN appointment.status = :noShow THEN 1 ELSE 0 END), 0)", "no_show")
         .addSelect("COALESCE(SUM(CASE WHEN appointment.status = :inProgress THEN 1 ELSE 0 END), 0)", "in_progress")
         .addSelect("COALESCE(SUM(CASE WHEN appointment.status = :completed THEN 1 ELSE 0 END), 0)", "completed")
         .addSelect("COALESCE(SUM(CASE WHEN appointment.status = :cancelled THEN 1 ELSE 0 END), 0)", "cancelled")
         .where("appointment.merged_into_id IS NULL")
         .setParameters({
             pending: AppointmentStatus.PENDING, confirmed: AppointmentStatus.CONFIRMED,
+            noShow: AppointmentStatus.NO_SHOW,
             inProgress: AppointmentStatus.IN_PROGRESS,
             completed: AppointmentStatus.COMPLETED, cancelled: AppointmentStatus.CANCELLED,
         })
@@ -667,6 +672,7 @@ export const getAdminLifetimeSummary = async () => {
         total: Number(counts?.total ?? 0),
         pending: Number(counts?.pending ?? 0),
         confirmed: Number(counts?.confirmed ?? 0),
+        no_show: Number(counts?.no_show ?? 0),
         in_progress: Number(counts?.in_progress ?? 0),
         completed: Number(counts?.completed ?? 0),
         cancelled: Number(counts?.cancelled ?? 0),
@@ -683,6 +689,7 @@ export const getAdminMonthSummary = async (month: string) => {
         .select("COUNT(*)", "total")
         .addSelect("SUM(CASE WHEN appointment.status = :pending THEN 1 ELSE 0 END)", "pending")
         .addSelect("SUM(CASE WHEN appointment.status = :confirmed THEN 1 ELSE 0 END)", "confirmed")
+        .addSelect("SUM(CASE WHEN appointment.status = :noShow THEN 1 ELSE 0 END)", "no_show")
         .addSelect("SUM(CASE WHEN appointment.status = :inProgress THEN 1 ELSE 0 END)", "in_progress")
         .addSelect("SUM(CASE WHEN appointment.status = :completed THEN 1 ELSE 0 END)", "completed")
         .addSelect("SUM(CASE WHEN appointment.status = :cancelled THEN 1 ELSE 0 END)", "cancelled")
@@ -690,6 +697,7 @@ export const getAdminMonthSummary = async (month: string) => {
         .andWhere("appointment.merged_into_id IS NULL")
         .setParameters({
             pending: AppointmentStatus.PENDING, confirmed: AppointmentStatus.CONFIRMED,
+            noShow: AppointmentStatus.NO_SHOW,
             inProgress: AppointmentStatus.IN_PROGRESS,
             completed: AppointmentStatus.COMPLETED, cancelled: AppointmentStatus.CANCELLED,
         }).getRawOne<Record<string, string | null>>();
@@ -714,6 +722,7 @@ export const getAdminMonthSummary = async (month: string) => {
         month, total: Number(counts?.total ?? 0),
         pending: Number(counts?.pending ?? 0),
         confirmed: Number(counts?.confirmed ?? 0),
+        no_show: Number(counts?.no_show ?? 0),
         in_progress: Number(counts?.in_progress ?? 0),
         completed: Number(counts?.completed ?? 0),
         cancelled: Number(counts?.cancelled ?? 0),
