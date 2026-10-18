@@ -24,7 +24,9 @@ import { parseBranchOpeningHours } from "../branches/branch-opening-hours";
 import { monthWindow } from "./admin-month-summary";
 import { StaffAssignmentRotation } from "./staff-assignment-rotation.entity";
 import { addAssignedMinutes, chooseFairStaff, type StaffWorkload } from "./staff-allocation";
-import { hasAllStaffPrices, isGroupComplete } from "./staff-completion";
+import { isGroupComplete } from "./staff-completion";
+import { fillUnenteredReferencePrices } from "./booking-work.service";
+import { hasHeldTransferOverlap, getActiveTransferHolds } from "./appointment-transfers.service";
 
 const appointmentRepo = AppDataSource.getRepository(Appointment);
 
@@ -70,6 +72,11 @@ function getRequiredSlotStarts(startTime: Date, endTime: Date) {
 }
 
 async function tryReserveStaffSlots(manager: EntityManager, staffId: string, slotStarts: Date[]) {
+    // Pending requests and accepted short-overlap transfers reserve capacity logically.
+    // All callers hold the per-branch allocation cursor lock.
+    if (slotStarts.length && await hasHeldTransferOverlap(
+        manager, staffId, slotStarts[0], new Date(slotStarts[slotStarts.length - 1].getTime() + BOOKING_SLOT_MS)
+    )) return false;
     const staffBookingSlotRepo = manager.getRepository(StaffBookingSlot);
 
     const slots = slotStarts.map((slotStart) => {
@@ -343,6 +350,9 @@ export const getAvailability = async (data: GetAvailabilityQueryDto) => {
         },
     });
     const occupied = new Set(reservedSlots.map(slot => slot.staff_id + ":" + slot.slot_start.getTime()));
+    const held = new Map(await Promise.all(staffIds.map(async staffId =>
+        [staffId, await getActiveTransferHolds(AppDataSource.manager, staffId)] as const
+    )));
 
     const slots: Date[] = [];
 
@@ -363,7 +373,10 @@ export const getAvailability = async (data: GetAvailabilityQueryDto) => {
         for (const staff of staffs) {
             if (!isWithinStaffWorkingHours(staff, getBusinessMinuteOfDay(startTime), getBusinessMinuteOfDay(endTime))) continue;
             const hasOverlap = getRequiredSlotStarts(startTime, endTime)
-                .some(slot => occupied.has(staff.user_id + ":" + slot.getTime()));
+                .some(slot => occupied.has(staff.user_id + ":" + slot.getTime())) ||
+                (held.get(staff.user_id) ?? []).some(hold =>
+                    startTime < hold.reserved_end && endTime > hold.reserved_start
+                );
 
             if (!hasOverlap) {
                 availableStaffCount += 1;
@@ -846,12 +859,16 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
             const allowed: Record<AppointmentStatus, AppointmentStatus[]> = {
                 [AppointmentStatus.PENDING]: [AppointmentStatus.CONFIRMED, AppointmentStatus.CANCELLED],
                 [AppointmentStatus.CONFIRMED]: [AppointmentStatus.IN_PROGRESS, AppointmentStatus.CANCELLED],
+                [AppointmentStatus.NO_SHOW]: [AppointmentStatus.IN_PROGRESS, AppointmentStatus.CANCELLED],
                 [AppointmentStatus.IN_PROGRESS]: [AppointmentStatus.COMPLETED, AppointmentStatus.CANCELLED],
                 [AppointmentStatus.COMPLETED]: [],
                 [AppointmentStatus.CANCELLED]: [],
             };
             // A worker's COMPLETED command marks only their assignment, not the group.
-            if (!allowed[appointment.status].includes(data.status)) {
+            // Other group workers can start after the first worker changed the shared booking to in_progress.
+            const startingOwnWork = role === UserRole.STAFF && data.status === AppointmentStatus.IN_PROGRESS &&
+                appointment.status === AppointmentStatus.IN_PROGRESS;
+            if (!allowed[appointment.status].includes(data.status) && !startingOwnWork) {
                 throw new AppError("Invalid appointment status transition", 409, "INVALID_STATUS_TRANSITION");
             }
             if (data.status === AppointmentStatus.CONFIRMED) {
@@ -864,7 +881,18 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
                 if (Date.now() < appointment.start_time.getTime()) {
                     throw new AppError("Appointment cannot start or complete before its scheduled time", 409, "APPOINTMENT_NOT_STARTED_YET");
                 }
-                if (data.status === AppointmentStatus.IN_PROGRESS) appointment.actual_started_at = new Date();
+                if (data.status === AppointmentStatus.IN_PROGRESS) {
+                    if (role === UserRole.STAFF) {
+                        const assignment = appointment.staff_assignments.find(row => row.staff_id === userId);
+                        if (!assignment || assignment.started_at || assignment.completed_at) {
+                            throw new AppError("Work already started or completed", 409, "APPOINTMENT_NOT_EDITABLE");
+                        }
+                        assignment.started_at = new Date();
+                        await assignmentRepo.save(assignment);
+                    }
+                    if (!appointment.actual_started_at) appointment.actual_started_at = new Date();
+                    if (startingOwnWork) return appointments.save(appointment);
+                }
                 if (data.status === AppointmentStatus.COMPLETED) {
                     if (role !== UserRole.STAFF) {
                         throw new AppError("Only assigned staff can mark their work complete", 403, "STAFF_COMPLETION_REQUIRED");
@@ -874,10 +902,9 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
                     if (assignment.completed_at !== null) {
                         throw new AppError("Work already completed by this employee", 409, "STAFF_ALREADY_COMPLETED");
                     }
-                    const prices = await manager.getRepository(AppointmentActualPrice).findBy({ appointment_id: appointment.id });
-                    if (!hasAllStaffPrices(userId, appointment.appointment_services.map(s => s.service_id), prices)) {
-                        throw new AppError("Enter your actual price for each service before completion", 409, "ACTUAL_PRICES_INCOMPLETE");
-                    }
+                    // Unedited booked services use their immutable reference-price snapshot.
+                    await fillUnenteredReferencePrices(manager, appointment, userId);
+                    if (!assignment.started_at) assignment.started_at = new Date();
                     const finishedAt = new Date();
                     assignment.completed_at = finishedAt;
                     await assignmentRepo.save(assignment);
@@ -961,12 +988,16 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
             // Price ownership is tied to each assigned staff member and service.
             // A reschedule/reassignment clears stale actual entries before new assignments.
             await manager.getRepository(AppointmentActualPrice).delete({ appointment_id: appointment.id });
+            // Custom per-worker snapshot lines must not survive an admin re-assignment.
+            await appointmentServicesRepo.delete({ appointment_id: appointment.id, duration_minutes: 0 });
             await assignmentRepo.delete({ appointment_id: appointment.id });
             appointment.staff_assignments = await assignmentRepo.save(assigned.map((staff, position) => ({
                 appointment_id: appointment.id,
                 staff_id: staff.user_id,
                 staff_full_name: staff.user.full_name,
                 position,
+                started_at: null,
+                completed_at: null,
             })));
             appointment.staff_id = assigned[0].user_id;
             appointment.staff_full_name = assigned[0].user.full_name;
