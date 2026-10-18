@@ -20,7 +20,7 @@ export async function setActualPriceForStaff(appointmentId: string, serviceId: s
         if (myAssignment.completed_at !== null) {
             throw new AppError("This employee has already completed their work", 409, "STAFF_ALREADY_COMPLETED");
         }
-        if (![AppointmentStatus.CONFIRMED, AppointmentStatus.IN_PROGRESS].includes(appointment.status)) {
+        if (![AppointmentStatus.CONFIRMED, AppointmentStatus.IN_PROGRESS, AppointmentStatus.NO_SHOW].includes(appointment.status)) {
             throw new AppError("Only confirmed or active appointments can be priced", 409, "APPOINTMENT_NOT_EDITABLE");
         }
         if (!appointment.appointment_services.some(service => service.service_id === serviceId)) {
