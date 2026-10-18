@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { AppError } from "../../common/errors";
 import { parseUuidParam } from "../../common/validators";
 import { parseWorkPrices, saveWorkPrices } from "./booking-work.service";
+import { lookupBookingForReception } from "./booking-reception.service";
 import { listTransferPeers, listTransferRequests, requestTransfer, respondToTransfer } from "./appointment-transfers.service";
 
 export async function saveMyWork(req: Request, res: Response) {
@@ -43,4 +44,10 @@ export async function decideTransfer(req: Request, res: Response) {
     }
     const result = await respondToTransfer(id, req.user.id, action);
     return res.status(200).json({ success: { data: result, message: "Transfer updated" } });
+}
+
+export async function receptionLookup(req: Request, res: Response) {
+    if (!req.user) throw new AppError("Login required", 401, "AUTHENTICATION_REQUIRED");
+    const result = await lookupBookingForReception(req.user.id, req.query.q);
+    return res.status(200).json({ success: { data: result } });
 }
