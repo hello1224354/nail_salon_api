@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { apiRequest, getApiErrorMessage, type AdminStaff, type Appointment, type AppointmentList, type Service, type ServiceList, type WalkInVisit, type WalkInList } from "@/lib/api";
-import { getAuthUser, restoreSession } from "@/lib/auth";
+import { AUTH_CHANGED_EVENT, getAuthUser, restoreSession } from "@/lib/auth";
 import { formatVnd, formatServicePrice } from "@/lib/studio-data";
 import { StaffBookingCard } from "@/components/staff/StaffBookingCard";
 import { StaffTransfersPanel } from "@/components/staff/StaffTransfersPanel";
@@ -51,6 +51,15 @@ export default function StaffPage() {
 
     useEffect(() => {
         let mounted = true;
+        let staffUserId: string | null = null;
+        const ensureStaffSession = () => {
+            if (!mounted || !staffUserId) return;
+            const current = getAuthUser();
+            if (current?.id === staffUserId && current.role.toLowerCase() === "staff") return;
+            setProfile(null);
+            router.replace(!current ? "/login" : current.role.toLowerCase() === "admin" ? "/admin" : "/");
+        };
+        window.addEventListener(AUTH_CHANGED_EVENT, ensureStaffSession);
         void (async () => {
             try {
                 const valid = await restoreSession();
@@ -60,8 +69,10 @@ export default function StaffPage() {
                     router.replace(auth.role.toLowerCase() === "admin" ? "/admin" : "/");
                     return;
                 }
+                staffUserId = auth.id;
                 const me = await apiRequest<AdminStaff>("/api/staffs/me");
-                if (!mounted) return;
+                if (!mounted || getAuthUser()?.id !== staffUserId ||
+                    getAuthUser()?.role.toLowerCase() !== "staff") return;
                 setProfile(me);
                 await load(me);
             } catch (cause) {
@@ -70,7 +81,10 @@ export default function StaffPage() {
                 if (mounted) setLoading(false);
             }
         })();
-        return () => { mounted = false; };
+        return () => {
+            mounted = false;
+            window.removeEventListener(AUTH_CHANGED_EVENT, ensureStaffSession);
+        };
     }, [router, load]);
 
     // Keep the start control in sync with appointment time without changing the server's rule.
@@ -93,7 +107,8 @@ export default function StaffPage() {
 
     async function saveVisit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
-        if (!profile || saving) return;
+        if (!profile || saving || getAuthUser()?.id !== profile.id ||
+            getAuthUser()?.role.toLowerCase() !== "staff") return;
         setError(""); setMessage("");
         const lines = chosen.map(s => ({ service_id: s.id, actual_price: Number(actuals[s.id]) }));
         if (!customerName.trim() || lines.length === 0) {
@@ -123,7 +138,8 @@ export default function StaffPage() {
     }
 
     async function changeStatus(appt: Appointment, status: "in_progress" | "completed") {
-        if (!profile || saving) return;
+        if (!profile || saving || getAuthUser()?.id !== profile.id ||
+            getAuthUser()?.role.toLowerCase() !== "staff") return;
         if (Date.now() < new Date(appt.start_time).getTime()) {
             setError("Lịch hẹn chưa đến giờ. Chỉ có thể bắt đầu từ " + dateVN(appt.start_time) + ".");
             return;
