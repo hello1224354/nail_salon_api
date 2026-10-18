@@ -12,7 +12,7 @@ const button = "rounded-full bg-ink px-5 py-3 text-xs font-semibold text-white d
 const validPrice = (raw: string) => raw.trim() !== "" && /^\d+$/.test(raw) && Number.isSafeInteger(Number(raw)) && Number(raw) <= 1_000_000_000;
 
 export function StaffBookingCard({
-    appt, staffId, peers, nowMs, reload, updateStatus,
+    appt, staffId, peers, nowMs, reload, updateStatus, adminMode = false,
 }: {
     appt: Appointment;
     staffId: string;
@@ -20,6 +20,7 @@ export function StaffBookingCard({
     nowMs: number;
     reload: () => Promise<void>;
     updateStatus: (appt: Appointment, status: "in_progress" | "completed") => Promise<void>;
+    adminMode?: boolean;
 }) {
     const core = useMemo(() => (appt.appointment_services ?? []).filter(service => service.duration_minutes > 0),
         [appt.appointment_services]);
@@ -87,6 +88,7 @@ export function StaffBookingCard({
                         actual_price: prices[service.service_id]?.trim() ? Number(prices[service.service_id]) : null,
                     })),
                     extras: extras.map(item => ({ name: item.name.trim(), price: Number(item.price) })),
+                    ...(adminMode ? { staff_id: staffId } : {}),
                 }),
             });
             await reload();
@@ -105,7 +107,7 @@ export function StaffBookingCard({
         try {
             await apiRequest("/api/appointments/" + appt.id + "/transfers", {
                 method: "POST",
-                body: JSON.stringify({ to_staff_id: target }),
+                body: JSON.stringify({ to_staff_id: target, ...(adminMode ? { from_staff_id: staffId } : {}) }),
             });
             setTarget("");
             setMessage("Đã gửi yêu cầu. Bạn vẫn phụ trách lịch cho đến khi nhân viên kia đồng ý.");
@@ -127,7 +129,7 @@ export function StaffBookingCard({
 
     return <article className="rounded-[22px] border border-line bg-white p-5 sm:p-7">
         <p className="text-xs font-semibold text-accent">Mã {code} · Nhóm {appt.party_size} người</p>
-        <h3 className="mt-1 font-serif text-2xl">Phần việc của tôi</h3>
+        <h3 className="mt-1 font-serif text-2xl">{adminMode ? "Thao tác cho nhân viên" : "Phần việc của tôi"}</h3>
         <p className="mt-1 text-xs text-muted">Người đặt: {appt.customer?.full_name || "Khách"} · {date} · {formatAppointmentStatus(appt.status)}</p>
         {mine ? <p className="mt-2 text-xs font-semibold">Khách số {(appt.assigned_staff?.findIndex(w => w.id === staffId) ?? 0) + 1} · {started ? "Đã bắt đầu" : "Chưa bắt đầu"}{completed ? " · Đã hoàn thành" : ""}</p> : null}
 
