@@ -475,6 +475,9 @@ export type AdminTodaySummary = {
 export type AppointmentTransferRequest = {
     id: string;
     appointment_id: string;
+    booking_code?: string;
+    customer_name?: string | null;
+    service_names?: string[];
     from_staff_id: string;
     to_staff_id: string;
     from_staff_name: string;
