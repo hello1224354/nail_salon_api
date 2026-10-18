@@ -1,6 +1,7 @@
 "use client";
 
-import type { Appointment } from "@/lib/api";
+import type { AdminStaff, Appointment } from "@/lib/api";
+import { AdminBookingWork } from "./AdminBookingWork";
 import { formatAppointmentStatus, formatVnd, shortBranchName } from "@/lib/studio-data";
 
 function localTime(value: string) {
@@ -11,9 +12,11 @@ function localTime(value: string) {
 }
 const money = (amount: number) => formatVnd(amount) + "đ";
 export function AdminAppointmentDetails({
-    appointment,
+    appointment, staff, onWorkChanged,
 }: {
     appointment: Appointment;
+    staff: AdminStaff[];
+    onWorkChanged: () => Promise<void>;
 }) {
     const services = (appointment.appointment_services ?? []).filter(service => service.duration_minutes > 0);
     const additional = (appointment.appointment_services ?? []).filter(service => service.duration_minutes === 0);
@@ -114,6 +117,7 @@ export function AdminAppointmentDetails({
                     <strong className="text-lg">{money(completedTotal)}</strong>
                 </div> : null}
             </section>
+            <AdminBookingWork appointment={appointment} staff={staff} onChanged={onWorkChanged} />
         </div>
     );
 }
