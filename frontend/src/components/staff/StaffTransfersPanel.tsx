@@ -50,7 +50,8 @@ export function StaffTransfersPanel({ reload }: { reload: () => Promise<void> })
         {incoming.length === 0 && outgoing.length === 0 ? <p className="mt-3 text-xs text-muted">Không có yêu cầu đang chờ.</p> : null}
         {incoming.map(row => <div key={row.id} className="mt-3 rounded-xl border border-line bg-cream p-4">
             <p className="text-xs font-semibold">Từ {row.from_staff_name} → Bạn</p>
-            <p className="mt-1 text-xs text-muted">Booking {row.appointment_id.slice(0, 8).toUpperCase()} · Dự kiến {format(row.reserved_start)}–{format(row.reserved_end)}</p>
+            <p className="mt-1 text-xs text-muted">Booking {row.booking_code ?? row.appointment_id.slice(0, 8).toUpperCase()} · {row.customer_name || "Khách"} · Dự kiến {format(row.reserved_start)}–{format(row.reserved_end)}</p>
+            <p className="mt-1 text-xs text-muted">Dịch vụ: {row.service_names?.join(", ") || "—"}</p>
             <p className="mt-1 text-xs text-muted">Hết hạn: {format(row.expires_at)}</p>
             <div className="mt-3 flex flex-wrap gap-2">
                 <button type="button" className={action} disabled={busy} onClick={() => void respond(row, "accept")}>Nhận lịch</button>
@@ -59,7 +60,7 @@ export function StaffTransfersPanel({ reload }: { reload: () => Promise<void> })
         </div>)}
         {outgoing.map(row => <div key={row.id} className="mt-3 rounded-xl border border-line p-4">
             <p className="text-xs font-semibold">Đang chờ {row.to_staff_name} xác nhận</p>
-            <p className="mt-1 text-xs text-muted">Booking {row.appointment_id.slice(0, 8).toUpperCase()} · Hết hạn {format(row.expires_at)}</p>
+            <p className="mt-1 text-xs text-muted">Booking {row.booking_code ?? row.appointment_id.slice(0, 8).toUpperCase()} · Hết hạn {format(row.expires_at)}</p>
             <button type="button" className="mt-3 rounded-full border border-line px-4 py-2.5 text-xs font-semibold disabled:opacity-50" disabled={busy} onClick={() => void respond(row, "cancel")}>Hủy yêu cầu</button>
         </div>)}
         {error ? <p role="alert" className="mt-3 text-xs text-red-700">{error}</p> : null}
