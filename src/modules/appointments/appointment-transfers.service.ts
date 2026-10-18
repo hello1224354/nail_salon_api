@@ -268,7 +268,10 @@ export async function respondToTransfer(requestId: string, actorId: string, acti
         });
         const oldSlots: Date[] = [];
         for (let ms = appointment.start_time.getTime(); ms < appointment.end_time.getTime(); ms += SLOT_MS) oldSlots.push(new Date(ms));
-        if (oldSlots.length && !fromLogicalTransfer) {
+        const mightHaveReleasedSlots = appointment.status === AppointmentStatus.NO_SHOW ||
+            Boolean(appointment.actual_started_at &&
+                appointment.actual_started_at.getTime() >= appointment.start_time.getTime() + 15 * 60_000);
+        if (oldSlots.length && !fromLogicalTransfer && !mightHaveReleasedSlots) {
             await manager.getRepository(StaffBookingSlot).delete({ staff_id: from.staff_id, slot_start: In(oldSlots) });
         }
         await manager.getRepository(AppointmentStaffAssignment).delete({
