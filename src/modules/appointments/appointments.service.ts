@@ -918,8 +918,16 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
             }
             if (data.status === AppointmentStatus.COMPLETED || data.status === AppointmentStatus.CANCELLED) {
                 const slots = getRequiredSlotStarts(appointment.start_time, appointment.end_time);
+                const logicalWorkers = new Set((await manager.getRepository(
+                    (await import("./appointment-transfer-request.entity")).AppointmentTransferRequest
+                ).find({
+                    where: { appointment_id: appointment.id,
+                        status: (await import("./appointment-transfer-request.entity")).TransferStatus.ACCEPTED },
+                })).map(row => row.to_staff_id));
                 for (const assignment of appointment.staff_assignments) {
-                    await releaseStaffSlots(manager, assignment.staff_id, slots);
+                    if (!logicalWorkers.has(assignment.staff_id)) {
+                        await releaseStaffSlots(manager, assignment.staff_id, slots);
+                    }
                 }
             }
             appointment.status = data.status;
@@ -978,8 +986,16 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
             }
 
             const oldSlots = getRequiredSlotStarts(appointment.start_time, appointment.end_time);
+            const previousLogicalWorkers = new Set((await manager.getRepository(
+                (await import("./appointment-transfer-request.entity")).AppointmentTransferRequest
+            ).find({
+                where: { appointment_id: appointment.id,
+                    status: (await import("./appointment-transfer-request.entity")).TransferStatus.ACCEPTED },
+            })).map(row => row.to_staff_id));
             for (const assignment of appointment.staff_assignments) {
-                await releaseStaffSlots(manager, assignment.staff_id, oldSlots);
+                if (!previousLogicalWorkers.has(assignment.staff_id)) {
+                    await releaseStaffSlots(manager, assignment.staff_id, oldSlots);
+                }
             }
             const assigned = await allocateBookingStaff(
                 manager, targetBranchId, staffCandidates, startTime, endTime,
