@@ -25,7 +25,9 @@ export function StaffBookingCard({
         [appt.appointment_services]);
     const mine = appt.assigned_staff?.find(worker => worker.id === staffId);
     const completed = Boolean(mine?.completed_at);
-    const started = Boolean(mine?.started_at);
+    const legacyActive = appt.status === "in_progress" && Boolean(appt.actual_started_at) &&
+        !(appt.assigned_staff ?? []).some(worker => worker.started_at);
+    const started = Boolean(mine?.started_at || (legacyActive && appt.party_size === 1));
     const [prices, setPrices] = useState<Record<string, string>>({});
     const [extras, setExtras] = useState<Extra[]>([]);
     const [dirty, setDirty] = useState(false);
@@ -59,7 +61,7 @@ export function StaffBookingCard({
     const editable = ["confirmed", "in_progress", "no_show"].includes(appt.status) && !completed;
     const canStart = nowMs > 0 && nowMs >= new Date(appt.start_time).getTime() &&
         ["confirmed", "in_progress", "no_show"].includes(appt.status) && !started && !completed;
-    const transferAllowed = editable && !started;
+    const transferAllowed = editable && !started && !legacyActive;
     const candidates = peers.filter(peer => !(appt.assigned_staff ?? []).some(worker => worker.id === peer.id));
 
     async function saveAll() {
