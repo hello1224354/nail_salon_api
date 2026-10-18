@@ -2,6 +2,7 @@ import { randomUUID } from "crypto";
 import { In, IsNull } from "typeorm";
 import { AppDataSource } from "../../config/database";
 import { AppError } from "../../common/errors";
+import { isUuid } from "../../common/validators";
 import { Appointment, AppointmentStatus } from "./appointments.entity";
 import { AppointmentService } from "./appointment-services.entity";
 import { AppointmentActualPrice } from "./appointment-actual-price.entity";
@@ -9,7 +10,6 @@ import { AppointmentActualPrice } from "./appointment-actual-price.entity";
 type PriceInput = { service_id: string; actual_price: number | null };
 type ExtraInput = { name: string; price: number };
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const validPrice = (value: unknown): value is number =>
     typeof value === "number" && Number.isSafeInteger(value) && value >= 0 && value <= 1_000_000_000;
 
@@ -24,7 +24,7 @@ export function parseWorkPrices(body: unknown): { prices: PriceInput[]; extras: 
     const prices = data.prices.map(row => {
         if (!row || typeof row !== "object" || Array.isArray(row)) throw new AppError("Invalid price line", 400, "VALIDATION_ERROR");
         const r = row as Record<string, unknown>;
-        if (typeof r.service_id !== "string" || !UUID.test(r.service_id) ||
+        if (!isUuid(r.service_id) ||
             (r.actual_price !== null && !validPrice(r.actual_price))) {
             throw new AppError("Invalid service or actual price", 400, "VALIDATION_ERROR");
         }
