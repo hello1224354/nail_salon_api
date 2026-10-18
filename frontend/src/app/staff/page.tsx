@@ -4,7 +4,9 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { apiRequest, getApiErrorMessage, type AdminStaff, type Appointment, type AppointmentList, type Service, type ServiceList, type WalkInVisit, type WalkInList } from "@/lib/api";
 import { getAuthUser, restoreSession } from "@/lib/auth";
-import { formatAppointmentStatus, formatVnd, formatServicePrice } from "@/lib/studio-data";
+import { formatVnd, formatServicePrice } from "@/lib/studio-data";
+import { StaffBookingCard } from "@/components/staff/StaffBookingCard";
+import { StaffTransfersPanel } from "@/components/staff/StaffTransfersPanel";
 
 const inputClass = "w-full rounded-xl border border-line bg-white px-4 py-3 text-sm outline-none focus:border-accent";
 const actionClass = "rounded-full bg-ink px-5 py-3 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50";
@@ -31,26 +33,19 @@ export default function StaffPage() {
     const [customerEmail, setCustomerEmail] = useState("");
     const [chosenIds, setChosenIds] = useState<string[]>([]);
     const [actuals, setActuals] = useState<Record<string, string>>({});
-    const [onlinePrices, setOnlinePrices] = useState<Record<string, string>>({});
+    const [peers, setPeers] = useState<Array<{ id: string; name: string }>>([]);
 
     const load = useCallback(async (staff: AdminStaff) => {
-        const [svc, appts, walkins] = await Promise.all([
+        const [svc, appts, walkins, coworkers] = await Promise.all([
             apiRequest<ServiceList>("/api/services?branch_id=" + staff.branch_id + "&page=1&limit=100"),
             apiRequest<AppointmentList>("/api/appointments?page=1&limit=100"),
             apiRequest<WalkInList>("/api/walk-ins"),
+            apiRequest<Array<{ id: string; name: string }>>("/api/appointments/transfers/peers"),
         ]);
         setServices(svc.services);
         setAppointments(appts.appointments);
         setVisits(walkins.visits);
-        const latestPrices: Record<string, string> = {};
-        for (const appt of appts.appointments) {
-            for (const item of appt.actual_prices ?? []) {
-                if (item.staff_id === staff.id) {
-                    latestPrices[appt.id + ":" + item.service_id] = String(item.actual_price);
-                }
-            }
-        }
-        setOnlinePrices(latestPrices);
+        setPeers(coworkers);
     }, []);
 
     useEffect(() => {
@@ -123,25 +118,6 @@ export default function StaffPage() {
             setChosenIds([]); setActuals({}); setCustomerName(""); setCustomerPhone(""); setCustomerEmail("");
             setMessage("Đã ghi nhận khách vãng lai, tự gán cho nhân viên đang đăng nhập.");
         } catch (cause) { setError(getApiErrorMessage(cause, "Không lưu được lượt khách.")); }
-        finally { setSaving(false); }
-    }
-
-    async function savePrice(appt: Appointment, serviceId: string) {
-        if (!profile || saving) return;
-        const raw = onlinePrices[appt.id + ":" + serviceId];
-        const amount = Number(raw);
-        if (raw === undefined || raw.trim() === "" || !Number.isSafeInteger(amount) || amount < 0 || amount > 1_000_000_000) {
-            setError("Nhập giá thực tế hợp lệ bằng VND."); return;
-        }
-        if (!window.confirm("Đã thông báo giá thực tế " + vnd(amount) + " cho khách trước khi thực hiện?")) return;
-        setSaving(true); setError(""); setMessage("");
-        try {
-            await apiRequest("/api/appointments/" + appt.id + "/actual-prices/" + serviceId, {
-                method: "PUT", body: JSON.stringify({ actual_price: amount }),
-            });
-            await load(profile);
-            setMessage("Đã lưu giá thực tế của bạn.");
-        } catch (cause) { setError(getApiErrorMessage(cause, "Không lưu được giá thực tế.")); }
         finally { setSaving(false); }
     }
 
@@ -220,49 +196,21 @@ export default function StaffPage() {
                 </div>}
             </section>
         </> : <section className="mt-6 space-y-5">
-            <p className="rounded-xl border border-[#e5c0a6] bg-[#fff1e6] p-4 text-xs leading-5">Booking nhóm có một mã lịch. Mỗi nhân viên nhập đủ giá thực tế rồi bấm Hoàn thành phần việc của mình; khi mọi người đã hoàn thành, lịch tự chuyển sang Hoàn thành.</p>
-            {appointments.length === 0 ? <p className="text-sm text-muted">Chưa có lịch hẹn được giao.</p> : appointments.map(appt => {
-                const canStart = nowMs > 0 && nowMs >= new Date(appt.start_time).getTime();
-                const myWorkFinished = appt.assigned_staff?.some(worker =>
-                    worker.id === profile.id && Boolean(worker.completed_at)) ?? false;
-                return <article key={appt.id} className="rounded-[22px] border border-line bg-white p-5 sm:p-7">
-                <p className="text-xs text-accent">Mã {(appt.booking_group_id || appt.id).slice(0, 8).toUpperCase()} · {appt.party_size} người</p>
-                <h3 className="mt-1 font-serif text-2xl">{appt.customer?.full_name || "Khách"}</h3>
-                <p className="mt-2 text-xs text-muted">{dateVN(appt.start_time)} · {formatAppointmentStatus(appt.status)}</p>
-                <div className="mt-5 space-y-3">{(appt.appointment_services ?? []).map(s => {
-                    const key = appt.id + ":" + s.service_id;
-                    const old = appt.actual_prices?.find(v => v.staff_id === profile.id && v.service_id === s.service_id);
-                    const editable = ["confirmed", "in_progress"].includes(appt.status) && !myWorkFinished;
-                    return <div key={s.service_id} className="grid gap-3 rounded-xl bg-cream p-4 sm:grid-cols-[1fr_180px_auto] sm:items-end">
-                        <div><p className="text-sm font-semibold">{s.service_name}</p><p className="mt-1 text-xs text-muted">Giá tham khảo: {vnd(s.price)}</p></div>
-                        <label className="text-xs font-semibold">Giá thực tế của tôi<input className={inputClass + " mt-1"} type="number" min={0} max={1000000000} step={1} disabled={!editable || saving} value={onlinePrices[key] ?? ""} onChange={e => setOnlinePrices(v => ({ ...v, [key]: e.target.value }))} placeholder="Nhập VND" /></label>
-                        <button className={actionClass} type="button" disabled={!editable || saving || onlinePrices[key] === undefined} onClick={() => void savePrice(appt, s.service_id)}>{old ? "Cập nhật" : "Lưu giá"}</button>
-                    </div>;
-                })}</div>
-                <p className="mt-4 text-xs text-muted">Đã nhập giá: {(appt.actual_prices ?? []).length}/{(appt.appointment_services?.length ?? 0) * appt.party_size} phần của toàn bộ nhóm.</p>
-                <div className="mt-4 flex justify-end gap-3">
-                    {appt.status === "confirmed" ? (
-                        <div className="flex flex-wrap items-center justify-end gap-3">
-                            {!canStart ? (
-                                <span className="text-xs leading-5 text-muted" role="status">
-                                    Chưa đến giờ hẹn · Có thể bắt đầu từ {dateVN(appt.start_time)}
-                                </span>
-                            ) : null}
-                            <button className={actionClass} type="button" disabled={saving || !canStart}
-                                aria-label={canStart ? "Bắt đầu làm" : "Chưa đến giờ hẹn"}
-                                onClick={() => void changeStatus(appt, "in_progress")}>
-                                {canStart ? "Bắt đầu làm" : "Chưa đến giờ hẹn"}
-                            </button>
-                        </div>
-                    ) : null}
-                    {appt.status === "in_progress" && !myWorkFinished ?
-                        <button className={actionClass} type="button" disabled={saving}
-                            onClick={() => void changeStatus(appt, "completed")}>Hoàn thành</button> : null}
-                    {myWorkFinished && appt.status === "in_progress" ?
-                        <span className="rounded-full border border-line bg-cream px-4 py-2 text-xs font-semibold">Đã hoàn thành phần việc</span> : null}
-                </div>
-            </article>;
-            })}
+            <StaffTransfersPanel reload={() => load(profile)} />
+            <p className="rounded-xl border border-[#e5c0a6] bg-[#fff1e6] p-4 text-xs leading-5">
+                Booking nhóm giữ một mã chung. Mỗi nhân viên ghi giá và dịch vụ phát sinh cho phần việc của mình.
+                Dịch vụ chưa nhập giá sẽ dùng giá tham khảo. Chuyển phần việc cần người nhận xác nhận.
+            </p>
+            {appointments.length === 0 ? <p className="text-sm text-muted">Chưa có lịch hẹn được giao.</p>
+                : appointments.map(appt => <StaffBookingCard
+                    key={appt.id}
+                    appt={appt}
+                    staffId={profile.id}
+                    peers={peers}
+                    nowMs={nowMs}
+                    reload={() => load(profile)}
+                    updateStatus={changeStatus}
+                />)}
         </section>}
     </main>;
 }
