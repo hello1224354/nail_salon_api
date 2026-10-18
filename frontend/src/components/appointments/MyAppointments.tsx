@@ -21,6 +21,7 @@ const filters = [
     { value: "pending", label: "Chờ xác nhận" },
     { value: "confirmed", label: "Đã xác nhận" },
     { value: "in_progress", label: "Đang làm" },
+    { value: "no_show", label: "Chưa đến" },
     { value: "completed", label: "Hoàn thành" },
     { value: "cancelled", label: "Đã hủy" },
 ] as const;
@@ -31,6 +32,7 @@ const statusClasses: Record<string, string> = {
     pending: "border-[#d9b9a7] bg-[#f4e9e2] text-[#865d4d]",
     confirmed: "border-[#b8c9b8] bg-[#edf3ed] text-[#4f684f]",
     in_progress: "border-[#b8c4d0] bg-[#edf1f5] text-[#536373]",
+    no_show: "border-[#d9b9a7] bg-[#f4e9e2] text-[#865d4d]",
     completed: "border-[#c7c1bb] bg-[#f0eeeb] text-[#514a45]",
     cancelled: "border-[#d1c6be] bg-[#f4f0ed] text-[#7b6f67]",
 };
