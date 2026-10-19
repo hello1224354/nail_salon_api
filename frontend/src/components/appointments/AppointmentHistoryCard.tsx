@@ -37,9 +37,9 @@ function formatTime(value: string) {
 
 /**
  * A completed appointment is not proof of payment: the current API has no
- * payment/paid_amount field. Reconstruct a displayed charge using recorded
- * staff prices, then reference prices for any missing staff/service lines.
- * Never call the result "paid" unless payment data is added to the API.
+ * payment/paid_amount field. Use recorded prices where available; the
+ * booked reference price becomes the actual price when no staff override exists.
+ * Never describe the charge as "paid" without payment confirmation.
  */
 function summarizePrices(appointment: Appointment) {
     const baseServices = (appointment.appointment_services ?? []).filter(s => s.duration_minutes > 0);
@@ -53,17 +53,12 @@ function summarizePrices(appointment: Appointment) {
         return sum + Math.max(0, appointment.party_size - recordedStaffCount) * Number(service.price);
     }, 0);
     const actualTotal = prices.reduce((sum, p) => sum + Number(p.actual_price), 0);
-    const completePrices = baseServices.length > 0 && missingReference === 0 &&
-        baseServices.every(service => new Set(recordedBase
-            .filter(p => p.service_id === service.service_id).map(p => p.staff_id)).size >= appointment.party_size);
     return {
         baseServices,
         extraServices,
         prices,
         total: actualTotal + missingReference,
         hasPrice: baseServices.length > 0 || prices.length > 0,
-        completePrices,
-        estimated: !completePrices,
     };
 }
 
@@ -71,7 +66,6 @@ type GuestPriceLine = {
     key: string;
     name: string;
     amount: number;
-    isReference: boolean;
 };
 
 function buildGuestPrices(appointment: Appointment) {
@@ -116,7 +110,6 @@ function buildGuestPrices(appointment: Appointment) {
                 key: service.service_id,
                 name: service.service_name,
                 amount: Number(recorded?.actual_price ?? service.price),
-                isReference: !recorded,
             };
         });
         for (const extra of extraServices) {
@@ -127,7 +120,6 @@ function buildGuestPrices(appointment: Appointment) {
                 key: extra.service_id,
                 name: extra.service_name + " (phát sinh)",
                 amount: Number(recorded.actual_price),
-                isReference: false,
             });
         }
         return {
@@ -135,7 +127,6 @@ function buildGuestPrices(appointment: Appointment) {
             staffName: worker?.name ?? "",
             lines,
             total: lines.reduce((sum, line) => sum + line.amount, 0),
-            isEstimated: lines.some(line => line.isReference),
         };
     });
 }
@@ -150,7 +141,7 @@ export function AppointmentHistoryCard({ appointment }: { appointment: Appointme
     const guests = buildGuestPrices(appointment);
     const totalText = summary.hasPrice ? formatVnd(summary.total) + " VND" : "—";
     const duration = summary.baseServices.reduce((sum, service) => sum + service.duration_minutes, 0);
-    const amountLabel = summary.completePrices ? "Tổng giá thực tế" : "Tổng giá tạm tính";
+    const amountLabel = "Tổng giá thực tế";
 
     return (
         <article className="min-w-0 rounded-[22px] border border-line bg-surface p-5 shadow-[0_12px_34px_rgba(48,40,35,0.035)] sm:p-6">
@@ -237,9 +228,9 @@ export function AppointmentHistoryCard({ appointment }: { appointment: Appointme
                         <h3 className="text-sm font-semibold">Giá dịch vụ theo từng khách</h3>
                         {guests.map(guest => (
                             <div key={guest.index} className="rounded-[16px] border border-line p-4">
-                                <p className="text-sm font-semibold">
-                                    Khách {guest.index + 1}
-                                    {guest.staffName ? <span className="ml-2 text-xs font-normal text-muted">· {guest.staffName}</span> : null}
+                                <p className="text-sm font-semibold">Khách {guest.index + 1}</p>
+                                <p className="mt-1 text-xs text-muted">
+                                    Nhân viên phụ trách: {guest.staffName || "Chưa có thông tin"}
                                 </p>
                                 {guest.lines.length ? (
                                     <div className="mt-3 space-y-2">
@@ -247,7 +238,6 @@ export function AppointmentHistoryCard({ appointment }: { appointment: Appointme
                                             <div key={line.key} className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1 text-xs leading-5">
                                                 <span className="min-w-0 flex-1">
                                                     {line.name}
-                                                    {line.isReference ? <span className="ml-1 text-muted">(giá tham khảo)</span> : null}
                                                 </span>
                                                 <span className="shrink-0 font-semibold tabular-nums">{formatVnd(line.amount)} VND</span>
                                             </div>
@@ -255,7 +245,7 @@ export function AppointmentHistoryCard({ appointment }: { appointment: Appointme
                                     </div>
                                 ) : <p className="mt-2 text-xs text-muted">Chưa có thông tin giá dịch vụ.</p>}
                                 <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3 text-xs">
-                                    <span className="font-semibold">{guest.isEstimated ? "Tạm tính khách " : "Tổng giá khách "}{guest.index + 1}</span>
+                                    <span className="font-semibold">Tổng giá khách {guest.index + 1}</span>
                                     <strong className="tabular-nums">{formatVnd(guest.total)} VND</strong>
                                 </div>
                             </div>
@@ -266,13 +256,6 @@ export function AppointmentHistoryCard({ appointment }: { appointment: Appointme
                             <p className="text-xs font-semibold">{amountLabel}</p>
                             <p className="font-serif text-2xl tabular-nums">{totalText}</p>
                         </div>
-                        {summary.estimated && summary.hasPrice ? (
-                            <p className="mt-3 text-xs leading-5 text-muted">
-                                {status === "completed"
-                                    ? "Lịch đã hoàn thành. Một số giá thực tế chưa được ghi nhận; phần thiếu đang tính theo giá tham khảo."
-                                    : "Tổng tạm tính theo giá đã ghi nhận và giá tham khảo cho phần chưa cập nhật."}
-                            </p>
-                        ) : null}
                         {status === "completed" ? (
                             <p className="mt-2 text-xs leading-5 text-muted">
                                 Hệ thống chưa lưu thông tin xác nhận thanh toán; tổng giá không đồng nghĩa với số tiền đã thu.
