@@ -47,7 +47,7 @@ export function formatAppointmentStatus(status: string) {
         pending: "Chờ xác nhận",
         confirmed: "Đã xác nhận",
         in_progress: "Đang làm",
-        no_show: "Chưa đến",
+        no_show: "Khách chưa đến",
         completed: "Đã hoàn thành",
         cancelled: "Đã hủy",
     };

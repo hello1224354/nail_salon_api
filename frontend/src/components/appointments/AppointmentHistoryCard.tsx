@@ -67,6 +67,79 @@ function summarizePrices(appointment: Appointment) {
     };
 }
 
+type GuestPriceLine = {
+    key: string;
+    name: string;
+    amount: number;
+    isReference: boolean;
+};
+
+function buildGuestPrices(appointment: Appointment) {
+    const baseServices = (appointment.appointment_services ?? []).filter(service => service.duration_minutes > 0);
+    const extraServices = (appointment.appointment_services ?? []).filter(service => service.duration_minutes === 0);
+    const prices = appointment.actual_prices ?? [];
+    // Booking is a single record with one staff assignment per guest, not one appointment per guest.
+    // The backend returns staff_assignments; assigned_staff supports older API representations.
+    const workers = (appointment.staff_assignments?.length
+        ? appointment.staff_assignments.map(worker => ({
+            id: worker.staff_id,
+            name: worker.staff_full_name,
+            position: worker.position,
+        }))
+        : (appointment.assigned_staff ?? []).map((worker, index) => ({
+            id: worker.id,
+            name: worker.full_name,
+            position: index,
+        })))
+        .sort((a, b) => a.position - b.position);
+
+    // For older bookings lacking assignment data, use staff identifiers on price lines.
+    const seen = new Set(workers.map(worker => worker.id));
+    for (const price of prices) {
+        if (!seen.has(price.staff_id) && workers.length < appointment.party_size) {
+            workers.push({ id: price.staff_id, name: "", position: workers.length });
+            seen.add(price.staff_id);
+        }
+    }
+    if (!workers.length && appointment.party_size === 1 && appointment.staff_id) {
+        workers.push({ id: appointment.staff_id, name: "", position: 0 });
+    }
+
+    return Array.from({ length: Math.max(1, appointment.party_size) }, (_, index) => {
+        const worker = workers[index];
+        const staffId = worker?.id;
+        const lines: GuestPriceLine[] = baseServices.map(service => {
+            const recorded = staffId
+                ? prices.find(price => price.staff_id === staffId && price.service_id === service.service_id)
+                : undefined;
+            return {
+                key: service.service_id,
+                name: service.service_name,
+                amount: Number(recorded?.actual_price ?? service.price),
+                isReference: !recorded,
+            };
+        });
+        for (const extra of extraServices) {
+            const recorded = staffId
+                ? prices.find(price => price.staff_id === staffId && price.service_id === extra.service_id)
+                : undefined;
+            if (recorded) lines.push({
+                key: extra.service_id,
+                name: extra.service_name + " (phát sinh)",
+                amount: Number(recorded.actual_price),
+                isReference: false,
+            });
+        }
+        return {
+            index,
+            staffName: worker?.name ?? "",
+            lines,
+            total: lines.reduce((sum, line) => sum + line.amount, 0),
+            isEstimated: lines.some(line => line.isReference),
+        };
+    });
+}
+
 export function AppointmentHistoryCard({ appointment }: { appointment: Appointment }) {
     const dialogRef = useRef<HTMLDialogElement>(null);
     const titleId = useId();
@@ -74,6 +147,7 @@ export function AppointmentHistoryCard({ appointment }: { appointment: Appointme
     const status = appointment.status.toLowerCase();
     const code = (appointment.booking_group_id ?? appointment.id).slice(0, 8).toUpperCase();
     const summary = summarizePrices(appointment);
+    const guests = buildGuestPrices(appointment);
     const totalText = summary.hasPrice ? formatVnd(summary.total) + " VND" : "—";
     const duration = summary.baseServices.reduce((sum, service) => sum + service.duration_minutes, 0);
     const amountLabel = summary.completePrices ? "Tổng giá thực tế" : "Tổng giá tạm tính";
@@ -92,7 +166,7 @@ export function AppointmentHistoryCard({ appointment }: { appointment: Appointme
             </div>
 
             <div className="mt-5 rounded-[16px] bg-cream p-4">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">Thời gian lịch hẹn</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">Thời gian đặt lịch</p>
                 <p className="mt-2 font-serif text-[clamp(1.4rem,4vw,1.75rem)] leading-[1.25]">{formatDate(appointment.start_time)}</p>
                 <p className="mt-1 text-sm font-semibold tabular-nums">
                     {formatTime(appointment.start_time)}–{formatTime(appointment.end_time)}
@@ -132,7 +206,7 @@ export function AppointmentHistoryCard({ appointment }: { appointment: Appointme
                         <span className="text-xs font-semibold">{appointment.party_size} người</span>
                     </div>
                     <div className="rounded-[16px] bg-cream p-4">
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">Thời gian lịch hẹn</p>
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">Thời gian đặt lịch</p>
                         <p className="mt-2 font-serif text-xl leading-[1.25]">{formatDate(appointment.start_time)}</p>
                         <p className="mt-1 text-sm font-semibold tabular-nums">
                             {formatTime(appointment.start_time)}–{formatTime(appointment.end_time)}
@@ -159,25 +233,34 @@ export function AppointmentHistoryCard({ appointment }: { appointment: Appointme
                             </div>
                         ) : <p className="mt-2 text-xs text-muted">Không có dữ liệu dịch vụ.</p>}
                     </section>
-                    {summary.prices.length ? (
-                        <section className="rounded-[16px] border border-line p-4">
-                            <h3 className="text-sm font-semibold">Giá thực tế đã ghi nhận</h3>
-                            <div className="mt-3 space-y-2">
-                                {summary.prices.map(price => {
-                                    const service = (appointment.appointment_services ?? [])
-                                        .find(item => item.service_id === price.service_id);
-                                    return (
-                                        <p key={price.staff_id + ":" + price.service_id} className="flex justify-between gap-3 text-xs leading-5">
-                                            <span>{service?.service_name ?? "Dịch vụ"}
-                                                {summary.extraServices.some(x => x.service_id === price.service_id) ? " (phát sinh)" : ""}
-                                            </span>
-                                            <span className="shrink-0 font-semibold tabular-nums">{formatVnd(price.actual_price)} VND</span>
-                                        </p>
-                                    );
-                                })}
+                    <section className="space-y-3">
+                        <h3 className="text-sm font-semibold">Giá dịch vụ theo từng khách</h3>
+                        {guests.map(guest => (
+                            <div key={guest.index} className="rounded-[16px] border border-line p-4">
+                                <p className="text-sm font-semibold">
+                                    Khách {guest.index + 1}
+                                    {guest.staffName ? <span className="ml-2 text-xs font-normal text-muted">· {guest.staffName}</span> : null}
+                                </p>
+                                {guest.lines.length ? (
+                                    <div className="mt-3 space-y-2">
+                                        {guest.lines.map(line => (
+                                            <div key={line.key} className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1 text-xs leading-5">
+                                                <span className="min-w-0 flex-1">
+                                                    {line.name}
+                                                    {line.isReference ? <span className="ml-1 text-muted">(giá tham khảo)</span> : null}
+                                                </span>
+                                                <span className="shrink-0 font-semibold tabular-nums">{formatVnd(line.amount)} VND</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : <p className="mt-2 text-xs text-muted">Chưa có thông tin giá dịch vụ.</p>}
+                                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3 text-xs">
+                                    <span className="font-semibold">{guest.isEstimated ? "Tạm tính khách " : "Tổng giá khách "}{guest.index + 1}</span>
+                                    <strong className="tabular-nums">{formatVnd(guest.total)} VND</strong>
+                                </div>
                             </div>
-                        </section>
-                    ) : null}
+                        ))}
+                    </section>
                     <div className="border-t border-line pt-4">
                         <div className="flex items-end justify-between gap-3">
                             <p className="text-xs font-semibold">{amountLabel}</p>

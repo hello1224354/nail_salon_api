@@ -19,7 +19,7 @@ const filters = [
     { value: "pending", label: "Chờ xác nhận" },
     { value: "confirmed", label: "Đã xác nhận" },
     { value: "in_progress", label: "Đang làm" },
-    { value: "no_show", label: "Chưa đến" },
+    { value: "no_show", label: "Khách chưa đến" },
     { value: "completed", label: "Hoàn thành" },
     { value: "cancelled", label: "Đã hủy" },
 ] as const;

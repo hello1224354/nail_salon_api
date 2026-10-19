@@ -405,6 +405,14 @@ export type Appointment = {
     party_size: number;
     staff_id: string;
     assigned_staff?: Array<{ id: string; full_name: string; started_at?: string | null; completed_at?: string | null }>;
+    staff_assignments?: Array<{
+        appointment_id: string;
+        staff_id: string;
+        staff_full_name: string;
+        position: number;
+        started_at: string | null;
+        completed_at: string | null;
+    }>;
     branch_id: number;
     start_time: string;
     end_time: string;
