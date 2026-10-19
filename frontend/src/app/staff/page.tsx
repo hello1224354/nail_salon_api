@@ -8,6 +8,7 @@ import { formatVnd, formatServicePrice } from "@/lib/studio-data";
 import { StaffBookingCard } from "@/components/staff/StaffBookingCard";
 import { StaffTransfersPanel } from "@/components/staff/StaffTransfersPanel";
 import { StaffReceptionLookup } from "@/components/staff/StaffReceptionLookup";
+import { useBranch } from "@/components/branch/BranchProvider";
 
 const inputClass = "w-full rounded-xl border border-line bg-white px-4 py-3 text-sm outline-none focus:border-accent";
 const actionClass = "rounded-full bg-ink px-5 py-3 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50";
@@ -19,6 +20,7 @@ const dateVN = (date: string) => new Intl.DateTimeFormat("vi-VN", {
 
 export default function StaffPage() {
     const router = useRouter();
+    const { branches } = useBranch();
     const [profile, setProfile] = useState<AdminStaff | null>(null);
     const [services, setServices] = useState<Service[]>([]);
     const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -148,7 +150,7 @@ export default function StaffPage() {
     return <main className="site-shell pb-20 pt-12">
         <p className="text-xs font-semibold uppercase tracking-[0.15em] text-accent">Khu vực nhân viên</p>
         <h1 className="mt-3 font-serif text-4xl sm:text-5xl">Ghi nhận dịch vụ</h1>
-        <p className="mt-3 text-sm text-muted">Đăng nhập: <strong>{profile.full_name}</strong> · {profile.branch_name}. Khách vãng lai do bạn ghi nhận sẽ tự động gán cho chính bạn.</p>
+        <p className="mt-3 text-sm text-muted">Đăng nhập: <strong>{profile.full_name}</strong>{branches.length > 1 ? " · " + profile.branch_name : ""}. Khách vãng lai do bạn ghi nhận sẽ tự động gán cho chính bạn.</p>
         <div className="mt-8 flex flex-wrap gap-3" role="tablist" aria-label="Chức năng nhân viên">
             <button type="button" role="tab" aria-selected={tab === "walkin"} onClick={() => setTab("walkin")} className={actionClass + (tab !== "walkin" ? " !bg-tint !text-ink" : "")}>Khách vãng lai</button>
             <button type="button" role="tab" aria-selected={tab === "bookings"} onClick={() => setTab("bookings")} className={actionClass + (tab !== "bookings" ? " !bg-tint !text-ink" : "")}>Lịch online được giao ({appointments.length})</button>

@@ -223,12 +223,14 @@ export function Header() {
                 </nav>
 
                 <div className="col-start-3 row-start-1 hidden translate-x-2 items-center justify-self-end gap-2 xl:flex">
-                    <BranchPicker
-                        branches={branches}
-                        selectedBranchId={selectedBranchId}
-                        onSelect={setSelectedBranchId}
-                        disabled={branchesLoading || branches.length === 0}
-                    />
+                    {branches.length > 1 ? (
+                        <BranchPicker
+                            branches={branches}
+                            selectedBranchId={selectedBranchId}
+                            onSelect={setSelectedBranchId}
+                            disabled={branchesLoading}
+                        />
+                    ) : null}
 
                     {authUser ? (
                         <>
@@ -349,16 +351,18 @@ export function Header() {
                             );
                         })}
 
-                        <div className="mt-3 rounded-2xl border border-line bg-surface p-3">
-                            <p className="mb-2 block px-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-accent">Chi nhánh</p>
-                            <BranchPicker
-                                mobile
-                                branches={branches}
-                                selectedBranchId={selectedBranchId}
-                                onSelect={setSelectedBranchId}
-                                disabled={branchesLoading || branches.length === 0}
-                            />
-                        </div>
+                        {branches.length > 1 ? (
+                            <div className="mt-3 rounded-2xl border border-line bg-surface p-3">
+                                <p className="mb-2 block px-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-accent">Chi nhánh</p>
+                                <BranchPicker
+                                    mobile
+                                    branches={branches}
+                                    selectedBranchId={selectedBranchId}
+                                    onSelect={setSelectedBranchId}
+                                    disabled={branchesLoading}
+                                />
+                            </div>
+                        ) : null}
 
                         {authUser ? (
                             <Link

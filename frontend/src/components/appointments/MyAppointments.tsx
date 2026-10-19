@@ -12,9 +12,7 @@ import {
 } from "@/lib/api";
 import { clearSession, restoreSession, type AuthUser } from "@/lib/auth";
 import { canUseCustomerFeatures as canBook } from "@/lib/roles";
-import { formatAppointmentStatus, formatVnd, localizeBranchName } from "@/lib/studio-data";
-
-const BUSINESS_TIMEZONE = "Asia/Ho_Chi_Minh";
+import { AppointmentHistoryCard } from "@/components/appointments/AppointmentHistoryCard";
 
 const filters = [
     { value: "all", label: "Tất cả" },
@@ -27,34 +25,6 @@ const filters = [
 ] as const;
 
 type FilterValue = (typeof filters)[number]["value"];
-
-const statusClasses: Record<string, string> = {
-    pending: "border-[#d9b9a7] bg-[#f4e9e2] text-[#865d4d]",
-    confirmed: "border-[#b8c9b8] bg-[#edf3ed] text-[#4f684f]",
-    in_progress: "border-[#b8c4d0] bg-[#edf1f5] text-[#536373]",
-    no_show: "border-[#d9b9a7] bg-[#f4e9e2] text-[#865d4d]",
-    completed: "border-[#c7c1bb] bg-[#f0eeeb] text-[#514a45]",
-    cancelled: "border-[#d1c6be] bg-[#f4f0ed] text-[#7b6f67]",
-};
-
-function formatAppointmentDate(value: string) {
-    return new Intl.DateTimeFormat("vi-VN", {
-        timeZone: BUSINESS_TIMEZONE,
-        weekday: "short",
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-    }).format(new Date(value));
-}
-
-function formatAppointmentTime(value: string) {
-    return new Intl.DateTimeFormat("vi-VN", {
-        timeZone: BUSINESS_TIMEZONE,
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false,
-    }).format(new Date(value));
-}
 
 async function fetchAppointmentContext() {
     return await Promise.all([
@@ -257,87 +227,9 @@ export function MyAppointments() {
 
                 {!loading && !error && visibleAppointments.length > 0 ? (
                     <div className="grid gap-4 lg:grid-cols-2">
-                        {visibleAppointments.map((appointment) => {
-                            const status = appointment.status.toLowerCase();
-                            const services = (appointment.appointment_services ?? []).filter(service => service.duration_minutes > 0);
-                            const customServices = (appointment.appointment_services ?? []).filter(service => service.duration_minutes === 0);
-                            const total = services.reduce((sum, service) => sum + service.price, 0);
-                            const actual = appointment.actual_prices ?? [];
-                            const totalActual = actual.reduce((sum, item) => sum + item.actual_price, 0);
-                            const allPriced = services.length > 0 &&
-                                actual.filter(item => services.some(service => service.service_id === item.service_id)).length >=
-                                    appointment.party_size * services.length;
-                            const duration = services.reduce((sum, service) => sum + service.duration_minutes, 0);
-
-                            return (
-                                <article key={appointment.id} className="rounded-[22px] border border-line bg-surface p-5 shadow-[0_12px_34px_rgba(48,40,35,0.035)] sm:p-6">
-                                    <div className="flex items-start justify-between gap-4">
-                                        <div>
-                                            <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-muted">
-                                                Mã lịch hẹn
-                                            </p>
-                                            <p className="mt-1 font-mono text-xs font-semibold tracking-[0.05em]">
-                                                {(appointment.booking_group_id ?? appointment.id).slice(0, 8).toUpperCase()}
-                                            </p>
-                                            {appointment.party_size > 1 ? (
-                                                <p className="mt-1 text-[10px] font-semibold text-accent">{appointment.party_size} người</p>
-                                            ) : null}
-                                        </div>
-                                        <span className={`shrink-0 rounded-full border px-3 py-1.5 text-[10px] font-semibold ${statusClasses[status] ?? "border-line bg-cream text-muted"}`}>
-                                            {formatAppointmentStatus(status)}
-                                        </span>
-                                    </div>
-
-                                    <div className="mt-5 rounded-[16px] bg-cream p-4">
-                                        <p className="font-serif text-[26px] leading-tight">{formatAppointmentDate(appointment.start_time)}</p>
-                                        <p className="mt-1 text-sm font-semibold tabular-nums">
-                                            {formatAppointmentTime(appointment.start_time)}–{formatAppointmentTime(appointment.end_time)}
-                                        </p>
-                                        <p className="mt-2 text-xs text-muted">{appointment.branch?.name ? localizeBranchName(appointment.branch.name) : `Chi nhánh #${appointment.branch_id}`}</p>
-                                    </div>
-
-                                    <div className="mt-5">
-                                        <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-accent">Dịch vụ</p>
-                                        {services.length > 0 ? (
-                                            <div className="mt-2 space-y-2">
-                                                {services.map((service) => (
-                                                    <div key={`${appointment.id}-${service.service_id}`} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-xs">
-                                                        <span className="leading-5">{service.service_name}</span>
-                                                        <span className="font-semibold tabular-nums">Giá tham khảo: {formatVnd(service.price)} VND</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        ) : (
-                                            <p className="mt-2 text-xs text-muted">Chưa có thông tin dịch vụ cho lịch hẹn này.</p>
-                                        )}
-                                    </div>
-
-                                    {actual.length > 0 ? (
-                                        <div className="mt-3 rounded-lg border border-line bg-white p-3 text-xs">
-                                            <p className="font-semibold">Giá thực tế nhân viên đã nhập</p>
-                                            {actual.map(item => <p key={item.staff_id + ":" + item.service_id} className="mt-1">
-                                                {services.find(s => s.service_id === item.service_id)?.service_name ??
-                                                    customServices.find(s => s.service_id === item.service_id)?.service_name ?? "Dịch vụ"}{customServices.some(s => s.service_id === item.service_id) ? " (phát sinh)" : ""}
-                                                {": "}<strong>{formatVnd(item.actual_price)} VND</strong>
-                                            </p>)}
-                                            <p className="mt-2 font-semibold">{allPriced ? "Tổng giá thực tế: " + formatVnd(totalActual) + " VND" : "Đang chờ các nhân viên cập nhật đủ giá thực tế."}</p>
-                                        </div>
-                                    ) : null}
-                                    <div className="mt-5 flex items-end justify-between gap-5 border-t border-line pt-4">
-                                        <div>
-                                            <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-muted">Thời lượng</p>
-                                            <p className="mt-1 text-xs font-semibold">{duration > 0 ? `${duration} phút` : "—"}</p>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-muted">
-                                                {appointment.party_size > 1 ? "Giá tham khảo / người" : "Tổng giá tham khảo"}
-                                            </p>
-                                            <p className="mt-1 font-serif text-xl tabular-nums">{services.length > 0 ? `${formatVnd(total)} VND` : "—"}</p>
-                                        </div>
-                                    </div>
-                                </article>
-                            );
-                        })}
+                        {visibleAppointments.map(appointment => (
+                            <AppointmentHistoryCard key={appointment.id} appointment={appointment} />
+                        ))}
                     </div>
                 ) : null}
             </div>

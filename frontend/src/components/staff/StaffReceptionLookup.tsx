@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { apiRequest, getApiErrorMessage } from "@/lib/api";
 import { formatAppointmentStatus } from "@/lib/studio-data";
+import { useBranch } from "@/components/branch/BranchProvider";
 
 type ReceptionBooking = {
     id: string;
@@ -20,6 +21,7 @@ const dateVN = (value: string) => new Intl.DateTimeFormat("vi-VN", {
 }).format(new Date(value));
 
 export function StaffReceptionLookup() {
+    const { branches } = useBranch();
     const [search, setSearch] = useState("");
     const [results, setResults] = useState<ReceptionBooking[] | null>(null);
     const [error, setError] = useState("");
@@ -37,7 +39,7 @@ export function StaffReceptionLookup() {
     }
     return <section className="rounded-[20px] border border-line bg-white p-4 sm:p-6">
         <h2 className="text-sm font-semibold">Tiếp khách có đặt lịch</h2>
-        <p className="mt-1 text-xs text-muted">Nhân viên nào cũng có thể tra lịch tại chi nhánh của mình, kể cả khi không được phân công. Tra cứu không làm thay đổi người phụ trách.</p>
+        <p className="mt-1 text-xs text-muted">{branches.length > 1 ? "Nhân viên có thể tra lịch tại cơ sở của mình. " : ""}Tra cứu không làm thay đổi người phụ trách.</p>
         <form onSubmit={e => void find(e)} className="mt-4 flex flex-col gap-2 sm:flex-row">
             <input value={search} onChange={e => setSearch(e.target.value)}
                 className="min-w-0 flex-1 rounded-xl border border-line bg-white px-4 py-3 text-sm outline-none focus:border-accent"
@@ -47,7 +49,7 @@ export function StaffReceptionLookup() {
                 {busy ? "Đang tìm…" : "Tìm lịch"}
             </button>
         </form>
-        {results?.length === 0 ? <p className="mt-4 text-xs text-muted">Không tìm thấy booking phù hợp tại chi nhánh này.</p> : null}
+        {results?.length === 0 ? <p className="mt-4 text-xs text-muted">{branches.length > 1 ? "Không tìm thấy lịch phù hợp tại cơ sở này." : "Không tìm thấy lịch phù hợp."}</p> : null}
         {results?.map(item => <div key={item.id} className="mt-4 rounded-xl border border-line bg-cream p-4">
             <div className="flex flex-wrap items-start justify-between gap-2">
                 <p className="text-sm font-semibold">{item.customer_name} · {item.party_size} người</p>

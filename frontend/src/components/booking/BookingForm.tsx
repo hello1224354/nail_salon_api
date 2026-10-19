@@ -514,7 +514,7 @@ export function BookingForm() {
         <>
         <form onSubmit={handleSubmit} className="grid min-w-0 gap-[clamp(1.25rem,3vw,2.5rem)] xl:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)] xl:items-start">
             <div className="min-w-0 rounded-[22px] border border-line bg-surface">
-                <section className="min-w-0 p-[clamp(1rem,2.5vw,2rem)]">
+                {branches.length !== 1 ? <section className="min-w-0 p-[clamp(1rem,2.5vw,2rem)]">
                     <SectionHeading number="01" title="Chi nhánh" />
                     <div className="mt-6 grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(min(100%,16rem),1fr))]">
                         {branches.length > 0 ? (
@@ -547,12 +547,12 @@ export function BookingForm() {
                             </div>
                         )}
                     </div>
-                </section>
+                </section> : null}
 
-                <div className="mx-[clamp(1rem,2.5vw,2rem)] h-px bg-line" />
+                {branches.length !== 1 ? <div className="mx-[clamp(1rem,2.5vw,2rem)] h-px bg-line" /> : null}
 
                 <section className="min-w-0 p-[clamp(1rem,2.5vw,2rem)]">
-                    <SectionHeading number="02" title="Dịch vụ" helper="Chọn dịch vụ bạn muốn làm trong lần hẹn này." />
+                    <SectionHeading number={branches.length === 1 ? "01" : "02"} title="Dịch vụ" helper="Chọn dịch vụ bạn muốn làm trong lần hẹn này." />
                     <div className="mt-6 min-w-0 space-y-2">
                         {servicesLoading ? (
                             Array.from({ length: 5 }, (_, index) => (
@@ -606,7 +606,7 @@ export function BookingForm() {
                 <div className="mx-[clamp(1rem,2.5vw,2rem)] h-px bg-line" />
 
                 <section className="min-w-0 p-[clamp(1rem,2.5vw,2rem)]">
-                    <SectionHeading number="03" title="Số người" />
+                    <SectionHeading number={branches.length === 1 ? "02" : "03"} title="Số người" />
                     <div className="mt-6 min-w-0">
                         <div className="flex w-full flex-wrap items-center justify-between gap-4 rounded-[14px] border border-line bg-cream p-[clamp(0.75rem,2vw,1.125rem)]">
                             <div className="min-w-0 flex-[1_1_12rem]">
@@ -616,7 +616,7 @@ export function BookingForm() {
                                         ? "Chọn dịch vụ để kiểm tra số nhân viên còn nhận lịch."
                                         : maxPartySize > 0
                                           ? `Khung giờ phù hợp có thể nhận tối đa ${maxPartySize} người cùng lúc.`
-                                          : "Hiện chưa có nhân viên phù hợp tại chi nhánh này."}
+                                          : branches.length === 1 ? "Hiện chưa có nhân viên phù hợp." : "Hiện chưa có nhân viên phù hợp tại chi nhánh này."}
                                 </p>
                             </div>
                             <div className="flex shrink-0 items-center gap-2">
@@ -650,7 +650,7 @@ export function BookingForm() {
                 <div className="mx-[clamp(1rem,2.5vw,2rem)] h-px bg-line" />
 
                 <section className="min-w-0 p-[clamp(1rem,2.5vw,2rem)]">
-                    <SectionHeading number="04" title="Ngày" helper="Đặt lịch trước tối thiểu 3 giờ và tối đa 14 ngày." />
+                    <SectionHeading number={branches.length === 1 ? "03" : "04"} title="Ngày" helper="Đặt lịch trước tối thiểu 3 giờ và tối đa 14 ngày." />
                     <div className="mt-6 grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,4.25rem),1fr))] gap-2">
                         {dates.map((date) => {
                             const selected = date.value === selectedDate;
@@ -681,7 +681,7 @@ export function BookingForm() {
                 <div className="mx-[clamp(1rem,2.5vw,2rem)] h-px bg-line" />
 
                 <section className="min-w-0 p-[clamp(1rem,2.5vw,2rem)]">
-                    <SectionHeading number="05" title="Giờ còn trống" />
+                    <SectionHeading number={branches.length === 1 ? "04" : "05"} title="Giờ còn trống" />
                     <div className="mt-6 min-w-0">
                         {selectedServiceIds.length === 0 ? (
                             <div className="rounded-[14px] border border-line bg-cream px-4 py-5 text-xs leading-5 text-muted">
@@ -793,10 +793,12 @@ export function BookingForm() {
                     <div className="my-5 h-px bg-line" />
 
                     <div className="space-y-5">
-                        <div>
-                            <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-accent">Chi nhánh</p>
-                            <p className="mt-1 text-sm font-semibold">{selectedBranch ? shortBranchName(selectedBranch.name) : "Chọn chi nhánh"}</p>
-                        </div>
+                        {branches.length > 1 ? (
+                            <div>
+                                <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-accent">Chi nhánh</p>
+                                <p className="mt-1 text-sm font-semibold">{selectedBranch ? shortBranchName(selectedBranch.name) : "Chọn chi nhánh"}</p>
+                            </div>
+                        ) : null}
 
                         <div>
                             <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-accent">Dịch vụ</p>
@@ -907,11 +909,13 @@ export function BookingForm() {
 
                     <div className="booking-success-details border-t border-line px-5 py-4 sm:px-8 sm:py-5">
                         <div className="grid grid-cols-2 gap-x-4 gap-y-4">
-                            <div className="min-w-0">
-                                <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-muted">Chi nhánh</p>
-                                <p className="mt-1 break-words text-sm font-semibold">{createdBranchName ? shortBranchName(createdBranchName) : "Đang cập nhật"}</p>
-                            </div>
-                            <div className="min-w-0">
+                            {branches.length > 1 ? (
+                                <div className="min-w-0">
+                                    <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-muted">Chi nhánh</p>
+                                    <p className="mt-1 break-words text-sm font-semibold">{createdBranchName ? shortBranchName(createdBranchName) : "Đang cập nhật"}</p>
+                                </div>
+                            ) : null}
+                            <div className={branches.length > 1 ? "min-w-0" : "col-span-2 min-w-0"}>
                                 <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-muted">Số người</p>
                                 <p className="mt-1 text-sm font-semibold">{createdAppointment.party_size} người</p>
                             </div>

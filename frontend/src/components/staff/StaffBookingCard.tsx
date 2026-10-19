@@ -191,7 +191,7 @@ export function StaffBookingCard({
             <p className="mt-1 text-xs text-muted">Người nhận phải đồng ý trong 3 phút. Trong lúc chờ, lịch vẫn thuộc bạn.</p>
             <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                 <select className={input + " min-w-0 flex-1"} value={target} onChange={e => setTarget(e.target.value)} disabled={working}>
-                    <option value="">Chọn nhân viên cùng chi nhánh</option>
+                    <option value="">Chọn nhân viên</option>
                     {candidates.map(person => <option key={person.id} value={person.id}>{person.name}</option>)}
                 </select>
                 <button type="button" className={button} disabled={!target || working} onClick={() => void transfer()}>Gửi yêu cầu</button>

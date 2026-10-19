@@ -138,9 +138,10 @@ export function AdminAppointmentsPanel({
                                         <div className="min-w-[100px]">
                                             <button type="button" disabled={submitting || allowed.length === 0}
                                                 aria-expanded={statusMenuId === appointment.id}
+                                                aria-label={"Trạng thái hiện tại: " + formatAppointmentStatus(appointment.status) + (allowed.length ? ". Chọn trạng thái mới" : "")}
                                                 onClick={() => setStatusMenuId(id => id === appointment.id ? null : appointment.id)}
                                                 className="rounded-lg border border-line bg-cream px-2.5 py-2 font-semibold text-ink disabled:opacity-35">
-                                                Cập nhật trạng thái
+                                                {formatAppointmentStatus(appointment.status)}
                                             </button>
                                             {statusMenuId === appointment.id ? (
                                                 <div className="mt-2 grid gap-1 rounded-lg border border-line bg-white p-1.5">
