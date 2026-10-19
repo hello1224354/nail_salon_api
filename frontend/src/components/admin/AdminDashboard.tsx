@@ -182,7 +182,7 @@ function Modal({
                 <div className="flex items-start justify-between gap-5">
                     <div>
                         <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-accent">Quản trị</p>
-                        <h2 id={headingId} className="mt-2 font-serif text-3xl tracking-[-0.025em]">{title}</h2>
+                        <h2 id={headingId} className="mt-2 font-serif text-3xl leading-[1.2] tracking-[-0.015em]">{title}</h2>
                     </div>
                     <button
                         type="button"
@@ -684,7 +684,7 @@ export function AdminDashboard() {
                                 <p className="text-[10px] font-semibold uppercase tracking-[0.17em] text-accent">
                                     {tabItems.find((item) => item.key === tab)?.label}
                                 </p>
-                                <h1 className="mt-1 font-serif text-2xl tracking-[-0.025em]">
+                                <h1 className="mt-1 font-serif text-2xl leading-[1.2] tracking-[-0.015em]">
                                     Xin chào, {admin?.full_name.split(" ").slice(-1)[0]}
                                 </h1>
                             </div>
@@ -1128,7 +1128,7 @@ function Overview({
                 {cards.map((card) => (
                     <article key={card.label} className="rounded-[20px] border border-line bg-white p-5 shadow-[0_8px_30px_rgba(48,40,35,0.035)]">
                         <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">{card.label}</p>
-                        <p className="mt-4 font-serif text-4xl tracking-[-0.035em]">{card.value}</p>
+                        <p className="mt-4 font-serif text-4xl leading-[1.2] tracking-[-0.015em]">{card.value}</p>
                     </article>
                 ))}
             </div>

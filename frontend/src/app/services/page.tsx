@@ -13,7 +13,7 @@ export default function ServicesPage() {
         <>
             <section className="site-shell pb-14 pt-12 lg:pb-20 lg:pt-16">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">Bảng giá Serpente</p>
-                <h1 className="mt-3 font-serif text-[clamp(2.75rem,6vw,4.5rem)] tracking-[-0.035em]">Dịch vụ</h1>
+                <h1 className="mt-3 font-serif text-[clamp(2.75rem,6vw,4.5rem)] leading-[1.2] tracking-[-0.015em]">Dịch vụ</h1>
                 <div className="mt-8 sm:mt-10">
                     <ServicesCatalogue />
                 </div>

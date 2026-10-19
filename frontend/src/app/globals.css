@@ -38,6 +38,13 @@ html {
     scroll-behavior: smooth;
 }
 
+h1,
+h2,
+h3 {
+    overflow-wrap: break-word;
+    text-wrap: pretty;
+}
+
 body {
     margin: 0;
     min-width: 320px;
@@ -119,13 +126,13 @@ body {
 
 .fluid-section-title {
     font-size: clamp(1.9rem, 3.6vw, 3.125rem);
-    line-height: 1.14;
+    line-height: 1.2;
     overflow-wrap: anywhere;
 }
 
 .fluid-card-title {
     font-size: clamp(1.4rem, 2.6vw, 2.125rem);
-    line-height: 1.2;
+    line-height: 1.25;
     overflow-wrap: anywhere;
 }
 

@@ -12,7 +12,7 @@ export default function BookPage() {
     return (
         <section className="site-shell pb-16 pt-12 lg:pb-20 lg:pt-16">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">Đặt lịch tại Serpente</p>
-            <h1 className="mt-3 font-serif text-[clamp(2.75rem,6vw,4.25rem)] tracking-[-0.035em]">Đặt lịch hẹn</h1>
+            <h1 className="mt-3 font-serif text-[clamp(2.75rem,6vw,4.25rem)] leading-[1.2] tracking-[-0.015em]">Đặt lịch hẹn</h1>
             <p className="mt-3 text-sm leading-6 text-muted sm:text-base">
                 Giá dịch vụ trên website chỉ mang tính tham khảo và có thể thay đổi tùy theo mẫu móng. Nếu cần tư vấn hoặc báo giá chi tiết, bạn có thể liên hệ tiệm qua Instagram.
             </p>

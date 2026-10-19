@@ -20,7 +20,7 @@ export default async function LoginPage() {
                         <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-accent">
                             Tài khoản của bạn
                         </p>
-                        <h1 className="mt-4 font-serif text-[clamp(2.8rem,5vw,4.6rem)] leading-[0.92] tracking-[-0.04em]">
+                        <h1 className="mt-4 font-serif text-[clamp(2.6rem,5vw,4.2rem)] leading-[1.2] tracking-[-0.015em]">
                             Đăng nhập
                             <br />
                             để đặt lịch.

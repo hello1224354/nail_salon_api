@@ -5,7 +5,7 @@ export default function NotFound() {
         <section className="site-shell flex min-h-[62vh] items-center py-16">
             <div className="max-w-2xl">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">404 · Không tìm thấy trang</p>
-                <h1 className="mt-4 font-serif text-5xl leading-[0.98] tracking-[-0.035em] sm:text-6xl">Không tìm thấy trang bạn cần.</h1>
+                <h1 className="mt-4 max-w-[18ch] font-serif text-[clamp(2.6rem,5vw,4.5rem)] leading-[1.2] tracking-[-0.015em]">Không tìm thấy trang bạn cần.</h1>
                 <p className="mt-5 max-w-lg text-sm leading-6 text-muted">
                     Đường dẫn có thể đã thay đổi hoặc không còn tồn tại. Bạn có thể quay về trang chủ hoặc xem bảng giá của Serpente.
                 </p>

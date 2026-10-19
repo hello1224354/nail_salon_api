@@ -78,7 +78,7 @@ export function CurrentOffers({ offers, instagramHandle }: CurrentOffersProps) {
                         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">
                             Ưu đãi
                         </p>
-                        <h1 className="mt-4 max-w-xl font-serif text-[clamp(2.3rem,5vw,4.625rem)] leading-[1.03] tracking-[-0.035em]">
+                        <h1 className="mt-4 max-w-xl font-serif text-[clamp(2.3rem,5vw,4.625rem)] leading-[1.2] tracking-[-0.015em]">
                             Ưu đãi mới
                             <br />
                             sẽ có tại đây.
@@ -146,7 +146,7 @@ export function CurrentOffers({ offers, instagramHandle }: CurrentOffersProps) {
 
                                         <div className="flex flex-1 flex-col justify-start pb-8 pt-7 sm:pt-8 lg:pb-10 lg:pt-8">
                                             <div className="w-full max-w-[16ch] font-serif text-[clamp(2.75rem,4.4vw,4.75rem)]">
-                                                <h1 className="font-medium leading-[1.06] tracking-[-0.045em] text-[#302823] [overflow-wrap:anywhere]">
+                                                <h1 className="font-medium leading-[1.2] tracking-[-0.015em] text-[#302823] [overflow-wrap:anywhere]">
                                                     {offer.name}
                                                 </h1>
                                                 <p className="mt-6 whitespace-pre-line border-l-2 border-[#ba9882] pl-4 font-sans text-sm leading-7 text-[#55473f] [overflow-wrap:anywhere] sm:text-[15px]">

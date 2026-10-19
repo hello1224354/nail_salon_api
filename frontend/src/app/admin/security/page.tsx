@@ -21,7 +21,7 @@ export default function AdminSecurityPage() {
                 </div>
 
                 <p className="mt-10 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#c9aa96]">Bảo mật quản trị</p>
-                <h1 className="mt-4 font-serif text-[clamp(2.5rem,7vw,4rem)] leading-[0.95] tracking-[-0.04em]">Đổi mật khẩu</h1>
+                <h1 className="mt-4 font-serif text-[clamp(2.5rem,7vw,4rem)] leading-[1.2] tracking-[-0.015em]">Đổi mật khẩu</h1>
                 <p className="mt-4 text-sm leading-6 text-white/55">
                     Sau khi đổi xong, tài khoản quản trị sẽ được đăng xuất khỏi tất cả thiết bị.
                 </p>

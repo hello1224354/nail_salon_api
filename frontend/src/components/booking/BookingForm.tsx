@@ -897,7 +897,7 @@ export function BookingForm() {
                             </svg>
                         </div>
                         <p className="mt-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-accent sm:mt-4">Đặt lịch thành công</p>
-                        <h2 id="booking-success-title" className="mt-1.5 max-w-[28rem] font-serif text-[clamp(1.5rem,5vw,2.35rem)] leading-[1.12] tracking-[-0.02em]">
+                        <h2 id="booking-success-title" className="mt-1.5 max-w-[28rem] font-serif text-[clamp(1.5rem,5vw,2.35rem)] leading-[1.2] tracking-[-0.015em]">
                             Serpente đã nhận lịch của bạn
                         </h2>
                         <p id="booking-success-status" className="mt-3 inline-flex rounded-full border border-accent/35 bg-tint px-3 py-1.5 text-[11px] font-semibold text-accent">
