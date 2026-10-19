@@ -119,7 +119,6 @@ function HotTrendCard({ item, index }: { item: InstagramTrendItem; index: number
                             </p>
                         ) : null}
                     </div>
-                    <span className="shrink-0 font-serif text-xl">{String(index + 1).padStart(2, "0")}</span>
                 </div>
             </figcaption>
         </figure>

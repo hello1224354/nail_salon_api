@@ -132,8 +132,8 @@ export function CurrentOffers({ offers, instagramHandle }: CurrentOffersProps) {
                             className="min-w-0 flex-[0_0_100%]"
                             aria-label={`Ưu đãi ${index + 1} trên ${offers.length}`}
                         >
-                            <div className="grid min-w-0 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
-                                <div className="relative isolate order-2 flex min-w-0 flex-col overflow-hidden bg-[linear-gradient(145deg,#eddfd3_0%,#e7d6c8_100%)] px-7 pb-9 pt-9 sm:px-10 sm:pb-10 sm:pt-10 lg:order-1 lg:min-h-[30rem] lg:px-[clamp(2.5rem,4.3vw,5.25rem)] lg:py-12">
+                            <div className="grid min-w-0 lg:grid-cols-2">
+                                <div className="relative isolate order-1 flex min-w-0 flex-col overflow-hidden bg-[linear-gradient(145deg,#eddfd3_0%,#e7d6c8_100%)] px-7 pb-9 pt-9 sm:px-10 sm:pb-10 sm:pt-10 lg:min-h-[30rem] lg:px-[clamp(2.5rem,4.3vw,5.25rem)] lg:py-12">
                                     <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 w-1 bg-[#aa806d]/70" />
 
                                     <div className="relative z-10 flex min-h-0 flex-1 flex-col">
@@ -197,13 +197,13 @@ export function CurrentOffers({ offers, instagramHandle }: CurrentOffersProps) {
                                     </div>
                                 </div>
 
-                                <div className="relative order-1 min-h-[19rem] bg-[#d9c5ba] sm:min-h-[24rem] lg:order-2 lg:min-h-[30rem]">
+                                <div className="relative order-2 min-h-[19rem] bg-[#d9c5ba] sm:min-h-[24rem] lg:min-h-[30rem]">
                                     <Image
                                         src={offer.image}
                                         alt={offer.name}
                                         fill
                                         priority={index === 0}
-                                        sizes="(max-width: 1023px) 100vw, 54vw"
+                                        sizes="(max-width: 1023px) 100vw, 50vw"
                                         className="motion-image object-cover"
                                     />
                                 </div>
