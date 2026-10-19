@@ -141,7 +141,29 @@ export function AppointmentHistoryCard({ appointment }: { appointment: Appointme
     const guests = buildGuestPrices(appointment);
     const totalText = summary.hasPrice ? formatVnd(summary.total) + " VND" : "—";
     const duration = summary.baseServices.reduce((sum, service) => sum + service.duration_minutes, 0);
-    const amountLabel = "Tổng giá thực tế";
+    const completed = status === "completed";
+    const amountLabel = completed ? "Tổng giá thực tế" : "Tổng giá tạm tính";
+
+    // Each member may start/finish at a different time. Use the first actual
+    // start and last actual finish for the whole group, never a scheduled time
+    // as an unmarked substitute for missing real timestamps.
+    const assignmentStarts = (appointment.staff_assignments ?? [])
+        .map(assignment => assignment.started_at)
+        .filter((value): value is string => Boolean(value))
+        .sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+    const assignmentEnds = (appointment.staff_assignments ?? [])
+        .map(assignment => assignment.completed_at)
+        .filter((value): value is string => Boolean(value))
+        .sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+    const actualStart = appointment.actual_started_at ?? assignmentStarts[0] ?? null;
+    const actualEnd = appointment.actual_completed_at ?? assignmentEnds[0] ?? null;
+    const displayDate = completed
+        ? (actualStart ?? actualEnd)
+        : appointment.start_time;
+    const displayHours = completed
+        ? (actualStart ? formatTime(actualStart) : "Chưa ghi nhận") + "–" +
+            (actualEnd ? formatTime(actualEnd) : "Chưa ghi nhận")
+        : formatTime(appointment.start_time) + "–" + formatTime(appointment.end_time);
 
     return (
         <article className="min-w-0 rounded-[22px] border border-line bg-surface p-5 shadow-[0_12px_34px_rgba(48,40,35,0.035)] sm:p-6">
@@ -157,11 +179,11 @@ export function AppointmentHistoryCard({ appointment }: { appointment: Appointme
             </div>
 
             <div className="mt-5 rounded-[16px] bg-cream p-4">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">Thời gian đặt lịch</p>
-                <p className="mt-2 font-serif text-[clamp(1.4rem,4vw,1.75rem)] leading-[1.25]">{formatDate(appointment.start_time)}</p>
-                <p className="mt-1 text-sm font-semibold tabular-nums">
-                    {formatTime(appointment.start_time)}–{formatTime(appointment.end_time)}
+                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">{completed ? "Thời gian thực tế" : "Thời gian đặt lịch"}</p>
+                <p className="mt-2 font-serif text-[clamp(1.4rem,4vw,1.75rem)] leading-[1.25]">
+                    {displayDate ? formatDate(displayDate) : "Chưa ghi nhận"}
                 </p>
+                <p className="mt-1 text-sm font-semibold tabular-nums">{displayDate ? displayHours : "Chưa có giờ thực tế"}</p>
             </div>
 
             <div className="mt-5 flex flex-wrap items-end justify-between gap-4">
@@ -197,11 +219,11 @@ export function AppointmentHistoryCard({ appointment }: { appointment: Appointme
                         <span className="text-xs font-semibold">{appointment.party_size} người</span>
                     </div>
                     <div className="rounded-[16px] bg-cream p-4">
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">Thời gian đặt lịch</p>
-                        <p className="mt-2 font-serif text-xl leading-[1.25]">{formatDate(appointment.start_time)}</p>
-                        <p className="mt-1 text-sm font-semibold tabular-nums">
-                            {formatTime(appointment.start_time)}–{formatTime(appointment.end_time)}
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">{completed ? "Thời gian thực tế" : "Thời gian đặt lịch"}</p>
+                        <p className="mt-2 font-serif text-xl leading-[1.25]">
+                            {displayDate ? formatDate(displayDate) : "Chưa ghi nhận"}
                         </p>
+                        <p className="mt-1 text-sm font-semibold tabular-nums">{displayDate ? displayHours : "Chưa có giờ thực tế"}</p>
                         <p className="mt-2 text-xs text-muted">Thời lượng dịch vụ: {duration} phút/người</p>
                         {branches.length > 1 ? (
                             <p className="mt-2 text-xs text-muted">
@@ -225,7 +247,7 @@ export function AppointmentHistoryCard({ appointment }: { appointment: Appointme
                         ) : <p className="mt-2 text-xs text-muted">Không có dữ liệu dịch vụ.</p>}
                     </section>
                     <section className="space-y-3">
-                        <h3 className="text-sm font-semibold">Giá dịch vụ theo từng khách</h3>
+                        <h3 className="text-sm font-semibold">{completed ? "Giá thực tế theo từng khách" : "Giá tạm tính theo từng khách"}</h3>
                         {guests.map(guest => (
                             <div key={guest.index} className="rounded-[16px] border border-line p-4">
                                 <p className="text-sm font-semibold">Khách {guest.index + 1}</p>
@@ -245,7 +267,7 @@ export function AppointmentHistoryCard({ appointment }: { appointment: Appointme
                                     </div>
                                 ) : <p className="mt-2 text-xs text-muted">Chưa có thông tin giá dịch vụ.</p>}
                                 <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3 text-xs">
-                                    <span className="font-semibold">Tổng giá khách {guest.index + 1}</span>
+                                    <span className="font-semibold">{completed ? "Tổng giá khách " : "Tạm tính khách "}{guest.index + 1}</span>
                                     <strong className="tabular-nums">{formatVnd(guest.total)} VND</strong>
                                 </div>
                             </div>
