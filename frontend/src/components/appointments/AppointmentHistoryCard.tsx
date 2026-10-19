@@ -79,11 +79,13 @@ function buildGuestPrices(appointment: Appointment) {
             id: worker.staff_id,
             name: worker.staff_full_name,
             position: worker.position,
+            completedAt: worker.completed_at,
         }))
         : (appointment.assigned_staff ?? []).map((worker, index) => ({
             id: worker.id,
             name: worker.full_name,
             position: index,
+            completedAt: worker.completed_at ?? null,
         })))
         .sort((a, b) => a.position - b.position);
 
@@ -91,12 +93,12 @@ function buildGuestPrices(appointment: Appointment) {
     const seen = new Set(workers.map(worker => worker.id));
     for (const price of prices) {
         if (!seen.has(price.staff_id) && workers.length < appointment.party_size) {
-            workers.push({ id: price.staff_id, name: "", position: workers.length });
+            workers.push({ id: price.staff_id, name: "", position: workers.length, completedAt: null });
             seen.add(price.staff_id);
         }
     }
     if (!workers.length && appointment.party_size === 1 && appointment.staff_id) {
-        workers.push({ id: appointment.staff_id, name: "", position: 0 });
+        workers.push({ id: appointment.staff_id, name: "", position: 0, completedAt: null });
     }
 
     return Array.from({ length: Math.max(1, appointment.party_size) }, (_, index) => {
@@ -124,7 +126,9 @@ function buildGuestPrices(appointment: Appointment) {
         }
         return {
             index,
-            staffName: worker?.name ?? "",
+            // A booking assignment is not proof of service. A completed work marker is.
+            // Accepted transfers replace the assignment with the actual recipient.
+            staffName: worker?.completedAt ? worker.name : "",
             lines,
             total: lines.reduce((sum, line) => sum + line.amount, 0),
         };
@@ -251,9 +255,11 @@ export function AppointmentHistoryCard({ appointment }: { appointment: Appointme
                         {guests.map(guest => (
                             <div key={guest.index} className="rounded-[16px] border border-line p-4">
                                 <p className="text-sm font-semibold">Khách {guest.index + 1}</p>
-                                <p className="mt-1 text-xs text-muted">
-                                    Nhân viên phụ trách: {guest.staffName || "Chưa có thông tin"}
-                                </p>
+                                {completed ? (
+                                    <p className="mt-1 text-xs text-muted">
+                                        Nhân viên thực hiện: {guest.staffName || "Chưa xác định nhân viên thực hiện"}
+                                    </p>
+                                ) : null}
                                 {guest.lines.length ? (
                                     <div className="mt-3 space-y-2">
                                         {guest.lines.map(line => (
