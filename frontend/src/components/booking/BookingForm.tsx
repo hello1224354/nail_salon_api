@@ -855,8 +855,8 @@ export function BookingForm() {
 
                 <section className="rounded-[20px] bg-tint p-5 sm:p-6">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-accent">Thông tin cần biết</p>
-                    <p className="mt-3 font-serif text-lg">{selectedBranch?.opening_hours || "09:00–20:30"}</p>
-                    <p className="mt-3 text-xs leading-5 text-muted">Cần đổi hoặc hủy lịch, bạn có thể gọi trực tiếp cho tiệm.</p>
+                    <p className="mt-3 font-serif text-lg">Giờ mở cửa: {selectedBranch?.opening_hours || "09:00–20:30"}</p>
+                    <p className="mt-3 text-xs leading-5 text-muted">Nếu cần đổi hoặc hủy lịch, bạn có thể gọi trực tiếp cho tiệm.</p>
                     <a
                         href={selectedBranch?.phone ? `tel:${selectedBranch.phone.replace(/[^+\d]/g, "")}` : "tel:+84818798098"}
                         className="mt-3 block w-fit text-sm font-semibold hover:text-accent"
