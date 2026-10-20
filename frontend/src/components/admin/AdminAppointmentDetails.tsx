@@ -26,8 +26,13 @@ export function AdminAppointmentDetails({
     const actual = appointment.actual_prices ?? [];
     const complete = appointment.status === "completed";
     const estimatedPerPerson = services.reduce((sum, item) => sum + item.price, 0);
-    const completedTotal = actual.reduce((sum, item) => sum + item.actual_price, 0);
-    const expectedEntries = workers.length * services.length;
+    const referenceTotal = estimatedPerPerson * appointment.party_size;
+    const baseServiceById = new Map(services.map(service => [service.service_id, service]));
+    const completedTotal = appointment.effective_total_price ?? referenceTotal + actual.reduce((sum, row) => {
+        const base = baseServiceById.get(row.service_id);
+        const isAdditional = additional.some(service => service.service_id === row.service_id);
+        return sum + (base ? Number(row.actual_price) - Number(base.price) : isAdditional ? Number(row.actual_price) : 0);
+    }, 0);
     return (
         <div className="space-y-5 text-sm">
             <div className="rounded-2xl border border-line bg-white p-5">
@@ -87,7 +92,7 @@ export function AdminAppointmentDetails({
                         const workerEntries = [...services, ...ownedAdditional].map(service => ({
                             service, row: actual.find(item => item.staff_id === person.id && item.service_id === service.service_id),
                         }));
-                        const amount = workerEntries.reduce((sum, entry) => sum + (entry.row?.actual_price ?? 0), 0);
+                        const amount = workerEntries.reduce((sum, entry) => sum + Number(entry.row?.actual_price ?? entry.service.price), 0);
                         return <div key={person.id} className="rounded-xl bg-cream p-4">
                             <p className="text-xs font-semibold">Khách {index + 1} · {person.full_name}</p>
                             {appointment.status === "in_progress" && person.completed_at ?
@@ -113,7 +118,7 @@ export function AdminAppointmentDetails({
                     })}
                 </div>
                 {complete ? <div className="mt-4 flex items-center justify-between gap-3 rounded-xl bg-[#302823] p-4 text-white">
-                    <span className="text-xs">Tổng giá thực tế {actual.length < expectedEntries ? "(chưa đủ dữ liệu)" : ""}</span>
+                    <span className="text-xs">Tổng giá thực tế</span>
                     <strong className="text-lg">{money(completedTotal)}</strong>
                 </div> : null}
             </section>

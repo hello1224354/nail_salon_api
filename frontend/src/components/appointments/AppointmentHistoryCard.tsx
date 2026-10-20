@@ -143,7 +143,7 @@ export function AppointmentHistoryCard({ appointment }: { appointment: Appointme
     const code = (appointment.booking_group_id ?? appointment.id).slice(0, 8).toUpperCase();
     const summary = summarizePrices(appointment);
     const guests = buildGuestPrices(appointment);
-    const totalText = summary.hasPrice ? formatVnd(summary.total) + " VND" : "—";
+    const totalText = summary.hasPrice ? formatVnd(appointment.effective_total_price ?? summary.total) + " VND" : "—";
     const duration = summary.baseServices.reduce((sum, service) => sum + service.duration_minutes, 0);
     const completed = status === "completed";
     const amountLabel = completed ? "Tổng giá thực tế" : "Tổng giá tạm tính";

@@ -422,6 +422,8 @@ export type Appointment = {
     status: string;
     appointment_services?: AppointmentService[];
     actual_prices?: AppointmentActualPrice[];
+    /** Booking snapshot per guest, with staff overrides (including an explicit zero). */
+    effective_total_price?: number;
     customer?: {
         id: string;
         full_name: string;

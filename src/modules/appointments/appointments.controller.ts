@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import * as appointmentService from "./appointments.service";
+import { calculateAppointmentCharge } from "./appointment-charge";
 import { parseCreateAppointmentDto, parseGetAppointmentsQuery, parseGetAvailabilityQuery, parseUpdateAppointmentDto } from "./appointments.dto";
 import { AppError } from "../../common/errors";
 import { Appointment } from "./appointments.entity";
@@ -21,6 +22,7 @@ function toAppointmentResponse(appointment: Appointment) {
 
     return {
         ...data,
+        effective_total_price: calculateAppointmentCharge(appointment),
         end_time: appointment.status === "completed" && appointment.actual_completed_at
             ? appointment.actual_completed_at : appointment.end_time,
         customer: {

@@ -31,6 +31,39 @@ import { hasHeldTransferOverlap, getActiveTransferHolds } from "./appointment-tr
 
 const appointmentRepo = AppDataSource.getRepository(Appointment);
 
+/**
+ * Revenue for completed online bookings. Sum one row per appointment to avoid
+ * the fan-out of joining services, staff assignments and price rows together.
+ * Booked service snapshots count once per guest; explicit staff overrides
+ * replace that amount (including zero), and additional work adds its charge.
+ * No mutation/backfill of legacy appointments is required.
+ */
+async function getCompletedOnlineRevenue(start?: Date, end?: Date): Promise<number> {
+    const query = appointmentRepo.createQueryBuilder("appointment")
+        .leftJoin(sub => sub
+            .select("service.appointment_id", "appointment_id")
+            .addSelect("SUM(service.price)", "reference_per_guest")
+            .from(AppointmentService, "service")
+            .where("service.duration_minutes > 0")
+            .groupBy("service.appointment_id"),
+            "booked", "booked.appointment_id = appointment.id")
+        .leftJoin(sub => sub
+            .select("price.appointment_id", "appointment_id")
+            .addSelect("SUM(price.actual_price - CASE WHEN service.duration_minutes > 0 THEN service.price ELSE 0 END)", "override_delta")
+            .from(AppointmentActualPrice, "price")
+            .innerJoin(AppointmentService, "service",
+                "service.appointment_id = price.appointment_id AND service.service_id = price.service_id")
+            .groupBy("price.appointment_id"),
+            "adjusted", "adjusted.appointment_id = appointment.id")
+        .select("COALESCE(SUM(appointment.party_size * COALESCE(booked.reference_per_guest, 0) + COALESCE(adjusted.override_delta, 0)), 0)", "revenue")
+        .where("appointment.status = :completed", { completed: AppointmentStatus.COMPLETED })
+        .andWhere("appointment.merged_into_id IS NULL");
+    if (start && end) query.andWhere("appointment.actual_completed_at >= :start AND appointment.actual_completed_at < :end", { start, end });
+    const row = await query.getRawOne<{ revenue: string | number | null }>();
+    return Number(row?.revenue ?? 0);
+}
+
+
 const CUSTOMER_MIN_BOOKING_LEAD_TIME_MS = 3 * 60 * 60 * 1000;
 const CUSTOMER_MAX_BOOKING_HORIZON_MS = 14 * 24 * 60 * 60 * 1000;
 const BUSINESS_TIMEZONE = "Asia/Ho_Chi_Minh";
@@ -608,16 +641,9 @@ export const getAdminTodaySummary = async () => {
         })
         .getRawOne<Record<string, string | null>>();
 
-    // Revenue is entered actual prices only, never indicative catalogue prices.
-    // Walk-ins use staff-entered prices and are recorded on their visit date.
-    const revenue = await AppDataSource.getRepository(AppointmentActualPrice)
-        .createQueryBuilder("actual")
-        .innerJoin(Appointment, "appointment", "appointment.id = actual.appointment_id")
-        .select("COALESCE(SUM(actual.actual_price), 0)", "revenue")
-        .where("appointment.status = :completed", { completed: AppointmentStatus.COMPLETED })
-        .andWhere("appointment.merged_into_id IS NULL")
-        .andWhere("appointment.actual_completed_at >= :start AND appointment.actual_completed_at < :end", { start, end })
-        .getRawOne<{ revenue: string }>();
+    // Walk-ins use staff-entered prices; online bookings include reference
+    // charges for staff price rows missing from legacy completed bookings.
+    const onlineRevenue = await getCompletedOnlineRevenue(start, end);
     const walkInRevenue = await AppDataSource.getRepository(WalkInVisitService)
         .createQueryBuilder("line")
         .innerJoin(WalkInVisit, "visit", "visit.id = line.visit_id")
@@ -632,7 +658,7 @@ export const getAdminTodaySummary = async () => {
         no_show: Number(counts?.no_show ?? 0),
         completed: Number(counts?.completed ?? 0),
         cancelled: Number(counts?.cancelled ?? 0),
-        revenue: Number(revenue?.revenue ?? 0) + Number(walkInRevenue?.revenue ?? 0),
+        revenue: onlineRevenue + Number(walkInRevenue?.revenue ?? 0),
     };
 };
 
@@ -643,7 +669,7 @@ export const getAdminTodaySummary = async () => {
  */
 /**
  * Lifetime booking totals and actual revenue, across all branches.
- * Revenue uses recorded completed appointment charges, never quoted prices.
+ * Unentered prices on completed bookings default to immutable booking snapshots.
  */
 export const getAdminLifetimeSummary = async () => {
     const counts = await appointmentRepo.createQueryBuilder("appointment")
@@ -662,19 +688,13 @@ export const getAdminLifetimeSummary = async () => {
             completed: AppointmentStatus.COMPLETED, cancelled: AppointmentStatus.CANCELLED,
         })
         .getRawOne<Record<string, string | null>>();
-    const online = await AppDataSource.getRepository(AppointmentActualPrice)
-        .createQueryBuilder("price")
-        .innerJoin(Appointment, "appointment", "appointment.id = price.appointment_id")
-        .select("COALESCE(SUM(price.actual_price), 0)", "revenue")
-        .where("appointment.status = :completed", { completed: AppointmentStatus.COMPLETED })
-        .andWhere("appointment.merged_into_id IS NULL")
-        .getRawOne<{ revenue: string }>();
+    const onlineRevenue = await getCompletedOnlineRevenue();
     const walkIns = await AppDataSource.getRepository(WalkInVisitService)
         .createQueryBuilder("price")
         .select("COALESCE(SUM(price.actual_price), 0)", "revenue")
         .getRawOne<{ revenue: string }>();
     const walkInCount = await AppDataSource.getRepository(WalkInVisit).count();
-    const onlineRevenue = Number(online?.revenue ?? 0);
+
     const walkInRevenue = Number(walkIns?.revenue ?? 0);
     return {
         total: Number(counts?.total ?? 0),
@@ -709,14 +729,7 @@ export const getAdminMonthSummary = async (month: string) => {
             inProgress: AppointmentStatus.IN_PROGRESS,
             completed: AppointmentStatus.COMPLETED, cancelled: AppointmentStatus.CANCELLED,
         }).getRawOne<Record<string, string | null>>();
-    const online = await AppDataSource.getRepository(AppointmentActualPrice)
-        .createQueryBuilder("price")
-        .innerJoin(Appointment, "appointment", "appointment.id = price.appointment_id")
-        .select("COALESCE(SUM(price.actual_price), 0)", "revenue")
-        .where("appointment.status = :completed", { completed: AppointmentStatus.COMPLETED })
-        .andWhere("appointment.merged_into_id IS NULL")
-        .andWhere("appointment.actual_completed_at >= :start AND appointment.actual_completed_at < :end", { start, end })
-        .getRawOne<{ revenue: string }>();
+    const onlineRevenue = await getCompletedOnlineRevenue(start, end);
     const walkIns = await AppDataSource.getRepository(WalkInVisitService)
         .createQueryBuilder("price")
         .innerJoin(WalkInVisit, "visit", "visit.id = price.visit_id")
@@ -735,9 +748,9 @@ export const getAdminMonthSummary = async (month: string) => {
         completed: Number(counts?.completed ?? 0),
         cancelled: Number(counts?.cancelled ?? 0),
         walk_ins: walkInCount,
-        online_revenue: Number(online?.revenue ?? 0),
+        online_revenue: onlineRevenue,
         walk_in_revenue: Number(walkIns?.revenue ?? 0),
-        revenue: Number(online?.revenue ?? 0) + Number(walkIns?.revenue ?? 0),
+        revenue: onlineRevenue + Number(walkIns?.revenue ?? 0),
     };
 };
 
