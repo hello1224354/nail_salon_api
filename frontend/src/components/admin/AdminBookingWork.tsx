@@ -52,13 +52,13 @@ export function AdminBookingWork({
         await loadRequests();
     }
 
-    async function updateStatus(_appointment: Appointment, status: "in_progress" | "completed") {
+    async function updateStatus(_appointment: Appointment, status: "in_progress" | "completed", earlyStartConfirmed = false) {
         if (!selectedId) return;
         setBusy(true); setError("");
         try {
             await apiRequest("/api/appointments/" + appointment.id, {
                 method: "PUT",
-                body: JSON.stringify({ status, acting_staff_id: selectedId }),
+                body: JSON.stringify({ status, acting_staff_id: selectedId, ...(earlyStartConfirmed ? { early_start_confirmed: true } : {}) }),
             });
             await refresh();
         } catch (cause) {

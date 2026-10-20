@@ -26,6 +26,7 @@ import { StaffAssignmentRotation } from "./staff-assignment-rotation.entity";
 import { addAssignedMinutes, chooseFairStaff, type StaffWorkload } from "./staff-allocation";
 import { isGroupComplete } from "./staff-completion";
 import { fillUnenteredReferencePrices } from "./booking-work.service";
+import { canCompleteWorkAtTime, canStartWorkAtTime } from "./appointment-work-time-policy";
 import { AppointmentTransferRequest, TransferStatus } from "./appointment-transfer-request.entity";
 import { hasHeldTransferOverlap, getActiveTransferHolds } from "./appointment-transfers.service";
 
@@ -920,8 +921,10 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
                 }
             }
             if (data.status === AppointmentStatus.IN_PROGRESS || data.status === AppointmentStatus.COMPLETED) {
-                if (Date.now() < appointment.start_time.getTime()) {
-                    throw new AppError("Appointment cannot start or complete before its scheduled time", 409, "APPOINTMENT_NOT_STARTED_YET");
+                // Workers may start early after affirming both they and the customer are ready.
+                if (data.status === AppointmentStatus.IN_PROGRESS &&
+                    !canStartWorkAtTime(Date.now(), appointment.start_time.getTime(), data.early_start_confirmed === true)) {
+                    throw new AppError("Confirm customer and staff readiness before starting early", 409, "EARLY_START_CONFIRMATION_REQUIRED");
                 }
                 if (data.status === AppointmentStatus.IN_PROGRESS) {
                     if (workActorId) {
@@ -943,6 +946,9 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
                     if (!assignment) throw new AppError("Staff not assigned", 403, "FORBIDDEN");
                     if (assignment.completed_at !== null) {
                         throw new AppError("Work already completed by this employee", 409, "STAFF_ALREADY_COMPLETED");
+                    }
+                    if (!canCompleteWorkAtTime(Date.now(), appointment.start_time.getTime(), assignment.started_at)) {
+                        throw new AppError("Start this worker's job before completing it early", 409, "APPOINTMENT_NOT_STARTED_YET");
                     }
                     // Unedited booked services use their immutable reference-price snapshot.
                     await fillUnenteredReferencePrices(manager, appointment, workActorId);

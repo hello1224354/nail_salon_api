@@ -19,7 +19,7 @@ export function StaffBookingCard({
     peers: Peer[];
     nowMs: number;
     reload: () => Promise<void>;
-    updateStatus: (appt: Appointment, status: "in_progress" | "completed") => Promise<void>;
+    updateStatus: (appt: Appointment, status: "in_progress" | "completed", earlyStartConfirmed?: boolean) => Promise<void>;
     adminMode?: boolean;
 }) {
     const core = useMemo(() => (appt.appointment_services ?? []).filter(service => service.duration_minutes > 0),
@@ -60,7 +60,7 @@ export function StaffBookingCard({
         return sum + (raw === undefined || raw.trim() === "" ? service.price : Number(raw) || 0);
     }, 0) + extras.reduce((sum, extra) => sum + (Number(extra.price) || 0), 0);
     const editable = ["confirmed", "in_progress", "no_show"].includes(appt.status) && !completed;
-    const canStart = nowMs > 0 && nowMs >= new Date(appt.start_time).getTime() &&
+    const canStart = nowMs > 0 &&
         ["confirmed", "in_progress", "no_show"].includes(appt.status) && !started && !completed;
     const transferAllowed = editable && !started && !legacyActive;
     const candidates = peers.filter(peer => !(appt.assigned_staff ?? []).some(worker => worker.id === peer.id));
@@ -118,7 +118,11 @@ export function StaffBookingCard({
 
     async function status(next: "in_progress" | "completed") {
         if (dirty && !window.confirm("Bạn chưa lưu các thay đổi về giá/dịch vụ. Tiếp tục mà không lưu?")) return;
-        await updateStatus(appt, next);
+        const startingEarly = next === "in_progress" && Date.now() < new Date(appt.start_time).getTime();
+        if (startingEarly && !window.confirm(
+            "Xác nhận khách đã có mặt và nhân viên đã sẵn sàng bắt đầu làm trước giờ hẹn?"
+        )) return;
+        await updateStatus(appt, next, startingEarly);
     }
 
     const code = (appt.booking_group_id || appt.id).slice(0, 8).toUpperCase();

@@ -21,6 +21,7 @@ export interface UpdateAppointmentDto {
     customer_phone?: string;
     status?: AppointmentStatus;
     acting_staff_id?: string;
+    early_start_confirmed?: boolean;
 }
 
 export interface GetAppointmentsQueryDto {
@@ -270,6 +271,10 @@ export function parseUpdateAppointmentDto(body: unknown): UpdateAppointmentDto {
     const status = typeof data.status === "string" ? data.status.toUpperCase() : undefined;
 
     if (status !== undefined && !(status in AppointmentStatus)) throw new AppError("Status must be pending, confirmed, in_progress, completed, or cancelled", 400, "VALIDATION_ERROR");
+    if (data.early_start_confirmed !== undefined &&
+        (typeof data.early_start_confirmed !== "boolean" || status !== "IN_PROGRESS")) {
+        throw new AppError("Early_start_confirmed must be a boolean for in_progress status only", 400, "VALIDATION_ERROR");
+    }
 
     return {
         branch_id: data.branch_id === undefined ? undefined : parsePositiveIntegerBody(data.branch_id, "Branch_id", 1),
@@ -280,6 +285,7 @@ export function parseUpdateAppointmentDto(body: unknown): UpdateAppointmentDto {
         customer_phone: data.customer_phone === undefined ? undefined : parseVietnamesePhone(data.customer_phone, "Customer_phone"),
         status: status === undefined ? undefined : AppointmentStatus[status as keyof typeof AppointmentStatus],
         acting_staff_id: data.acting_staff_id as string | undefined,
+        early_start_confirmed: data.early_start_confirmed as boolean | undefined,
     };
 }
 

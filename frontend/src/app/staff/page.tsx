@@ -124,17 +124,17 @@ export default function StaffPage() {
         finally { setSaving(false); }
     }
 
-    async function changeStatus(appt: Appointment, status: "in_progress" | "completed") {
+    async function changeStatus(appt: Appointment, status: "in_progress" | "completed", earlyStartConfirmed = false) {
         if (!profile || saving) return;
-        if (Date.now() < new Date(appt.start_time).getTime()) {
-            setError("Lịch hẹn chưa đến giờ. Chỉ có thể bắt đầu từ " + dateVN(appt.start_time) + ".");
+        if (status === "in_progress" && Date.now() < new Date(appt.start_time).getTime() && !earlyStartConfirmed) {
+            setError("Cần xác nhận khách đã có mặt và nhân viên sẵn sàng để bắt đầu sớm.");
             return;
         }
-        if (!window.confirm("Xác nhận cập nhật trạng thái lịch hẹn?")) return;
+        if (!earlyStartConfirmed && !window.confirm("Xác nhận cập nhật trạng thái lịch hẹn?")) return;
         setSaving(true); setError(""); setMessage("");
         try {
             const updated = await apiRequest<Appointment>("/api/appointments/" + appt.id, {
-                method: "PUT", body: JSON.stringify({ status }),
+                method: "PUT", body: JSON.stringify({ status, ...(earlyStartConfirmed ? { early_start_confirmed: true } : {}) }),
             });
             await load(profile);
             setMessage(status === "completed"
