@@ -20,6 +20,8 @@ jobs:
 
   frontend:
     runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_API_BASE_URL: https://api-production-e911.up.railway.app
     defaults:
       run:
         working-directory: frontend
