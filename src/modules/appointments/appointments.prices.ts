@@ -24,11 +24,21 @@ export async function setActualPriceForStaff(appointmentId: string, serviceId: s
         if (![AppointmentStatus.CONFIRMED, AppointmentStatus.IN_PROGRESS, AppointmentStatus.NO_SHOW].includes(appointment.status)) {
             throw new AppError("Only confirmed or active appointments can be priced", 409, "APPOINTMENT_NOT_EDITABLE");
         }
-        const booked = appointment.appointment_services.filter(service => service.duration_minutes > 0);
-        if (!ownedBookedServiceIds(booked.map(service => service.service_id), appointment.staff_assignments, staffId).includes(serviceId)) {
-            throw new AppError("Service is not assigned to this worker", 403, "FORBIDDEN");
-        }
+        const service = appointment.appointment_services.find(item => item.service_id === serviceId);
+        if (!service) throw new AppError("Service not found on this appointment", 404, "SERVICE_NOT_FOUND");
         const prices = manager.getRepository(AppointmentActualPrice);
+        if (service.duration_minutes > 0) {
+            const booked = appointment.appointment_services.filter(item => item.duration_minutes > 0);
+            if (!ownedBookedServiceIds(booked.map(item => item.service_id), appointment.staff_assignments, staffId).includes(serviceId)) {
+                throw new AppError("Service is not assigned to this worker", 403, "FORBIDDEN");
+            }
+        } else if (!await prices.findOneBy({
+            appointment_id: appointmentId, service_id: serviceId, staff_id: staffId,
+        })) {
+            // Preserve corrections of an existing custom service by its author.
+            // Other staff cannot take ownership of a different worker's extra.
+            throw new AppError("Additional service belongs to another worker", 403, "FORBIDDEN");
+        }
         let price = await prices.findOneBy({ appointment_id: appointmentId, service_id: serviceId, staff_id: staffId });
         if (!price) price = prices.create({ appointment_id: appointmentId, staff_id: staffId, service_id: serviceId });
         price.actual_price = actualPrice;

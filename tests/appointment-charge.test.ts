@@ -71,3 +71,19 @@ test("an explicitly free helper service remains zero-valued", () => {
         actual_prices: [{ service_id: "foot", actual_price: 0 }],
     }), 80_000);
 });
+
+test("two-guest group with an assisting worker is still billed per guest", () => {
+    assert.equal(calculateAppointmentCharge({
+        party_size: 2,
+        appointment_services: [
+            { service_id: "hand", duration_minutes: 30, price: 80_000 },
+            { service_id: "foot", duration_minutes: 45, price: 100_000 },
+        ],
+        actual_prices: [
+            { service_id: "hand", actual_price: 75_000 },
+            { service_id: "foot", actual_price: 90_000 },
+            { service_id: "hand", actual_price: 82_000 },
+            { service_id: "foot", actual_price: 101_000 },
+        ],
+    }), 348_000);
+});
