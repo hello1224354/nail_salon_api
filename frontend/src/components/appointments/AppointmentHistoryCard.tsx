@@ -80,33 +80,40 @@ function buildGuestPrices(appointment: Appointment) {
             name: worker.staff_full_name,
             position: worker.position,
             completedAt: worker.completed_at,
+            assistedServiceId: worker.assisted_service_id ?? null,
         }))
         : (appointment.assigned_staff ?? []).map((worker, index) => ({
             id: worker.id,
             name: worker.full_name,
-            position: index,
+            position: worker.position ?? index,
             completedAt: worker.completed_at ?? null,
+            assistedServiceId: worker.assisted_service_id ?? null,
         })))
+        .filter(worker => !worker.assistedServiceId)
         .sort((a, b) => a.position - b.position);
 
     // For older bookings lacking assignment data, use staff identifiers on price lines.
     const seen = new Set(workers.map(worker => worker.id));
     for (const price of prices) {
         if (!seen.has(price.staff_id) && workers.length < appointment.party_size) {
-            workers.push({ id: price.staff_id, name: "", position: workers.length, completedAt: null });
+            workers.push({ id: price.staff_id, name: "", position: workers.length, completedAt: null, assistedServiceId: null });
             seen.add(price.staff_id);
         }
     }
     if (!workers.length && appointment.party_size === 1 && appointment.staff_id) {
-        workers.push({ id: appointment.staff_id, name: "", position: 0, completedAt: null });
+        workers.push({ id: appointment.staff_id, name: "", position: 0, completedAt: null, assistedServiceId: null });
     }
 
     return Array.from({ length: Math.max(1, appointment.party_size) }, (_, index) => {
-        const worker = workers[index];
+        const worker = workers.find(row => row.position === index);
         const staffId = worker?.id;
+        const helpers = (appointment.staff_assignments ?? []).filter(row =>
+            row.position === index && row.assisted_service_id);
         const lines: GuestPriceLine[] = baseServices.map(service => {
-            const recorded = staffId
-                ? prices.find(price => price.staff_id === staffId && price.service_id === service.service_id)
+            const helper = helpers.find(row => row.assisted_service_id === service.service_id);
+            const owner = helper?.staff_id ?? staffId;
+            const recorded = owner
+                ? prices.find(price => price.staff_id === owner && price.service_id === service.service_id)
                 : undefined;
             return {
                 key: service.service_id,

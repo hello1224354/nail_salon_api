@@ -15,6 +15,8 @@ router.get("/transfers/requests", authenticate, requireRole(UserRole.STAFF), wor
 router.post("/transfers/:requestId/:action", authenticate, requireRole(UserRole.STAFF), work.decideTransfer);
 router.post("/:id/transfers", authenticate, requireRole(UserRole.STAFF), work.createTransfer);
 router.put("/:id/work-prices", authenticate, requireRole(UserRole.STAFF), work.saveMyWork);
+router.post("/:id/assists", authenticate, requireRole(UserRole.STAFF), work.assignHelper);
+router.delete("/:id/assists/:helperId", authenticate, requireRole(UserRole.STAFF), work.cancelHelper);
 router.get("/availability", authenticate, requireRole(UserRole.CUSTOMER, UserRole.ADMIN), availabilityRateLimiter, controller.getAvailability);
 router.get("/admin/today-summary", authenticate, requireRole(UserRole.ADMIN), controller.getAdminTodaySummary);
 router.get("/admin/month-summary", authenticate, requireRole(UserRole.ADMIN), controller.getAdminMonthSummary);

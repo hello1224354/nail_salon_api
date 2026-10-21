@@ -133,6 +133,10 @@ export async function requestTransfer(appointmentId: string, fromStaffId: string
         }
         const mine = appointment.staff_assignments.find(row => row.staff_id === fromStaffId);
         if (!mine) throw new AppError("You do not own this work", 403, "FORBIDDEN");
+        if (mine.assisted_service_id ||
+            appointment.staff_assignments.some(row => row.position === mine.position && row.assisted_service_id)) {
+            throw new AppError("Shared service work cannot be transferred", 409, "APPOINTMENT_NOT_EDITABLE");
+        }
         if (mine.started_at || mine.completed_at) throw new AppError("Work already started", 409, "APPOINTMENT_NOT_EDITABLE");
         const existing = await manager.getRepository(AppointmentTransferRequest).find({
             where: { appointment_id: appointmentId, from_staff_id: fromStaffId, status: TransferStatus.PENDING },

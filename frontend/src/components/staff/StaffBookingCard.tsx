@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { apiRequest, getApiErrorMessage, type Appointment } from "@/lib/api";
 import { formatAppointmentStatus, formatVnd } from "@/lib/studio-data";
 
@@ -22,9 +22,14 @@ export function StaffBookingCard({
     updateStatus: (appt: Appointment, status: "in_progress" | "completed", earlyStartConfirmed?: boolean) => Promise<void>;
     adminMode?: boolean;
 }) {
-    const core = useMemo(() => (appt.appointment_services ?? []).filter(service => service.duration_minutes > 0),
-        [appt.appointment_services]);
     const mine = appt.assigned_staff?.find(worker => worker.id === staffId);
+    const guestPosition = mine?.position ?? appt.assigned_staff?.findIndex(worker => worker.id === staffId) ?? 0;
+    const helpers = (appt.assigned_staff ?? []).filter(row =>
+        row.position === guestPosition && row.assisted_service_id);
+    const delegated = new Set(helpers.map(row => row.assisted_service_id));
+    const core = (appt.appointment_services ?? []).filter(service => service.duration_minutes > 0 &&
+        (mine?.assisted_service_id ? service.service_id === mine.assisted_service_id :
+            !delegated.has(service.service_id)));
     const completed = Boolean(mine?.completed_at);
     const legacyActive = appt.status === "in_progress" && Boolean(appt.actual_started_at) &&
         !(appt.assigned_staff ?? []).some(worker => worker.started_at);
@@ -34,6 +39,7 @@ export function StaffBookingCard({
     const [dirty, setDirty] = useState(false);
     const [working, setWorking] = useState(false);
     const [target, setTarget] = useState("");
+    const [assistedService, setAssistedService] = useState("");
     const [message, setMessage] = useState("");
     const [error, setError] = useState("");
     const snapshotKey = JSON.stringify({
@@ -62,7 +68,9 @@ export function StaffBookingCard({
     const editable = ["confirmed", "in_progress", "no_show"].includes(appt.status) && !completed;
     const canStart = nowMs > 0 &&
         ["confirmed", "in_progress", "no_show"].includes(appt.status) && !started && !completed;
-    const transferAllowed = editable && !started && !legacyActive;
+    const transferAllowed = editable && !started && !legacyActive && !mine?.assisted_service_id && helpers.length === 0;
+    const canRequestHelp = Boolean(mine && !mine.assisted_service_id && started && !completed &&
+        appt.status === "in_progress" && helpers.length === 0 && core.length >= 2);
     const candidates = peers.filter(peer => !(appt.assigned_staff ?? []).some(worker => worker.id === peer.id));
 
     async function saveAll() {
@@ -116,6 +124,39 @@ export function StaffBookingCard({
         finally { setWorking(false); }
     }
 
+    async function shareService() {
+        if (!canRequestHelp || !assistedService || working) return;
+        if (dirty) { setError("Hãy lưu thay đổi giá trước khi chia phần việc."); return; }
+        if (!window.confirm("Phân công thêm một nhân viên rảnh làm dịch vụ đã chọn?")) return;
+        setWorking(true); setError(""); setMessage("");
+        try {
+            const result = await apiRequest<{ staff_full_name: string }>("/api/appointments/" + appt.id + "/assists", {
+                method: "POST",
+                body: JSON.stringify({ service_id: assistedService, ...(adminMode ? { staff_id: staffId } : {}) }),
+            });
+            setAssistedService("");
+            await reload();
+            setMessage("Đã phân công hỗ trợ: " + result.staff_full_name + ". Hai nhân viên có thể thực hiện đồng thời.");
+        } catch (cause) {
+            setError(getApiErrorMessage(cause, "Không có nhân viên rảnh để chia dịch vụ."));
+        } finally { setWorking(false); }
+    }
+
+    async function undoHelper(helperId: string) {
+        if (working || !window.confirm("Hủy phân công hỗ trợ chưa bắt đầu?")) return;
+        setWorking(true); setError(""); setMessage("");
+        try {
+            await apiRequest("/api/appointments/" + appt.id + "/assists/" + helperId, {
+                method: "DELETE",
+                body: JSON.stringify(adminMode ? { staff_id: staffId } : {}),
+            });
+            await reload();
+            setMessage("Đã hủy hỗ trợ, dịch vụ trả lại cho thợ chính.");
+        } catch (cause) {
+            setError(getApiErrorMessage(cause, "Không hủy được hỗ trợ."));
+        } finally { setWorking(false); }
+    }
+
     async function status(next: "in_progress" | "completed") {
         if (dirty && !window.confirm("Bạn chưa lưu các thay đổi về giá/dịch vụ. Tiếp tục mà không lưu?")) return;
         const startingEarly = next === "in_progress" && Date.now() < new Date(appt.start_time).getTime();
@@ -135,7 +176,7 @@ export function StaffBookingCard({
         <p className="text-xs font-semibold text-accent">Mã {code} · Nhóm {appt.party_size} người</p>
         <h3 className="mt-1 font-serif text-2xl">{adminMode ? "Thao tác cho nhân viên" : "Phần việc của tôi"}</h3>
         <p className="mt-1 text-xs text-muted">Người đặt: {appt.customer?.full_name || "Khách"} · {date} · {formatAppointmentStatus(appt.status)}</p>
-        {mine ? <p className="mt-2 text-xs font-semibold">Khách số {(appt.assigned_staff?.findIndex(w => w.id === staffId) ?? 0) + 1} · {started ? "Đã bắt đầu" : "Chưa bắt đầu"}{completed ? " · Đã hoàn thành" : ""}</p> : null}
+        {mine ? <p className="mt-2 text-xs font-semibold">Khách số {guestPosition + 1}{mine.assisted_service_id ? " · Nhân viên hỗ trợ dịch vụ" : ""} · {started ? "Đã bắt đầu" : "Chưa bắt đầu"}{completed ? " · Đã hoàn thành" : ""}</p> : null}
 
         <div className="mt-5 space-y-3">
             <h4 className="text-sm font-semibold">Dịch vụ đặt trước</h4>
@@ -154,7 +195,7 @@ export function StaffBookingCard({
             </div>)}
         </div>
 
-        <div className="mt-5 border-t border-line pt-5">
+        {!mine?.assisted_service_id ? <div className="mt-5 border-t border-line pt-5">
             <h4 className="text-sm font-semibold">Dịch vụ phát sinh</h4>
             <p className="mt-1 text-xs text-muted">Nhập tự do tên dịch vụ và giá thực tế; không tạo dịch vụ mới trong danh mục.</p>
             {extras.map((extra, index) => <div key={extra.id} className="mt-3 grid gap-3 rounded-xl border border-line p-3 sm:grid-cols-[1fr_165px_auto] sm:items-end">
@@ -181,7 +222,7 @@ export function StaffBookingCard({
                 disabled={working} onClick={() => { setExtras(rows => [...rows, { id: crypto.randomUUID(), name: "", price: "" }]); setDirty(true); }}>
                 + Thêm dịch vụ
             </button> : null}
-        </div>
+        </div> : null}
         <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
             <div><p className="text-xs text-muted">Tổng giá phần việc của tôi</p>
                 <p className="font-serif text-2xl">{money(total)}</p></div>
@@ -190,6 +231,26 @@ export function StaffBookingCard({
             </button>
         </div>
 
+        {canRequestHelp ? <div className="mt-5 rounded-xl border border-line bg-cream p-4">
+            <h4 className="text-sm font-semibold">Chia dịch vụ cho thợ khác</h4>
+            <p className="mt-1 text-xs text-muted">Chọn một dịch vụ; hệ thống tự tìm nhân viên khác đang rảnh. Không thay đổi giờ đã đặt của khách.</p>
+            <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                <select className={input + " min-w-0 flex-1"} value={assistedService} onChange={e => setAssistedService(e.target.value)} disabled={working}>
+                    <option value="">Chọn dịch vụ để chia</option>
+                    {core.map(service => <option key={service.service_id} value={service.service_id}>{service.service_name}</option>)}
+                </select>
+                <button type="button" className={button} disabled={!assistedService || working} onClick={() => void shareService()}>Phân công thợ hỗ trợ</button>
+            </div>
+        </div> : null}
+        {!mine?.assisted_service_id && helpers.length ? <div className="mt-5 rounded-xl border border-line bg-cream p-4">
+            <h4 className="text-sm font-semibold">Nhân viên hỗ trợ</h4>
+            {helpers.map(helper => <div key={helper.id} className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs">
+                <span>{helper.full_name} · {appt.appointment_services?.find(s => s.service_id === helper.assisted_service_id)?.service_name || "Dịch vụ hỗ trợ"}</span>
+                {!helper.started_at && !helper.completed_at && !completed ?
+                    <button type="button" disabled={working} className="rounded-full border border-line px-3 py-2 disabled:opacity-50"
+                        onClick={() => void undoHelper(helper.id)}>Hủy hỗ trợ</button> : null}
+            </div>)}
+        </div> : null}
         {transferAllowed ? <div className="mt-5 rounded-xl border border-line bg-cream p-4">
             <p className="text-sm font-semibold">Chuyển phần việc cho nhân viên khác</p>
             <p className="mt-1 text-xs text-muted">Người nhận phải đồng ý trong 3 phút. Trong lúc chờ, lịch vẫn thuộc bạn.</p>

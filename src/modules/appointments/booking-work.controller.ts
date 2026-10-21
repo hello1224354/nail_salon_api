@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { AppError } from "../../common/errors";
 import { parseUuidParam } from "../../common/validators";
 import { parseWorkPrices, saveWorkPrices } from "./booking-work.service";
+import { assignAvailableServiceHelper, cancelServiceHelper } from "./booking-service-assistance.service";
 import { lookupBookingForReception } from "./booking-reception.service";
 import { resolveWorkStaff, auditAdminWork } from "./admin-staff-actor";
 import { UserRole } from "../users/users.entity";
@@ -14,6 +15,27 @@ export async function saveMyWork(req: Request, res: Response) {
     const result = await saveWorkPrices(appointmentId, staffId, parseWorkPrices(req.body));
     await auditAdminWork(req, res, staffId, "SAVE_WORK_PRICES", appointmentId);
     return res.status(200).json({ success: { data: result, message: "Work prices saved" } });
+}
+
+export async function assignHelper(req: Request, res: Response) {
+    if (!req.user) throw new AppError("Login required", 401, "AUTHENTICATION_REQUIRED");
+    const appointmentId = parseUuidParam(req.params.id, "Appointment id");
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const staffId = resolveWorkStaff(req.user, body.staff_id);
+    const serviceId = parseUuidParam(body.service_id, "Service id");
+    const result = await assignAvailableServiceHelper(appointmentId, staffId, serviceId);
+    await auditAdminWork(req, res, staffId, "ASSIGN_SERVICE_HELPER", appointmentId);
+    return res.status(201).json({ success: { data: result, message: "Available service helper assigned" } });
+}
+
+export async function cancelHelper(req: Request, res: Response) {
+    if (!req.user) throw new AppError("Login required", 401, "AUTHENTICATION_REQUIRED");
+    const appointmentId = parseUuidParam(req.params.id, "Appointment id");
+    const helperId = parseUuidParam(req.params.helperId, "Helper id");
+    const staffId = resolveWorkStaff(req.user, (req.body as Record<string, unknown> | undefined)?.staff_id);
+    await cancelServiceHelper(appointmentId, staffId, helperId);
+    await auditAdminWork(req, res, staffId, "CANCEL_SERVICE_HELPER", appointmentId);
+    return res.status(200).json({ success: { data: null, message: "Service helper removed" } });
 }
 
 export async function peers(req: Request, res: Response) {
