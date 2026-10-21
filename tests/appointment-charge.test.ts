@@ -45,3 +45,29 @@ test("orphan price rows do not add revenue", () => {
         actual_prices: [{ service_id: "unknown", actual_price: 20_000 }],
     }), 120_000);
 });
+
+test("one guest with two workers charges hand and foot exactly once", () => {
+    assert.equal(calculateAppointmentCharge({
+        party_size: 1,
+        appointment_services: [
+            { service_id: "hand", duration_minutes: 30, price: 80_000 },
+            { service_id: "foot", duration_minutes: 45, price: 100_000 },
+        ],
+        // Primary owns hand, helper owns foot; the same service has one price row.
+        actual_prices: [
+            { service_id: "hand", actual_price: 75_000 },
+            { service_id: "foot", actual_price: 90_000 },
+        ],
+    }), 165_000);
+});
+
+test("an explicitly free helper service remains zero-valued", () => {
+    assert.equal(calculateAppointmentCharge({
+        party_size: 1,
+        appointment_services: [
+            { service_id: "hand", duration_minutes: 30, price: 80_000 },
+            { service_id: "foot", duration_minutes: 45, price: 100_000 },
+        ],
+        actual_prices: [{ service_id: "foot", actual_price: 0 }],
+    }), 80_000);
+});

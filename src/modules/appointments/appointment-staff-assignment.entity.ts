@@ -17,6 +17,17 @@ export class AppointmentStaffAssignment {
     @Column({ type: "int", default: 0 })
     position: number;
 
+    // NULL = primary worker for the guest; non-NULL = assisting on one service.
+    @Column({ type: "varchar", length: 36, nullable: true })
+    assisted_service_id: string | null;
+
+    // Only assistants reserve additional slots at the moment work is shared.
+    @Column({ type: "datetime", nullable: true })
+    reserved_start: Date | null;
+
+    @Column({ type: "datetime", nullable: true })
+    reserved_end: Date | null;
+
     @Column({ type: "datetime", precision: 3, nullable: true })
     started_at: Date | null;
 

@@ -6,6 +6,7 @@ import { isUuid } from "../../common/validators";
 import { Appointment, AppointmentStatus } from "./appointments.entity";
 import { AppointmentService } from "./appointment-services.entity";
 import { AppointmentActualPrice } from "./appointment-actual-price.entity";
+import { ownedBookedServiceIds } from "./booking-service-ownership";
 
 type PriceInput = { service_id: string; actual_price: number | null };
 type ExtraInput = { name: string; price: number };
@@ -60,10 +61,17 @@ export async function saveWorkPrices(appointmentId: string, staffId: string, inp
         if (mine.completed_at || ![AppointmentStatus.CONFIRMED, AppointmentStatus.IN_PROGRESS, AppointmentStatus.NO_SHOW].includes(appointment.status)) {
             throw new AppError("Work is no longer editable", 409, "APPOINTMENT_NOT_EDITABLE");
         }
-        const originals = appointment.appointment_services.filter(row => row.duration_minutes > 0);
+        const eligible = new Set(ownedBookedServiceIds(
+            appointment.appointment_services.filter(row => row.duration_minutes > 0).map(row => row.service_id),
+            appointment.staff_assignments, staffId
+        ));
+        const originals = appointment.appointment_services.filter(row => row.duration_minutes > 0 && eligible.has(row.service_id));
         const baseIds = new Set(originals.map(row => row.service_id));
         if (input.prices.some(row => !baseIds.has(row.service_id))) {
             throw new AppError("Unknown booked service", 400, "SERVICE_NOT_FOUND");
+        }
+        if (mine.assisted_service_id && input.extras.length) {
+            throw new AppError("Helpers cannot add unassigned services", 403, "FORBIDDEN");
         }
         const specified = new Map(input.prices.map(row => [row.service_id, row.actual_price]));
         const actualRepo = manager.getRepository(AppointmentActualPrice);
@@ -113,8 +121,12 @@ export async function fillUnenteredReferencePrices(
     const priceRepo = manager.getRepository(AppointmentActualPrice);
     const existing = await priceRepo.findBy({ appointment_id: appointment.id, staff_id: staffId });
     const known = new Set(existing.map(item => item.service_id));
+    const eligible = new Set(ownedBookedServiceIds(
+        appointment.appointment_services.filter(service => service.duration_minutes > 0).map(service => service.service_id),
+        appointment.staff_assignments, staffId
+    ));
     const missing = appointment.appointment_services
-        .filter(service => service.duration_minutes > 0 && !known.has(service.service_id))
+        .filter(service => service.duration_minutes > 0 && eligible.has(service.service_id) && !known.has(service.service_id))
         .map(service => priceRepo.create({
             appointment_id: appointment.id, staff_id: staffId,
             service_id: service.service_id, actual_price: service.price,

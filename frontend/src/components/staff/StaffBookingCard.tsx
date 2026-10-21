@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { apiRequest, getApiErrorMessage, type Appointment } from "@/lib/api";
 import { formatAppointmentStatus, formatVnd } from "@/lib/studio-data";
 
@@ -116,6 +116,21 @@ export function StaffBookingCard({
         finally { setWorking(false); }
     }
 
+    async function undoHelper(helperId: string) {
+        if (working || !window.confirm("Hủy phân công hỗ trợ chưa bắt đầu?")) return;
+        setWorking(true); setError(""); setMessage("");
+        try {
+            await apiRequest("/api/appointments/" + appt.id + "/assists/" + helperId, {
+                method: "DELETE",
+                body: JSON.stringify(adminMode ? { staff_id: staffId } : {}),
+            });
+            await reload();
+            setMessage("Đã hủy hỗ trợ, dịch vụ trả lại cho thợ chính.");
+        } catch (cause) {
+            setError(getApiErrorMessage(cause, "Không hủy được hỗ trợ."));
+        } finally { setWorking(false); }
+    }
+
     async function status(next: "in_progress" | "completed") {
         if (dirty && !window.confirm("Bạn chưa lưu các thay đổi về giá/dịch vụ. Tiếp tục mà không lưu?")) return;
         const startingEarly = next === "in_progress" && Date.now() < new Date(appt.start_time).getTime();
@@ -190,6 +205,15 @@ export function StaffBookingCard({
             </button>
         </div>
 
+        {!mine?.assisted_service_id && helpers.length ? <div className="mt-5 rounded-xl border border-line bg-cream p-4">
+            <h4 className="text-sm font-semibold">Nhân viên hỗ trợ</h4>
+            {helpers.map(helper => <div key={helper.id} className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs">
+                <span>{helper.full_name} · {appt.appointment_services?.find(s => s.service_id === helper.assisted_service_id)?.service_name || "Dịch vụ hỗ trợ"}</span>
+                {!helper.started_at && !helper.completed_at && !completed ?
+                    <button type="button" disabled={working} className="rounded-full border border-line px-3 py-2 disabled:opacity-50"
+                        onClick={() => void undoHelper(helper.id)}>Hủy hỗ trợ</button> : null}
+            </div>)}
+        </div> : null}
         {transferAllowed ? <div className="mt-5 rounded-xl border border-line bg-cream p-4">
             <p className="text-sm font-semibold">Chuyển phần việc cho nhân viên khác</p>
             <p className="mt-1 text-xs text-muted">Người nhận phải đồng ý trong 3 phút. Trong lúc chờ, lịch vẫn thuộc bạn.</p>

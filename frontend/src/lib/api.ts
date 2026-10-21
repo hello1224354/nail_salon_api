@@ -404,12 +404,15 @@ export type Appointment = {
     booking_group_id?: string | null;
     party_size: number;
     staff_id: string;
-    assigned_staff?: Array<{ id: string; full_name: string; started_at?: string | null; completed_at?: string | null }>;
+    assigned_staff?: Array<{ id: string; full_name: string; started_at?: string | null; completed_at?: string | null; position?: number; assisted_service_id?: string | null }>;
     staff_assignments?: Array<{
         appointment_id: string;
         staff_id: string;
         staff_full_name: string;
         position: number;
+        assisted_service_id?: string | null;
+        reserved_start?: string | null;
+        reserved_end?: string | null;
         started_at: string | null;
         completed_at: string | null;
     }>;

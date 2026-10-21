@@ -249,9 +249,12 @@ async function allocateBookingStaff(
         for (const assigned of appointment.staff_assignments) {
             const load = loads.get(assigned.staff_id);
             if (!load) continue;
-            load.trailing14DaysMinutes += duration;
+            const contribution = assigned.assisted_service_id && assigned.reserved_start && assigned.reserved_end
+                ? Math.max(0, (assigned.reserved_end.getTime() - assigned.reserved_start.getTime()) / 60000)
+                : duration;
+            load.trailing14DaysMinutes += contribution;
             if (appointment.start_time >= dayStart && appointment.start_time < dayEnd) {
-                load.dayMinutes += duration;
+                load.dayMinutes += contribution;
             }
         }
     }
@@ -965,6 +968,15 @@ export const updateAppointment = async (id: string, userId: string, role: UserRo
                 }
             }
             if (data.status === AppointmentStatus.COMPLETED || data.status === AppointmentStatus.CANCELLED) {
+                if (data.status === AppointmentStatus.CANCELLED) {
+                    for (const helper of appointment.staff_assignments) {
+                        if (helper.assisted_service_id && !helper.completed_at &&
+                            helper.reserved_start && helper.reserved_end) {
+                            await releaseStaffSlots(manager, helper.staff_id,
+                                getRequiredSlotStarts(helper.reserved_start, helper.reserved_end));
+                        }
+                    }
+                }
                 const slots = getRequiredSlotStarts(appointment.start_time, appointment.end_time);
                 const logicalWorkers = new Set((await manager.getRepository(AppointmentTransferRequest).find({
                     where: { appointment_id: appointment.id,
@@ -1102,13 +1114,20 @@ export const deleteAppointment = async (id: string) => {
         const assignments = await manager.getRepository(AppointmentStaffAssignment).findBy({
             appointment_id: appointment.id,
         });
+        // Release helper holds even if no-show previously freed primary slots.
+        for (const helper of assignments) {
+            if (helper.assisted_service_id && !helper.completed_at && helper.reserved_start && helper.reserved_end) {
+                await releaseStaffSlots(manager, helper.staff_id,
+                    getRequiredSlotStarts(helper.reserved_start, helper.reserved_end));
+            }
+        }
         if (!mayHaveReleasedNoShowSlots(appointment)) {
             const acceptedTransfers = await manager.getRepository(AppointmentTransferRequest).find({
                 where: { appointment_id: appointment.id, status: TransferStatus.ACCEPTED },
             });
             const logicalWorkers = new Set(acceptedTransfers.map(row => row.to_staff_id));
             for (const assignment of assignments) {
-                if (!logicalWorkers.has(assignment.staff_id)) {
+                if (!assignment.assisted_service_id && !logicalWorkers.has(assignment.staff_id)) {
                     await releaseStaffSlots(manager, assignment.staff_id,
                         getRequiredSlotStarts(appointment.start_time, appointment.end_time));
                 }

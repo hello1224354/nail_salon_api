@@ -95,7 +95,7 @@ export function AdminBookingWork({
             <select value={selectedId} onChange={event => setSelected(event.target.value)}
                 className="mt-2 w-full rounded-xl border border-line bg-white px-3 py-3 text-sm">
                 {workers.map((person, index) =>
-                    <option key={person.id} value={person.id}>Khách {index + 1} — {person.full_name}</option>)}
+                    <option key={person.id} value={person.id}>Khách {(person.position ?? index) + 1} — {person.full_name}{person.assisted_service_id ? " (hỗ trợ)" : ""}</option>)}
             </select>
         </label>
         {selectedId ? <StaffBookingCard key={appointment.id + ":" + selectedId} appt={appointment}

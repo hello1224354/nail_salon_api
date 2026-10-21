@@ -87,14 +87,20 @@ export function AdminAppointmentDetails({
                 <h3 className="font-serif text-xl">Nhân viên theo từng khách</h3>
                 <div className="mt-3 space-y-3">
                     {workers.map((person, index) => {
+                        const guestPosition = person.position ?? index;
+                        const delegated = new Set(workers.filter(row =>
+                            row.position === guestPosition && row.assisted_service_id).map(row => row.assisted_service_id));
+                        const ownedCore = services.filter(service => person.assisted_service_id
+                            ? service.service_id === person.assisted_service_id
+                            : !delegated.has(service.service_id));
                         const ownedAdditional = additional.filter(service =>
                             actual.some(price => price.staff_id === person.id && price.service_id === service.service_id));
-                        const workerEntries = [...services, ...ownedAdditional].map(service => ({
+                        const workerEntries = [...ownedCore, ...ownedAdditional].map(service => ({
                             service, row: actual.find(item => item.staff_id === person.id && item.service_id === service.service_id),
                         }));
                         const amount = workerEntries.reduce((sum, entry) => sum + Number(entry.row?.actual_price ?? entry.service.price), 0);
                         return <div key={person.id} className="rounded-xl bg-cream p-4">
-                            <p className="text-xs font-semibold">Khách {index + 1} · {person.full_name}</p>
+                            <p className="text-xs font-semibold">Khách {guestPosition + 1} · {person.full_name}{person.assisted_service_id ? " (hỗ trợ dịch vụ)" : ""}</p>
                             {appointment.status === "in_progress" && person.completed_at ?
                                 <p className="mt-1 text-xs font-semibold text-accent">Đã hoàn thành phần việc</p> : null}
                             {complete ? (
@@ -110,7 +116,7 @@ export function AdminAppointmentDetails({
                                         ))}
                                     </div>
                                     <p className="mt-3 border-t border-line pt-3 text-right text-xs font-semibold">
-                                        Giá thực tế khách {index + 1}: {money(amount)}
+                                        Giá thực tế phần việc: {money(amount)}
                                     </p>
                                 </>
                             ) : <p className="mt-2 text-xs text-muted">Giá thực tế sẽ hiển thị khi lịch hoàn thành.</p>}

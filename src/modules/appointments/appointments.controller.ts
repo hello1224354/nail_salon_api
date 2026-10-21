@@ -42,6 +42,8 @@ function toAppointmentResponse(appointment: Appointment) {
                 full_name: assignment.staff_full_name,
                 started_at: assignment.started_at,
                 completed_at: assignment.completed_at,
+                position: assignment.position,
+                assisted_service_id: assignment.assisted_service_id,
             })),
         branch: {
             id: appointment.branch_id,

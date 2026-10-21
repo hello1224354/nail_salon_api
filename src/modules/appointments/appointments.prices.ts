@@ -3,6 +3,7 @@ import { AppError } from "../../common/errors";
 import { IsNull } from "typeorm";
 import { Appointment, AppointmentStatus } from "./appointments.entity";
 import { AppointmentActualPrice } from "./appointment-actual-price.entity";
+import { ownedBookedServiceIds } from "./booking-service-ownership";
 
 /** Staff identity is always taken from the authenticated request, never client input. */
 export async function setActualPriceForStaff(appointmentId: string, serviceId: string, staffId: string, actualPrice: number) {
@@ -23,8 +24,9 @@ export async function setActualPriceForStaff(appointmentId: string, serviceId: s
         if (![AppointmentStatus.CONFIRMED, AppointmentStatus.IN_PROGRESS, AppointmentStatus.NO_SHOW].includes(appointment.status)) {
             throw new AppError("Only confirmed or active appointments can be priced", 409, "APPOINTMENT_NOT_EDITABLE");
         }
-        if (!appointment.appointment_services.some(service => service.service_id === serviceId)) {
-            throw new AppError("Service not found on this appointment", 404, "SERVICE_NOT_FOUND");
+        const booked = appointment.appointment_services.filter(service => service.duration_minutes > 0);
+        if (!ownedBookedServiceIds(booked.map(service => service.service_id), appointment.staff_assignments, staffId).includes(serviceId)) {
+            throw new AppError("Service is not assigned to this worker", 403, "FORBIDDEN");
         }
         const prices = manager.getRepository(AppointmentActualPrice);
         let price = await prices.findOneBy({ appointment_id: appointmentId, service_id: serviceId, staff_id: staffId });
