@@ -1,56 +1,46 @@
-# Media upload — MySQL storage and admin image management
+# Media storage and content management
 
-## Data model
+Administrator uploads are stored in MySQL in `media_files`. Each record contains a UUID, filename, verified MIME type, byte size, creation metadata and an `image_data MEDIUMBLOB`. The feature uses the existing database connection and does not require an object-store account.
 
-Admin-uploaded JPEG, PNG and WebP files are stored as **binary bytes in Railway MySQL**, in table `media_files`. Each record has a UUID, original filename, verified MIME type, size, creation metadata and an `image_data MEDIUMBLOB` field.
+## Upload and read flow
 
-```text
-Admin browser → POST /api/media (binary JPEG/PNG/WebP, ADMIN JWT)
-             → Express checks role, rate limit, size & format
-             → INSERT media_files (metadata + image_data MEDIUMBLOB)
-             → /api/media/{uuid}/file
-Public page  → GET /api/media/{uuid}/file → SELECT image_data from MySQL
-```
+The admin client sends raw image bytes to `POST /api/media` with an ADMIN bearer token and the appropriate `Content-Type`. The API checks authorization, rate limit, size and image signature before saving the bytes. It returns a public `/api/media/{uuid}/file` URL, served through the same-origin frontend rewrite.
 
-No separate file host or Cloudflare R2 bucket is needed. This feature uses the existing MySQL connection on Railway; no new environment variables are necessary. Images are served via the existing same-origin Next.js `/api` rewrite to the Express API.
+The [entity](../src/modules/media/media-file.entity.ts) marks `image_data` as `select: false`. Gallery list requests load metadata; individual file requests explicitly select the BLOB. See [routes](../src/modules/media/media.routes.ts), [validation](../src/modules/media/media-validation.ts) and [service](../src/modules/media/media.service.ts).
 
-The `image_data` column is marked `select: false` in TypeORM so the admin gallery's paginated list fetches metadata **without** loading all binary files. Only the individual image endpoint selects the BLOB.
+## API
 
-## API surface
+| Method | Endpoint | Access | Behavior |
+| --- | --- | --- | --- |
+| GET | `/api/media?page=1` | ADMIN | Metadata list, 24 records per page; page 1-1000 |
+| POST | `/api/media` | ADMIN | Raw JPEG, PNG or WebP; at most 5 MiB; 100 upload requests/hour/account |
+| GET | `/api/media/:id/file` | Public, rate-limited | Image bytes with verified MIME type |
+| DELETE | `/api/media/:id` | ADMIN | Delete an image after reference checks |
+| GET | `/api/site-content/admin/trends` | ADMIN | List trends for salon content 1 |
+| POST | `/api/site-content/admin/trends` | ADMIN | Create a trend |
+| PUT | `/api/site-content/admin/trends/:id` | ADMIN | Replace editable trend fields |
+| DELETE | `/api/site-content/admin/trends/:id` | ADMIN | Remove a trend record |
 
-| Method | Endpoint | Access | Description |
-|---|---|---|---|
-| GET | `/api/media?page=1` | ADMIN | List up to 24 image records/page, metadata only |
-| POST | `/api/media` | ADMIN | Binary JPEG/PNG/WebP request, appropriate `Content-Type`, optional URL-encoded `X-File-Name`; 5 MiB max; 30 uploads/hour/account |
-| GET | `/api/media/:id/file` | Public, rate-limited | Return image bytes from MySQL |
-| DELETE | `/api/media/:id` | ADMIN | Remove an unused image; reject if referenced by offers or trends |
-| GET | `/api/site-content/admin/trends` | ADMIN | List Hot Trend entries |
-| POST/PUT/DELETE | `/api/site-content/admin/trends[/:id]` | ADMIN | Add, update and delete trends |
+Uploads are binary bodies, not JSON/base64 or multipart form data. An optional `X-File-Name` header carries the URL-encoded filename. The declared content type must match the detected JPEG/PNG/WebP format. The backend validates bytes but does not re-encode or resize the image. HTTP limiter counters are process-local; see [Authentication](AUTH-SECURITY.md).
 
-The existing `/api/offers` API accepts an uploaded image URL as its `image` field. Newly created trends select an image from the media library. Existing Google Drive URLs and **still-referenced** static images remain supported; three unreferenced public assets (`nail-01.png`, `nail-03.png`, `nail-care.png`) have been removed from the repository. No automatic download of legacy images occurs.
+File responses set `Cache-Control: public, max-age=3600, immutable` and inline disposition. A new upload receives a new UUID URL. Deletion removes the stored record but does not invalidate copies already cached by clients or intermediaries.
 
-## Deployment
+## Offers and trends
 
-1. Back up Railway MySQL, including the full `media_files.image_data` BLOBs; test a restore before schema changes.
-2. Existing production `media_files` uses `image_data MEDIUMBLOB` and was verified with four complete image records. The obsolete `object_key` column and `media_object_deletions` table have been removed from production.
-3. The 30 historical TypeORM migrations (including `AddMediaFiles`) are no longer present in the current branch; `npm run migration:run` does **not** initialize a new database. Restore a verified database snapshot for a fresh environment.
-4. Confirm Railway API health, Vercel deployment compatibility, and as ADMIN verify upload, file retrieval, offer/trend assignment and deletion behavior.
+Offers reference images through their `image` field; trends use `image_src`. Trend create/update requires an existing uploaded-media URL, an Instagram HTTPS URL, and optionally a title (up to 255 characters) and integer `sort_order` (0-1,000,000). Creation requires the parent `salon_content` record with ID 1.
 
-**Do not use production customer data in test screenshots or upload private images for testing.**
+[Trend routes](../src/modules/site-content/site-content-admin.routes.ts) manage the content record separately from the underlying image. Deleting a trend does not delete its media file. Media deletion checks offer/trend references transactionally and rejects images still in use. These references are URL strings, not database foreign keys; the check is not a general foreign-key guarantee for every possible concurrent content update.
 
-## Admin UI
+Existing static or external image references are not automatically imported into the media library. Newly selected trend images must satisfy the uploaded-media requirement.
 
-- **Thư viện ảnh**: upload from mobile/desktop, preview and delete unused images.
-- **Ưu đãi**: choose an image already uploaded or upload a new one while editing the offer.
-- **Hot Trend**: add/edit an image with Instagram URL, title and display order; delete a trend without deleting its underlying media file.
+## Admin interface
 
-The UI leaves existing Google Drive and currently deployed referenced static image URLs unchanged until replaced.
+[AdminMedia.tsx](../frontend/src/components/admin/AdminMedia.tsx) provides upload, preview, selection and deletion. It attempts to reduce an image to a maximum side of 1600 pixels and encode WebP at quality 0.82. It uses that result only when smaller than the original; the final upload must still satisfy the server's 5 MiB limit. Raw API uploads do not receive this browser-side optimization.
 
-## Limits and operating considerations
+The gallery supports offers and trend editing. Use synthetic or authorized public images when validating the workflow, and check both successful retrieval and rejection of referenced-image deletion.
 
-- **Storage is not unlimited or automatically free.** A 5 MiB image adds approximately 5 MiB to the database, plus backup/storage overhead. Monitor the actual Railway volume capacity and free space in the dashboard. Railway storage and transfer usage continue to apply.
-- **Operational trade-off:** Storing image BLOBs alongside booking data increases database size and I/O load. Suitable for a smaller image gallery and early-stage site, not an unrestricted multi-user photo hosting service.
-- **Cache:** Images use long-lived UUID URLs and a one-hour cache header. Each upload creates a new URL, so replacing an image in an offer/trend will cause the frontend to use a new URL.
-- **Optimization:** The Admin frontend attempts to resize large photos to a maximum side of 1600 pixels and encode smaller WebP images before upload, reducing storage and download costs. The backend still validates format and size independently. Raw API uploads are not server-reencoded, so restrict uploads to trusted admins.
-- **Integrity:** Admin deletion is blocked for images referenced in offers or trends. The URLs are stored in those tables, rather than MySQL foreign keys; concurrent content updates should be handled carefully.
-- **Recovery:** Backups must include the full `media_files` BLOB data, not just table schema/metadata. Restore tests should verify image URLs and booking data.
+## Storage and recovery
+
+BLOB storage increases database size, I/O and backup volume. Monitor actual database capacity and transfer usage; application upload limits are not a storage quota. Public image URLs are appropriate for public site assets, not private documents.
+
+Backups must include the complete `image_data` bytes as well as metadata and referencing content. Test restored image URLs alongside appointment data. The repository's incremental migrations are not a full database bootstrap; follow [Database](DATABASE.md) and [Setup](SETUP.md) when provisioning a new environment. No production table contents, image counts or backup status can be inferred from the entity definitions alone.

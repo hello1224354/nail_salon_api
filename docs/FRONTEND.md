@@ -1,81 +1,68 @@
-# FRONTEND — Pages, components và data flow
+# Frontend
 
-Frontend: `frontend/`, Next.js 16 App Router, React 19, TypeScript, Tailwind 4. Đây là **một ứng dụng** với trang công khai, tài khoản cá nhân và admin, không phải SPA/admin repo tách riêng.
+The `frontend/` application uses Next.js 16 App Router, React 19, TypeScript and Tailwind CSS 4. Public, account, staff and administrator pages share one application and API client.
 
-## Danh sách URL
+## Pages
 
-| Route | Thành phần/nhiệm vụ |
-|---|---|
-| `/` | Trang chủ; giới thiệu, sản phẩm ảnh, offers, reviews/trends |
-| `/services` | Danh mục/bảng giá theo chi nhánh |
-| `/book` | BookingForm: chọn dịch vụ, người, ngày, slot, điện thoại và xác nhận |
-| `/appointments` | MyAppointments: lịch của tôi, filter status |
-| `/login` | Customer LoginForm và OTP email khi cần |
-| `/register` | RegisterForm và email verification |
-| `/forgot-password` | Reset mật khẩu bằng OTP |
-| `/account/security` | Đổi mật khẩu/OTP cho tài khoản |
-| `/admin/login` | Login dành admin, OTP nếu cần |
-| `/admin` | AdminDashboard — overview và quản trị records |
-| `/admin/security` | Bảo mật tài khoản admin |
+| Route | Purpose |
+| --- | --- |
+| `/` | Salon introduction, offers, trends and reviews |
+| `/services` | Branch-specific service catalog |
+| `/book` | Service, party-size and available-time selection |
+| `/appointments` | Personal appointment history and status filtering |
+| `/login`, `/register` | Login/OTP and email-verified registration |
+| `/forgot-password` | Email-based password reset |
+| `/account/security` | Account password/security flow |
+| `/staff` | Assigned online bookings and walk-in entry/history |
+| `/admin/login` | Administrator login entry |
+| `/admin` | Operational dashboard and catalog/content management |
+| `/admin/staff` | Staff-account management page |
+| `/admin/security` | Administrator account security |
 
-`app/error.tsx`, `loading.tsx`, `not-found.tsx`, `manifest.ts` quản lý fallback và metadata/PWA manifest.
+Routes and buttons guide the user, while API role/ownership checks remain authoritative. The repository also contains error/loading/not-found boundaries and metadata routes.
 
-## Layout và design system
+## Layout and request flow
 
-- `app/layout.tsx`: metadata SEO, Header, Footer, BranchProvider, RouteMotion.
-- `app/globals.css`: design tokens và hiệu ứng chung; `app/book/book.css` cho booking.
-- Ảnh trong `public/nails`, logo trong `public/brand`; Next Image cho assets ở những nơi hỗ trợ.
-- `BranchProvider`: branch context chung cho các trang public.
-- CSP nonce từ `frontend/src/proxy.ts`; không chèn third-party scripts tùy tiện ngoài policy.
-- Responsive styling bằng Tailwind; modal booking thành công dùng close icon SVG đối xứng/centered và có nút xem lịch.
+[layout.tsx](../frontend/src/app/layout.tsx) composes the shared header/footer, branch context, route motion and traffic tracker. Global styles and booking-specific styles provide the visual system. Static assets live under `frontend/public`; uploaded media is delivered through `/api/media/:id/file`.
 
-## Booking UI
+[proxy.ts](../frontend/src/proxy.ts) creates a request-specific CSP nonce. The layout opts into request-time rendering. Keep added script requirements consistent with this policy.
 
-`components/booking/BookingForm.tsx`:
+Browser requests use same-origin `/api/...`. [next.config.ts](../frontend/next.config.ts) rewrites them to the origin configured in `NEXT_PUBLIC_API_BASE_URL`. The canonical host and legacy-host redirect are described in [Deployment](DEPLOYMENT.md).
 
-1. Yêu cầu khôi phục session (`restoreSession`) và role cho phép.
-2. GET branches/services; khách chọn một branch, các service thuộc branch.
-3. Điều chỉnh `partySize`, ngày, GET `/appointments/availability` để thấy **giờ còn đủ nhân viên**.
-4. Khách chỉ chọn **slot**, không có dropdown chọn nhân viên.
-5. POST `/api/appointments` với `service_ids`, `start_time`, `party_size`, `customer_phone`.
-6. Thành công hiển thị modal thông tin (branch/time/service/party/tổng dự kiến), trạng thái chờ xác nhận, mã 8 ký tự viết hoa, nút điều hướng lịch tôi.
-7. Khi `SLOT_UNAVAILABLE`, người dùng cần refresh availability và chọn slot khác.
+## API and authentication state
 
-UI có thể render giờ dựa trên ISO UTC bằng timezone Việt Nam; **không lấy local timezone browser mặc định** thay giờ kinh doanh.
+[api.ts](../frontend/src/lib/api.ts) defines response interfaces, request/error helpers, bearer-token attachment and credentialed requests. Its `fetchAllPages` helper requests pages of 100 until the reported final page.
 
-## Lịch cá nhân
+[auth.ts](../frontend/src/lib/auth.ts) stores the access token and user in module memory, restores sessions using the refresh cookie and shares an in-flight refresh promise to avoid duplicate refresh work within the client. The access token is not stored in localStorage. Logout clears local authentication state before attempting server-side session revocation. See [Authentication](AUTH-SECURITY.md) for server-side rotation and cookie behavior.
 
-`components/appointments/MyAppointments.tsx` tải user + GET `/api/appointments?scope=mine&page=1&limit=100`, filter theo trạng thái. Trang lịch cá nhân hiện chỉ tải tối đa 100 lịch trong một request. Backend hỗ trợ phân trang, nhưng UI chưa cung cấp khả năng duyệt các trang tiếp theo khi số lịch vượt giới hạn này.
+## Booking and appointment history
 
-## AdminDashboard
+[BookingForm.tsx](../frontend/src/components/booking/BookingForm.tsx) restores the session, loads branch/service data, and queries available times for the selected services, party size and business date. Availability requests are debounced and superseded requests can be aborted. Customers select a time, not an employee.
 
-`components/admin/AdminDashboard.tsx` có tab:
+The form submits `service_ids`, `start_time`, `party_size` and `customer_phone`; the API derives the branch from the selected services. The API rechecks availability and assigns staff transactionally. A successful response shows the booking reference and appointment summary; a slot conflict requires updated availability. Business-time display uses Vietnam time.
 
-- Tổng quan: stats theo ngày từ `/api/appointments/admin/today-summary`.
-- Lịch hẹn: bảng lịch, chi nhánh, trạng thái, thao tác sửa/xóa, chuyển trạng thái; pagination **20 rows/page**.
-- Dịch vụ, Nhân viên, Chi nhánh, Ưu đãi: danh mục/CRUD. Trong mục **Nhân viên** có cột giờ làm và hai trường bắt đầu/kết thúc ca khi thêm/sửa. Giờ làm được áp dụng vào booking availability; chỉnh ca không được làm sai lịch hẹn đã đặt.
-- Thư viện ảnh: upload, chọn, preview và xóa ảnh trong Railway MySQL (chỉ ADMIN). Form ưu đãi chọn ảnh từ thư viện.
-- Hot Trend: quản lý hình, tiêu đề, link Instagram và thứ tự hiển thị. Xem [MEDIA-STORAGE](MEDIA-STORAGE.md).
+[MyAppointments.tsx](../frontend/src/components/appointments/MyAppointments.tsx) uses `fetchAllPages` with `scope=mine`, so it is not limited to the first 100 appointments. It then filters the loaded records by status, including `no_show`. Loading all pages is different from a server-paginated history interface and has a cost as history grows.
 
-**Filters bảng Lịch hẹn hiện tại:**
+## Staff workspace
 
-- `Từ ngày` và `Đến ngày`: ngày theo giờ Việt Nam, end inclusive được chuyển sang `to` exclusive.
-- Tìm kiếm theo **mã booking 8 ký tự** khách thấy trong confirmation (`booking_code`); cả giá trị 1–8 hex dạng prefix đều được API nhận.
-- Chi nhánh và trạng thái; có nút xóa tất cả filters.
-- Hiển thị mã 8 ký tự ngay dưới giờ hẹn và tổng số records khớp.
-- Lọc/tìm kiếm dùng API query server-side, không chỉ lọc 20 rows đã tải.
+The [staff page](../frontend/src/app/staff/page.tsx) loads the current staff profile, branch services, assigned online appointments, recent walk-ins and transfer peers. Its service and appointment reads request the first 100 records; the walk-in API returns the staff member's latest 100 records. These are not unlimited-history views.
 
-UI phản ánh các chuyển trạng thái được hỗ trợ; **backend thực thi** các điều kiện thời gian và phân quyền. Ví dụ, lịch `confirmed` không thể thành `in_progress` trước giờ hẹn. Một số lỗi HTTP 409 vẫn dùng thông báo chung ở frontend thay vì thông điệp theo `error.code`.
+The workspace supports walk-in entry and assigned-booking operations through shared components. A local 30-second clock updates time-dependent display; it should not be interpreted as a claim that every dataset is refreshed on that interval. Transfers, service assistance and work completion remain subject to the API's assignment and state rules.
 
-## API client / state
+## Administrator interfaces
 
-- `src/lib/api.ts`: typed interfaces, `apiRequest<T>`, Bearer access token, `credentials: include`, refresh khi 401, mapping error code.
-- `src/lib/auth.ts`: access token/user chỉ ở module memory; tự restore bằng refresh endpoint, single-flight refresh promise, logout invalidates local state.
-- `src/lib/studio-data.ts` và `public-data.ts`: formatter/display helpers; không thay thế nguồn dữ liệu DB cho booking.
-- Client browser gọi `/api/...`; server-side calls có base URL. Cấu hình `NEXT_PUBLIC_API_BASE_URL` để Next rewrite tới backend origin.
+[AdminDashboard.tsx](../frontend/src/components/admin/AdminDashboard.tsx) provides overview, appointments, services, staff, branches, offers, media, trends and walk-in panels. Summary components cover daily, monthly and lifetime reporting. The separate [staff management page](../frontend/src/app/admin/staff/page.tsx) manages employee accounts.
 
-## Các điểm mở rộng
+Appointments use server-side filtering and 20 rows per page. Filters include branch, status, a 1-8 hexadecimal booking-code prefix and date bounds. The UI converts an inclusive business-date end into the API's exclusive `to` boundary. Catalog loading follows all pages where implemented rather than assuming one response contains every record.
 
-Frontend dùng các kiểu dữ liệu API tập trung trong `frontend/src/lib/api.ts`, state xác thực trong `frontend/src/lib/auth.ts` và các React components trong `frontend/src/components`. Các luồng cần truy cập backend phải đi qua typed API client và chịu kiểm tra phân quyền tại server.
+The appointment detail/work interfaces reflect per-worker progress and actual charges. Administrators acting on a worker's behalf must send the selected employee identity required by the API. Early starts require explicit confirmation; the backend does not impose an unconditional ban on starting before the scheduled time.
 
-Quy trình review, kiểm thử giao diện và cập nhật tài liệu khi bổ sung tính năng mới được mô tả trong [CONTRIBUTING](CONTRIBUTING.md).
+Admin media upload attempts browser-side image optimization, while the API independently validates the final bytes. Offers and trends can reference the media library. See [Media storage](MEDIA-STORAGE.md).
+
+## Traffic and reporting
+
+[WebsiteVisitTracker.tsx](../frontend/src/components/traffic/WebsiteVisitTracker.tsx) sends a visit pulse immediately and every 60 seconds, using a browser-tab session identifier. The API considers sessions active within five minutes online. This measures visit sessions, not unique people or page views.
+
+Revenue reports summarize recorded service charges, not settled payment transactions. Definitions and operational caveats are in [Booking](BOOKING.md) and [Operations](OPERATIONS.md).
+
+Run the frontend typecheck, lint and build commands in [Contributing](CONTRIBUTING.md). Review interactive flows with suitable test accounts when changing their behavior.
