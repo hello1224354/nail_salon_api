@@ -2,9 +2,7 @@
 
 A full-stack nail salon application for appointment booking, staff coordination, and day-to-day salon operations.
 
-> **Deployment status (October 2026):** This repository is the **legacy full-stack implementation**. Its Vercel production URL is [nail-salon-web-v2.vercel.app](https://nail-salon-web-v2.vercel.app/). The official salon domain [serpentenailroom.site](https://serpentenailroom.site/) now serves the **standalone frontend-only** repository [serpente-web](https://github.com/hello1224354/serpente-web); booking on that public site is handled by [KiotViet](https://booksalon.kiotviet.vn/serpentenailroom). This repository's booking and admin features remain separate from KiotViet and should not be used for live customer reservations without an explicit operating decision.
-
-[Legacy full-stack website](https://nail-salon-web-v2.vercel.app/) · [Product tour](docs/DEMO.md) · [Technical documentation](docs/README.md) · [Engineering case study](docs/PORTFOLIO.md)
+[Live demo](https://nail-salon-web-v2.vercel.app/) · [Product tour](docs/DEMO.md) · [Technical documentation](docs/README.md) · [Engineering case study](docs/PORTFOLIO.md)
 
 ## What the application does
 
