@@ -1,5 +1,4 @@
 import type { NextConfig } from "next";
-import { SITE_ORIGIN } from "./src/lib/site-url";
 
 const apiOrigin = (() => {
   const value = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -21,16 +20,6 @@ const nextConfig: NextConfig = {
         pathname: "/thumbnail",
       },
     ],
-  },
-  async redirects() {
-    return [
-      {
-        source: "/:path*",
-        has: [{ type: "host" as const, value: "nail-salon-web-v2.vercel.app" }],
-        destination: `${SITE_ORIGIN}/:path*`,
-        permanent: true,
-      },
-    ];
   },
   async rewrites() {
     return [
