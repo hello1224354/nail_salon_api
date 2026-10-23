@@ -1,7 +1,5 @@
 # Frontend
 
-> **Current deployment:** This document describes the original full-stack frontend available at [nail-salon-web-v2.vercel.app](https://nail-salon-web-v2.vercel.app/). The primary salon domain [serpentenailroom.site](https://serpentenailroom.site/) uses the separate [serpente-web](https://github.com/hello1224354/serpente-web) frontend with KiotViet booking. These applications are not synchronized.
-
 The `frontend/` application uses Next.js 16 App Router, React 19, TypeScript and Tailwind CSS 4. Public, account, staff and administrator pages share one application and API client.
 
 ## Pages
@@ -29,7 +27,7 @@ Routes and buttons guide the user, while API role/ownership checks remain author
 
 [proxy.ts](../frontend/src/proxy.ts) creates a request-specific CSP nonce. The layout opts into request-time rendering. Keep added script requirements consistent with this policy.
 
-Browser requests use same-origin `/api/...`. [next.config.ts](../frontend/next.config.ts) rewrites them to the origin configured in `NEXT_PUBLIC_API_BASE_URL`. The canonical host and legacy-host redirect are described in [Deployment](DEPLOYMENT.md).
+Browser requests use same-origin `/api/...`. [next.config.ts](../frontend/next.config.ts) rewrites them to the origin configured in `NEXT_PUBLIC_API_BASE_URL`. The frontend URL and hosting configuration are described in [Deployment](DEPLOYMENT.md).
 
 ## API and authentication state
 

@@ -1,7 +1,5 @@
 # Product tour
 
-> **Legacy full-stack demo:** These links open the original booking, staff, and admin application at its Vercel URL. The current customer-facing salon site is [serpentenailroom.site](https://serpentenailroom.site/), whose booking buttons open KiotViet. Appointments made in the legacy demo are **not synchronized** with KiotViet; use test accounts and synthetic data only.
-
 [Open Serpente Nail Room](https://nail-salon-web-v2.vercel.app/)
 
 The application combines a public salon website with authenticated customer, staff and administrator workflows. Use accounts with the appropriate roles to explore protected pages; this repository does not publish demo credentials.
