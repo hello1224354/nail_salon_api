@@ -1,171 +1,231 @@
-# API — HTTP contract, RBAC và ví dụ
+# HTTP API reference
 
-API được khai báo trong `src/app.ts` và các module `.routes.ts`, `.dto.ts`, `.controller.ts` tại `src/modules/`. Các endpoint nghiệp vụ dùng tiền tố `/api`. Phản hồi lỗi JSON có dạng `{ "error": { "code": "...", "message": "..." } }`.
+The API is defined in [app.ts](../src/app.ts) and module route/controller/DTO files. Business endpoints use `/api`; `/health` is separate. Browser clients use the frontend's same-origin rewrite.
 
-## Image upload and image management
+## Conventions
 
-The admin media library stores image data directly in the Railway MySQL database as MEDIUMBLOB. `POST /api/media` accepts raw JPEG/PNG/WebP bytes (up to 5 MiB) with the appropriate `Content-Type` header and requires ADMIN JWT. `GET /api/media` lists image metadata, `DELETE /api/media/:id` removes an unreferenced image, and public `GET /api/media/:id/file` serves the stored image bytes. Admin-only `GET/POST/PUT/DELETE /api/site-content/admin/trends` manages Hot Trend images by using media URLs returned from the library. See [MEDIA-STORAGE](MEDIA-STORAGE.md).
+Protected requests use `Authorization: Bearer <access_token>`. Send `Content-Type: application/json` for JSON bodies. Refresh/logout use the refresh cookie and require a trusted `Origin`. Media upload uses a raw binary body instead of JSON or multipart form data.
 
-## Transport
+Most responses use `{ "success": { "message": "...", "data": ... } }`; `message` is not present on every endpoint. Errors use `{ "error": { "code": "...", "message": "..." } }`. Paginated collections return their named array with `total`, `page`, `limit` and `total_pages` inside `success.data`. Image reads return bytes; traffic pulses return 204 with no body. Responses include `X-Request-Id`.
 
-- Request protected: `Authorization: Bearer <access_token>`; login/session sử dụng cookies.
-- Khi có JSON body: `Content-Type: application/json`.
-- Thành công điển hình: `{ "success": { "message": "...", "data": ... } }`.
-- Các endpoint danh sách phân trang trả bên trong `success.data` có mảng + `total`, `page`, `limit`, `total_pages`.
-- Lỗi validation là 400, không đăng nhập 401, không đủ quyền 403, không tìm thấy 404, conflict/quy tắc trạng thái 409, rate limit 429, email unavailable 503.
-- Browser frontend dùng `/api` same-origin rewrite của Next; không cần nhúng trực tiếp domain backend vào client requests.
-- `GET /health` (public) → `{ "status": "ok" }` nằm **ngoài** `/api`.
+Access labels below describe effective route access:
 
-## RBAC
+- **Public:** no JWT required.
+- **Auth:** CUSTOMER, STAFF or ADMIN; service-level ownership still applies.
+- **Staff/Admin:** employee functions, with selected-worker requirements for ADMIN.
+- **Admin:** administrative access only.
+- **Cookie + Origin:** refresh proof and an explicitly trusted browser origin.
 
-`Public` = chưa cần Bearer. `Auth` = ADMIN, STAFF hoặc CUSTOMER đã authenticate. `Admin` = role admin. `Staff` = role staff. `Customer/Admin` chỉ các role đó.
+The role middleware permits STAFF on customer routes and ADMIN on staff/customer routes. This does not bypass domain-level restrictions. See [Authentication](AUTH-SECURITY.md).
 
-| Method | Endpoint | Quyền | Ghi chú |
-|---|---|---|---|
-| POST | `/api/users/register/code` | Public | Gửi OTP xác thực email |
-| POST | `/api/users/register` | Public | Đăng ký sau OTP |
-| POST | `/api/users/login` | Public | Thành công 200, hoặc 202 nếu cần OTP |
-| POST | `/api/users/login/mfa/verify` | Public | Xác minh OTP đăng nhập |
-| POST | `/api/users/session/refresh` | Public + trusted Origin | Cookie refresh → access JWT mới |
-| POST | `/api/users/session/logout` | Public + trusted Origin | Thu hồi refresh hiện tại |
-| POST | `/api/users/password/forgot` | Public | Yêu cầu mã reset |
-| POST | `/api/users/password/reset` | Public | Reset bằng mã |
-| POST | `/api/users/password/change/code` | Auth | Gửi OTP đổi mật khẩu |
-| POST | `/api/users/password/change` | Auth | Đổi mật khẩu, thu hồi phiên |
-| GET | `/api/users/me` | Auth | User hiện tại |
-| DELETE | `/api/users/me` | Auth | Xóa tài khoản hiện tại |
-| GET | `/api/branches` | Public | Danh sách phân trang |
-| GET | `/api/branches/admin` | Admin | Danh sách cho dashboard |
-| GET | `/api/branches/:id` | Public | Chi tiết cơ sở |
-| POST / PUT / DELETE | `/api/branches` / `/api/branches/:id` | Admin | Quản lý chi nhánh |
-| GET | `/api/services` | Public | Danh mục, `branch_id` optional |
-| GET | `/api/services/admin` | Admin | Danh mục đầy đủ |
-| GET | `/api/services/:id` | Public | Chi tiết dịch vụ |
-| POST / PUT / DELETE | `/api/services` / `/api/services/:id` | Admin | CRUD dịch vụ |
-| GET | `/api/staffs` và `/api/staffs/admin` | Admin | Danh sách nhân viên |
-| GET | `/api/staffs/me` | Staff | Hồ sơ nhân viên hiện tại |
-| GET | `/api/staffs/:id` | Admin | Chi tiết nhân viên |
-| POST / PUT / DELETE | `/api/staffs` / `/api/staffs/:id` | Admin | CRUD nhân viên và giờ làm (`work_start_time`, `work_end_time`, định dạng `HH:mm`, bước 15 phút, trong 09:00–20:30) |
-| GET | `/api/appointments` | Auth | Phân trang, scope/role filters |
-| GET | `/api/appointments/availability` | Customer/Admin | Slot trống theo ngày/dịch vụ/số người |
-| GET | `/api/appointments/admin/today-summary` | Admin | Thống kê ngày Việt Nam |
-| POST | `/api/appointments` | Customer/Admin | Đặt lịch cho chính account |
-| GET | `/api/appointments/:id` | Auth | Customer chỉ mình, staff chỉ lịch được giao |
-| PUT | `/api/appointments/:id` | Staff/Admin | Cập nhật chi tiết/trạng thái theo policy |
-| DELETE | `/api/appointments/:id` | Admin | Xóa lịch, giải phóng slot |
-| GET | `/api/offers` | Public | Ưu đãi đang hiện hành |
-| GET | `/api/offers/admin` | Admin | Tất cả ưu đãi phân trang |
-| GET | `/api/offers/:id` | Admin | Chi tiết |
-| POST / PUT / DELETE | `/api/offers` / `/api/offers/:id` | Admin | CRUD ưu đãi |
-| GET | `/api/site-content?branch_id=1` | Public | Nội dung salon, reviews theo chi nhánh, trend |
+## Accounts and sessions
 
-**Lưu ý:** `GET /api/appointments` là endpoint chung nhưng được **giới hạn dữ liệu trong service**: CUSTOMER chỉ lịch của mình; STAFF chỉ lịch được giao; ADMIN có thể xem tất cả hoặc thêm `scope=mine`.
+| Method | Endpoint | Access | Input or purpose |
+| --- | --- | --- | --- |
+| POST | `/api/users/register/code` | Public | `email`; generic 202 response |
+| POST | `/api/users/register` | Public | `full_name`, `email`, `password`, `code`; creates CUSTOMER |
+| POST | `/api/users/login` | Public | `email`, `password`, optional `remember_me`; 200 session or 202 OTP challenge |
+| POST | `/api/users/login/mfa/verify` | Public | `challenge_id`, `code`; completes OTP login |
+| POST | `/api/users/session/refresh` | Cookie + Origin | Rotates refresh proof and returns access JWT |
+| POST | `/api/users/session/logout` | Cookie + Origin | Revokes refresh family and clears cookie |
+| POST | `/api/users/password/forgot` | Public | `email`; requests reset code |
+| POST | `/api/users/password/reset` | Public | `email`, `code`, `new_password` |
+| POST | `/api/users/password/change/code` | Auth | Requests account password-change code |
+| POST | `/api/users/password/change` | Auth | `current_password`, `new_password`, `code` |
+| GET | `/api/users/me` | Auth | Current account |
+| DELETE | `/api/users/me` | Auth | `current_password`; self-deletion subject to service rules |
 
-## Query danh sách appointments
+All three roles require login OTP on an untrusted browser. For HTTP 202 login, read `success.data.mfa_required`, `challenge_id`, `masked_email` and `expires_at`, then submit the code to the verify route. Registration does not itself return a login session.
 
-| Query | Ý nghĩa |
-|---|---|
-| `page` | Trang >= 1, tối đa 1000, default 1 |
-| `limit` | Kích thước trang 1–100, default 5; admin UI dùng 20 |
-| `scope=mine` | ADMIN chỉ lấy lịch của chính mình; CUSTOMER vốn đã bị giới hạn |
-| `branch_id` | Số nguyên chi nhánh |
-| `staff_id` | UUID nhân viên |
-| `status` | `pending`, `confirmed`, `in_progress`, `completed`, `cancelled` |
-| `from` | UTC/offset ISO datetime, lấy `start_time >= from` |
-| `to` | UTC/offset ISO datetime, lấy `start_time < to` (**exclusive**) |
-| `booking_code` | ADMIN-only, 1–8 ký tự hexadecimal, case-insensitive, tiền tố `booking_group_id`; fallback `id` với lịch cũ không có group |
+Source: [account DTOs](../src/modules/users/users.dto.ts), [account routes](../src/modules/users/users.routes.ts).
 
-Admin UI `Từ ngày`–`Đến ngày` chuyển ngày theo múi giờ Việt Nam sang khoảng UTC, đặt `to` bằng **00:00 ngày tiếp theo** để bao trọn ngày kết thúc. `booking_code` tìm ở DB trước pagination. Có thể kết hợp branch/status/date/code.
+## Appointments and summaries
 
-Ví dụ (minh họa, thay Bearer token):
+| Method | Endpoint | Access | Purpose |
+| --- | --- | --- | --- |
+| GET | `/api/appointments` | Auth | Scoped appointment list |
+| GET | `/api/appointments/availability` | Auth | Start times for services, date and party size |
+| POST | `/api/appointments` | Auth | Create a personal booking with server-assigned employees |
+| GET | `/api/appointments/:id` | Auth | Own/assigned appointment; ADMIN can access any |
+| PUT | `/api/appointments/:id` | Staff/Admin | Valid state/work updates; schedule/details are ADMIN-only |
+| DELETE | `/api/appointments/:id` | Admin | Delete an appointment and release applicable capacity |
+| GET | `/api/appointments/admin/today-summary` | Admin | Current Vietnam business-day counts and revenue |
+| GET | `/api/appointments/admin/month-summary` | Admin | `month=YYYY-MM`; monthly counts and revenue |
+| GET | `/api/appointments/admin/lifetime-summary` | Admin | Lifetime online-booking and walk-in totals/revenue |
+
+### List query
+
+| Parameter | Contract |
+| --- | --- |
+| `page` | 1-1000; default 1 |
+| `limit` | 1-100; default 5 |
+| `scope` | Only `mine` is supported; STAFF/ADMIN can list their personal customer bookings |
+| `branch_id` | Positive integer |
+| `staff_id` | UUID; filters assignment membership |
+| `status` | `pending`, `confirmed`, `in_progress`, `no_show`, `completed`, `cancelled` |
+| `booking_code` | ADMIN-only 1-8 hex-character reference prefix |
+| `from`, `to` | Timezone-bearing ISO timestamps; inclusive lower and exclusive upper start-time bounds |
+
+CUSTOMER always sees their own appointments. STAFF sees assigned jobs unless `scope=mine`; ADMIN sees all unless requesting personal scope. Filters do not expand the caller's access. Merged legacy rows are excluded.
+
+### Availability and creation
+
+Availability requires comma-separated service UUIDs, a date representing 00:00 in Vietnam and optional positive `party_size` (default 1):
 
 ```http
-GET /api/appointments?booking_code=9DCB7830&from=2026-10-08T17%3A00%3A00.000Z&to=2026-10-10T17%3A00%3A00.000Z&page=1&limit=20
-Authorization: Bearer <access_token>
+GET /api/appointments/availability?service_ids=<service-uuid>&date=<URL-encoded-midnight-with-offset>&party_size=2
+Authorization: Bearer <access-token>
 ```
 
-## Availability
-
-```http
-GET /api/appointments/availability?service_ids=<uuid1>,<uuid2>&date=2026-10-09T00%3A00%3A00%2B07%3A00&party_size=2
-Authorization: Bearer <access_token>
-```
-
-`date` phải đại diện 00:00 theo `Asia/Ho_Chi_Minh`; service IDs phải cùng branch và bookable. Dữ liệu trả về (các slot là ISO timestamp):
+The response data contains `branch_id`, `duration_minutes`, `party_size`, `max_party_size` and `slots` (ISO start timestamps). Services must be bookable and in the same branch. Select an available start within the permitted future booking window.
 
 ```json
 {
-  "success": {
-    "data": {
-      "branch_id": 1,
-      "duration_minutes": 60,
-      "party_size": 2,
-      "max_party_size": 3,
-      "slots": ["2026-10-09T03:00:00.000Z"]
-    }
-  }
+  "service_ids": ["00000000-0000-4000-8000-000000000001"],
+  "start_time": "2030-01-02T10:00:00+07:00",
+  "party_size": 2,
+  "customer_phone": "0900000000"
 }
 ```
 
-Con số và slot ở ví dụ là **minh họa**, không phải cam kết availability thực tế.
+This is an illustrative shape: replace the service ID, date and phone with valid data. The date must be 3 hours to 14 days ahead when submitting. The phone is normalized to Vietnamese `+84` format. Customer identity comes from authentication; `staff_id`, `user_id` and `customer_email` overrides are rejected.
 
-## Tạo booking
+HTTP 201 returns **one appointment** with `party_size`, `booking_group_id`, `staff_assignments` and `appointment_services`. Staff selection and complete-party reservation occur in a transaction. See [Booking](BOOKING.md) for capacity rules.
 
-```http
-POST /api/appointments
-Authorization: Bearer <access_token>
-Content-Type: application/json
+### Work state and admin edits
 
+A staff start request can use:
+
+```json
+{ "status": "in_progress", "early_start_confirmed": true }
+```
+
+The readiness confirmation is required only when starting early. ADMIN additionally supplies `acting_staff_id` for start/completion. STAFF must not supply that field. Completion marks the acting worker; the booking remains active until all assignments complete.
+
+ADMIN detail updates accept `branch_id`, `service_ids`, `start_time`, `customer_phone`, and either `staff_id` or `staff_ids`. `staff_ids` has one distinct employee UUID or `null` automatic position per guest. Changing branch requires target-branch services. Schedule edits are limited to pending/confirmed bookings and reallocate transactionally. Do not combine status and detail updates.
+
+Sources: [appointment DTOs](../src/modules/appointments/appointments.dto.ts), [booking service](../src/modules/appointments/appointments.service.ts).
+
+## Staff work, reception, transfers and assistance
+
+| Method | Endpoint | Access | Contract |
+| --- | --- | --- | --- |
+| GET | `/api/appointments/reception/search` | Staff/Admin | `q`: full 8-character reference or phone; STAFF branch-scoped |
+| PUT | `/api/appointments/:id/work-prices` | Staff/Admin | `prices` and `extras` arrays; updates the selected worker's owned services |
+| PUT | `/api/appointments/:id/actual-prices/:serviceId` | Staff/Admin | `actual_price`; updates one owned charge |
+| POST | `/api/appointments/:id/assists` | Staff/Admin | `service_id`; automatically assigns an available helper |
+| DELETE | `/api/appointments/:id/assists/:helperId` | Staff/Admin | Cancels eligible unstarted assistance |
+| GET | `/api/appointments/transfers/peers` | Staff/Admin | Same-branch recipient candidates |
+| GET | `/api/appointments/transfers/requests` | Staff/Admin | Incoming/outgoing requests; ADMIN sees unscoped lists |
+| POST | `/api/appointments/:id/transfers` | Staff/Admin | `to_staff_id`; ADMIN also supplies `from_staff_id` |
+| POST | `/api/appointments/transfers/:requestId/:action` | Staff/Admin | `accept`, `decline` or `cancel`; ADMIN may only cancel |
+
+For work-prices, single-price, assist and assist-cancellation requests, ADMIN supplies `staff_id` in the body. For transfer-peer lookup, ADMIN supplies it in the query; for transfer cancellation, in the body. STAFF derives its worker identity from the JWT and cannot supply a selected employee. Transfer acceptance/decline must be performed by the receiving STAFF account; cancellation belongs to the sender.
+
+A work-price body for STAFF:
+
+```json
 {
-  "service_ids": ["<service_uuid>"],
-  "start_time": "2026-10-12T03:00:00.000Z",
-  "party_size": 1,
-  "customer_phone": "0912345678"
+  "prices": [
+    { "service_id": "00000000-0000-4000-8000-000000000001", "actual_price": 150000 }
+  ],
+  "extras": [
+    { "name": "Additional nail art", "price": 30000 }
+  ]
 }
 ```
 
-**Không cho truyền** `staff_id`, `user_id` hoặc `customer_email` trong public booking; backend tự gán staff và snapshot customer. Status mới `pending`, response HTTP 201 chứa **appointment đầu tiên** và `booking_group_id`. Mã khách nhìn thấy là 8 ký tự đầu của group ID, uppercase. Booking nhóm tạo `party_size` appointments chung ID nhóm.
+Use real owned service IDs. Both arrays are required, with at most 40 entries each. Prices are whole VND amounts from 0 to 1,000,000,000; `null` on a booked price uses its reference snapshot. Saving replaces that worker's extra lines. Helpers may price only their delegated service and cannot add extras. Work must be in an editable state and the assignment must not be completed.
 
-## Đổi trạng thái (admin/staff)
+Reception returns at most ten matches and grants no write access. Transfers expire after three minutes and have their own logical-capacity policy. Assistance requires an active primary worker and at least two booked services. See [Booking](BOOKING.md) for the complete rules.
 
-```http
-PUT /api/appointments/<appointment_uuid>
-Authorization: Bearer <access_token>
-Content-Type: application/json
+Source: [work controller](../src/modules/appointments/booking-work.controller.ts).
 
-{ "status": "in_progress" }
-```
+## Walk-ins
 
-Chỉ được đi theo chuỗi `pending → confirmed → in_progress → completed` hoặc `cancelled` từ trạng thái chưa kết thúc; `confirmed → in_progress` phải đến thời gian bắt đầu. DTO cấm gửi `status` chung với thay đổi detail. STAFF chỉ có quyền chuyển `in_progress`/`completed` trên lịch được giao; ADMIN có thể đổi theo policy. Cần xem [BOOKING](BOOKING.md) cho guard cụ thể.
+| Method | Endpoint | Access | Purpose |
+| --- | --- | --- | --- |
+| GET | `/api/walk-ins` | Staff/Admin | Own recent visits for STAFF; filtered/paginated list for ADMIN |
+| POST | `/api/walk-ins` | Staff/Admin | Record customer details and actual service charges |
+| PUT | `/api/walk-ins/:id` | Admin | Correct customer details and prices for the same service set |
+| DELETE | `/api/walk-ins/:id` | Admin | Delete a visit |
 
-## Ví dụ đăng nhập OTP
+Creation requires `customer_name` and `services: [{service_id, actual_price}]` (1-40 distinct services), with optional `customer_phone` and `customer_email`. ADMIN also selects `staff_id`; STAFF cannot provide staff, branch or user overrides. The employee's branch determines the service catalog.
 
-1. `POST /api/users/login` body `{"email":"<email>","password":"<password>","remember_me":true}`.
-2. Nếu cần OTP, server trả **202** kèm `challenge_id`, `masked_email`, `expires_at`.
-3. `POST /api/users/login/mfa/verify` body `{"challenge_id":"<uuid>","code":"<6 digits>"}`.
-4. Kết quả thành công trả `access_token`, `user`, và Set-Cookie refresh/trusted proof phù hợp.
-5. Browser gọi `POST /api/users/session/refresh` khi cần, kèm cookie và trusted Origin.
+ADMIN list filters: `month=YYYY-MM`, `branch_id`, `from`, `to`, `page` (default 1) and `limit` (default 50, maximum 100). STAFF receives the latest 100 own visits; advanced month/branch/date filters are rejected and list pagination is fixed to page 1. Admin edits preserve employee, branch, date and service membership.
 
-Chi tiết chính xác về auth và cookie xem [AUTH-SECURITY](AUTH-SECURITY.md).
+Source: [walk-in DTO](../src/modules/walk-ins/walk-ins.dto.ts), [walk-in service](../src/modules/walk-ins/walk-ins.service.ts).
 
-## Những mã lỗi hay gặp
+## Catalog, branches and employees
 
-| Code | Ý nghĩa |
-|---|---|
-| `SLOT_UNAVAILABLE` | Không đủ nhân viên đang trong ca và còn slot rảnh khi ghi |
-| `INVALID_STAFF_WORK_HOURS` | Giờ làm không hợp lệ hoặc ngoài 09:00–20:30 |
-| `STAFF_SCHEDULE_CONFLICT` | Không thể đổi ca vì còn lịch hẹn tương lai ngoài ca mới |
-| `STAFF_OUTSIDE_WORK_HOURS` | Giờ hẹn được Admin chỉnh nằm ngoài ca nhân viên |
-| `APPOINTMENT_CONFLICT` | Trùng lịch staff |
-| `CUSTOMER_APPOINTMENT_CONFLICT` | Lịch của khách bị trùng (theo policy hiện hành khi phát sinh) |
-| `TOO_MANY_PENDING_APPOINTMENTS` | Tối đa 3 nhóm booking `pending` |
-| `INVALID_APPOINTMENT_TIME` | Không nằm trên mốc 15 phút |
-| `OUTSIDE_BUSINESS_HOURS` | Ngoài khung 09:00–20:30 theo rule code |
-| `INVALID_STATUS_TRANSITION` | Chuyển trạng thái không hợp lệ |
-| `APPOINTMENT_NOT_STARTED_YET` | Chưa tới giờ bắt đầu để chuyển `in_progress`/`completed` |
-| `INVALID_MFA_CODE` | Mã OTP login sai/hết hạn |
-| `REFRESH_TOKEN_REUSE` | Dùng lại refresh token đã rotate |
-| `UNTRUSTED_ORIGIN` | Origin không khớp cấu hình |
-| `VALIDATION_ERROR` | Tham số/body không hợp lệ |
+| Method | Endpoint | Access | Purpose |
+| --- | --- | --- | --- |
+| GET | `/api/branches` | Public | Paginated branches |
+| GET | `/api/branches/admin` | Admin | Administrative branch list |
+| GET | `/api/branches/:id` | Public | Branch details |
+| POST | `/api/branches` | Admin | Create branch |
+| PUT | `/api/branches/:id` | Admin | Update branch |
+| DELETE | `/api/branches/:id` | Admin | Delete branch subject to service guards |
+| GET | `/api/services` | Public | Paginated catalog; optional `branch_id` |
+| GET | `/api/services/admin` | Admin | Administrative service list |
+| GET | `/api/services/categories` | Public | Category names |
+| POST | `/api/services/categories` | Admin | Create category |
+| GET | `/api/services/:id` | Public | Service details |
+| POST | `/api/services` | Admin | Create service |
+| PUT | `/api/services/:id` | Admin | Update service |
+| DELETE | `/api/services/:id` | Admin | Delete service |
+| GET | `/api/staffs` | Admin | Staff list |
+| GET | `/api/staffs/admin` | Admin | Staff list alias |
+| GET | `/api/staffs/me` | Staff/Admin | Signed-in account's staff profile; requires a staff record |
+| GET | `/api/staffs/:id` | Admin | Employee details |
+| POST | `/api/staffs` | Admin | Create employee |
+| PUT | `/api/staffs/:id` | Admin | Update employee, branch or recurring hours |
+| DELETE | `/api/staffs/:id` | Admin | Delete employee subject to service guards |
+| GET | `/api/offers` | Public | Current promotions; optional branch filter |
+| GET | `/api/offers/admin` | Admin | Paginated administrative promotions |
+| GET | `/api/offers/:id` | Admin | Promotion details |
+| POST | `/api/offers` | Admin | Create promotion |
+| PUT | `/api/offers/:id` | Admin | Update promotion |
+| DELETE | `/api/offers/:id` | Admin | Delete promotion |
 
-Mã `error.code` phân biệt các nguyên nhân có cùng HTTP status, ví dụ 409 có thể đại diện cho trùng slot hoặc chuyển trạng thái lịch quá sớm. UI có thể ánh xạ mã lỗi thành thông báo theo ngữ cảnh.
+Write schemas and validation are defined in [branch DTOs](../src/modules/branches/branches.dto.ts), [service DTOs](../src/modules/services/services.dto.ts), [staff DTOs](../src/modules/staffs/staffs.dto.ts) and [offer DTOs](../src/modules/offers/offers.dto.ts). A database entity may contain fields not accepted by its write DTO; do not submit the entity shape as an assumed API contract.
+
+## Site content, media and traffic
+
+| Method | Endpoint | Access | Purpose |
+| --- | --- | --- | --- |
+| GET | `/api/site-content` | Public | Salon content, branch reviews and trends |
+| GET | `/api/site-content/admin/trends` | Admin | List trends |
+| POST | `/api/site-content/admin/trends` | Admin | Create trend from an uploaded media URL |
+| PUT | `/api/site-content/admin/trends/:id` | Admin | Update trend |
+| DELETE | `/api/site-content/admin/trends/:id` | Admin | Delete trend; media remains separate |
+| GET | `/api/media` | Admin | Metadata list; `page`, 24 files per page |
+| POST | `/api/media` | Admin | Raw JPEG/PNG/WebP bytes; maximum 5 MiB |
+| GET | `/api/media/:id/file` | Public | Image bytes and cache headers |
+| DELETE | `/api/media/:id` | Admin | Delete media if no offer/trend references it |
+| POST | `/api/traffic/pulse` | Public | `session_id` UUID; records browser-tab activity; HTTP 204 |
+| GET | `/api/traffic/admin/summary` | Admin | `total_visits` and `online_visits` |
+| GET | `/health` | Public | `{ "status": "ok" }`; process-level health response |
+
+Trend writes accept `image_src`, `instagram_url`, optional `title` and `sort_order`. The image must reference an existing `/api/media/<uuid>/file`; the salon-content parent with ID 1 must exist. Media details are documented in [Media storage](MEDIA-STORAGE.md).
+
+Traffic totals count session identifiers, not unique people. Online visits have activity within five minutes. `/health` does not perform a fresh database query or exercise email/booking behavior.
+
+## Error handling
+
+| Code or class | Meaning |
+| --- | --- |
+| `VALIDATION_ERROR` / HTTP 400 | Invalid input shape, identifier, amount or date |
+| `AUTHENTICATION_REQUIRED`, `INVALID_REFRESH_SESSION` / HTTP 401 | Missing or invalid authentication/session |
+| `FORBIDDEN`, `UNTRUSTED_ORIGIN` / HTTP 403 | Role/ownership or origin restriction |
+| `APPOINTMENT_NOT_FOUND` / HTTP 404 | Missing or inaccessible appointment |
+| `SLOT_UNAVAILABLE` / HTTP 409 | Required staff capacity could not be allocated |
+| `EARLY_START_CONFIRMATION_REQUIRED` / HTTP 409 | Early start needs explicit readiness confirmation |
+| `APPOINTMENT_NOT_STARTED_YET` / HTTP 409 | Early completion lacks a started assignment |
+| `APPOINTMENT_NOT_EDITABLE`, `INVALID_STATUS_TRANSITION` / HTTP 409 | Operation conflicts with current workflow |
+| `TRANSFER_ALREADY_PENDING`, `TRANSFER_NOT_PENDING`, `TRANSFER_INVALIDATED` / HTTP 409 | Transfer lifecycle conflict |
+| `MEDIA_IN_USE` / HTTP 409 | Image still referenced by content |
+| `REFRESH_RACE` / HTTP 409 | Near-simultaneous refresh rotation |
+| `RATE_LIMIT_EXCEEDED`, `TOO_MANY_PENDING_APPOINTMENTS` / HTTP 429 | Request or pending-booking limit |
+
+These are representative codes, not an exhaustive list. Use `error.code` alongside HTTP status and `X-Request-Id` when diagnosing failures. Source: [error handler](../src/common/error-handler.ts).

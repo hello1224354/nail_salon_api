@@ -1,75 +1,98 @@
-# AUTH-SECURITY — Xác thực, session và hardening
+# Authentication and security
 
-Source: `src/modules/users`, `src/common/middleware`, `frontend/src/lib/auth.ts`, `frontend/src/proxy.ts`.
+The API owns authentication and authorization. Frontend route guards improve navigation, but do not grant access to protected data.
 
-## Roles & authorization
+## Roles and resource ownership
 
-`users.role`: `admin`, `staff`, `customer`. Server tin `req.user.id/role` đã xác thực bằng JWT, **không tin role do browser tự gửi**.
+`users.role` is `customer`, `staff` or `admin`. [hasRoleAccess](../src/common/role-permissions.ts) implements route-level inheritance: STAFF can use CUSTOMER routes; ADMIN can use STAFF and CUSTOMER routes.
 
-- CUSTOMER: đọc dịch vụ công khai, xem availability, tự đặt lịch, chỉ xem lịch của mình; không PUT/DELETE appointments.
-- STAFF: xem lịch được phân công; được chuyển lịch sang `in_progress` hoặc `completed` theo guard, không đổi staff/service/time.
-- ADMIN: quản trị chi nhánh, staff, service, offer, lịch; có thể đặt lịch cá nhân qua flow public nhưng không được chỉ định nhân viên tại endpoint tạo lịch.
-- GET `/api/site-content`, `/api/services`, `/api/branches`, `/api/offers` (current) là public với rate limits.
+| Role | Typical access and restrictions |
+| --- | --- |
+| CUSTOMER | Make personal bookings and read own appointments; no appointment update/delete permission |
+| STAFF | Customer capabilities plus assigned jobs, own work charges, reception lookup, transfer/assistance operations and own walk-ins |
+| ADMIN | Administrative catalogs, appointment management, summaries and supported employee actions with an explicitly selected employee |
 
-Mỗi route protected dùng `authenticate` + `requireRole`; service còn enforce quyền truy cập theo ID (khách xem lịch mình, staff lịch được giao).
+Services still enforce ownership. STAFF cannot impersonate another worker. ADMIN selects the relevant worker for supported work actions, but cannot accept or decline a transfer for its recipient. Staff reception lookup is limited to their branch and does not grant assignment ownership. See [API](API.md).
 
-## Đăng ký và đăng nhập
+## Registration and login
 
-- Đăng ký: `POST /api/users/register/code` gửi OTP tới email; `POST /api/users/register` xác minh code và tạo customer.
-- Login: `POST /api/users/login` kiểm tra email/password bằng service. Với CUSTOMER/ADMIN không trusted, trả HTTP **202** với `mfa_required`, `challenge_id`, `masked_email`, `expires_at`.
-- OTP email gồm 6 chữ số, hiệu lực **5 phút**, tối đa **5 lần thử**, một lần sử dụng.
-- Xác minh: `POST /api/users/login/mfa/verify` → session mới, access token và cookies.
-- Login trên **trusted browser** đúng user + token_version + role + User-Agent hash + hạn dùng → bypass OTP, vẫn cần password.
-- STAFF không nằm trong nhánh OTP đó theo code `loginUser`.
+Registration requests a verification code before creating a CUSTOMER account. The code-request endpoint returns a generic HTTP 202 response for registered and unregistered addresses with a minimum response delay and jitter to reduce account enumeration.
 
-Mã OTP được sinh và xác minh ở backend, không hard-code trong ứng dụng.
+Login checks password credentials, then evaluates trusted-browser proof for **all three roles**. An untrusted browser receives HTTP 202 with `mfa_required`, `challenge_id`, `masked_email` and `expires_at`; `/api/users/login/mfa/verify` completes authentication. A trusted browser still requires the password.
 
-## Access JWT & refresh
+Email challenges use six-digit codes, five-minute expiry and at most five attempts. Codes are HMAC-hashed with server-side key material, single-use and verified in the backend. Passwords are stored with bcrypt hashing. Password changes/resets invalidate relevant account sessions through token-version and revocation logic.
 
-- Access token: JWT `HS256`, `iss=nail-salon-api`, `aud=nail-salon-web`, `type=access`, `role`, `ver=token_version`, subject user ID; hạn token từ `JWT_EXPIRES_IN_SECONDS` (300–900).
-- Frontend giữ access JWT và current user **trong bộ nhớ**, không đưa vào localStorage.
-- Refresh token: opaque secret với session UUID, lưu **hash SHA-256** trong `refresh_sessions`.
-- Cookie refresh production: `__Secure-ns_refresh`, `HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/api/users/session`; local là `ns_refresh`.
-- `remember_me=true` tạo persistent refresh cookie (`Max-Age`/`Expires`); `false` là session cookie.
-- POST `/session/refresh` rotate token; server detect reuse, revoke family (sau điều kiện xử lý gần đồng thời). Frontend retry một lần khi gặp `REFRESH_RACE`.
-- Logout thu hồi refresh session hiện tại và xóa cookie; không xóa toàn bộ trusted browser cookies.
+Sources: [users controller](../src/modules/users/users.controller.ts), [login challenge service](../src/modules/users/login-mfa.service.ts), [registration verification](../src/modules/users/registration-verification.service.ts).
 
-## Trusted browser — riêng từng tài khoản
+## JWT and refresh sessions
 
-- Cookie base production: `__Secure-ns_login_trust`, local: `ns_login_trust`, `Path=/api/users/login`, HttpOnly/Secure trên production.
-- **Tên cookie tách theo user**, thêm suffix SHA-256 của user ID (32 hex chars). Không lưu user ID gốc trong cookie key.
-- Proof random 256 bit; database chỉ lưu hash trong `trusted_login_devices`.
-- Khi verify OTP mới, chỉ revoke proof trước đó **thuộc cùng user**, không ảnh hưởng tài khoản khác.
-- Code có legacy shared-cookie fallback để cookie cũ còn hợp lệ tiếp tục được xác minh bởi server.
-- Đổi mật khẩu/reset password/khóa phiên nhạy cảm có thể revoke trust theo user. Nếu trình duyệt đổi User-Agent, cookie hết hạn hoặc bị revoke, lần login tiếp theo cần OTP.
+- Access JWTs use HS256, issuer `nail-salon-api`, audience `nail-salon-web`, subject user ID, role, token version and `type=access`.
+- Token life is configured by `JWT_EXPIRES_IN_SECONDS`: 300-900 seconds, default 600.
+- The frontend keeps access tokens and current-user state in module memory, not persistent browser storage.
+- Refresh proofs contain a session identifier and random secret; the database stores a SHA-256 hash.
+- Refresh rotates to a replacement session in the same family. Detected reuse revokes that family. A same-fingerprint request within five seconds of rotation receives `REFRESH_RACE` rather than immediately revoking the family.
+- Refresh lifetime is `REFRESH_SESSION_DAYS`: 1-30 days, default 7. Rotation retains the existing session expiry.
+- Logout revokes the refresh family and clears the refresh cookie. Browser-trust proof remains separate.
 
-## Các biện pháp khác
+Source: [session service](../src/modules/users/auth-session.service.ts).
 
-- Endpoint refresh/logout yêu cầu `Origin` đúng **chính xác** `CORS_ORIGIN` (`requireTrustedOrigin`). Browser dùng same-origin `/api`.
-- `cors` chỉ cho origin cấu hình và `credentials: true`.
-- `express.json` giới hạn body **32 KB**.
-- Headers Express: X-Request-Id, nosniff, Referrer-Policy, Permissions-Policy, CSP deny-all cho API, HSTS trên production.
-- Next `frontend/src/proxy.ts`: nonce CSP riêng mỗi HTML request, hạn chế script injections; `layout.tsx` dùng `connection()` để tránh static-render CSP nonce sai.
-- Rate limits: login 5/15 phút, registration 5/giờ, MFA 10/15 phút, password recovery 5/15 phút, booking 5/15 phút theo user, availability 30/phút theo user, authenticated/public read 120/phút, refresh 60/5 phút. Ngoài middleware còn giới hạn login theo audit/account/IP.
-- Audit log: login failures, MFA, security events; thành công với POST/PUT/DELETE có audit mutation best-effort. Lưu identifier/IP/UA dạng hash khi sử dụng trong security context.
-- Password lưu `password_hash` (bcryptjs trong users service); token_version phục vụ thu hồi JWT cũ.
+## Cookies and trusted browsers
 
-## Cấu hình email OTP
+| Cookie | Development / production name | Scope |
+| --- | --- | --- |
+| Refresh | `ns_refresh` / `__Secure-ns_refresh` | `/api/users/session` |
+| Browser trust | `ns_login_trust` / `__Secure-ns_login_trust`, with account suffix | `/api/users/login` |
 
-Ưu tiên dịch vụ email giao dịch Resend (`RESEND_API_KEY`, `RESEND_FROM_EMAIL` từ domain đã xác minh), không phụ thuộc thời hạn OAuth của Google. Khi chưa cấu hình Resend, backend giữ đường Gmail OAuth2 cũ qua `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN`, `GMAIL_FROM_EMAIL`. Không có nhà cung cấp hợp lệ → trả lỗi, **không** tự bỏ qua OTP.
+Both are HttpOnly and SameSite=Lax, with Secure in production. `remember_me` controls persistent versus session refresh cookies. Browser trust has an independent 30-day lifetime.
 
-Chỉ lưu API key và refresh token trong secrets manager/biến môi trường phía backend, không đưa vào Git hoặc `.env.example`. Xem [DEPLOYMENT](DEPLOYMENT.md) để cấu hình DNS và chuyển provider.
+Trust proof is bound to account identity, role, token version, user-agent hash and expiry. Cookie names contain a 32-character hash-derived account suffix, so multiple accounts do not overwrite one shared proof. The server stores hashed proofs; legacy shared-cookie fallback is supported. Successful trusted password login renews trust, while revocation or changed proof conditions require OTP again.
 
-## Các điều cần kiểm tra khi troubleshooting
+Sources: [refresh cookie](../src/modules/users/session-cookie.ts), [trusted-device service](../src/modules/users/trusted-login-device.service.ts), [cookie naming](../src/modules/users/trusted-login-device.logic.ts).
 
-| Hiện tượng | Kiểm tra |
-|---|---|
-| OTP xuất hiện mỗi lần đổi A/B | Cookie per-account, `Path`, Origin/proxy, User-Agent hash, token_version, expiry |
-| Login đúng password nhưng 202 | Bình thường nếu thiết bị chưa được trust |
-| Refresh 401 | Cookie/expiry, revoke, reuse/family |
-| Refresh 403 | `Origin` không khớp `CORS_ORIGIN` |
-| 429 | Rate limiter / audit thresholds |
-| API 403 | Role server-side, không sửa bằng UI bypass |
-| Email provider error | Resend key/sender và DNS, hoặc Gmail OAuth fallback; kiểm tra log server |
+## Origins and browser protection
 
-Các giá trị credentials, token, cookie, Gmail OAuth secrets, JWT secret và log chứa dữ liệu cá nhân được phân loại là thông tin nhạy cảm, không lưu trong repository.
+`CORS_ORIGIN` and optional comma-separated `CORS_EXTRA_ORIGINS` form an exact allowlist of HTTP(S) origins. Wildcards, paths, credentials, queries and fragments are rejected. Refresh/logout require a matching `Origin` header; an absent header is not trusted. CORS uses the same allowlist with credentials enabled.
+
+Express disables its identifying header, applies request IDs, nosniff, a restrictive API CSP, referrer/permissions policy and production HSTS. JSON bodies are limited to 32 KB; binary media uploads use a separate 5 MiB parser. The Next proxy supplies a CSP nonce, and the layout renders dynamically to use request-specific values.
+
+Sources: [trusted origins](../src/common/middleware/trusted-origins.ts), [API setup](../src/app.ts), [frontend proxy](../frontend/src/proxy.ts).
+
+## Rate limits and audit checks
+
+The following route-level limits are configured in [rate-limit.middleware.ts](../src/common/middleware/rate-limit.middleware.ts). They are independent of OTP attempt limits and database audit checks.
+
+| Limiter | Requests/window | Key |
+| --- | --- | --- |
+| Login | 100 / 15 minutes; successful requests skipped | IP |
+| Registration | 100 / hour | IP |
+| MFA verification; password recovery | 100 / 15 minutes | IP |
+| Refresh/logout | 100 / 5 minutes | IP |
+| Account OTP | 100 / 15 minutes | Account, IP fallback |
+| Sensitive account actions | 100 / 15 minutes; successful requests skipped | Account |
+| Booking | 100 / 15 minutes | Account |
+| Availability | 100 / minute | Account, IP fallback |
+| Public reads | 120 / minute | IP |
+| Authenticated reads | 120 / minute | Account, IP fallback |
+| Media upload | 100 / hour | Account |
+
+Only routes using a limiter receive that limiter's protection; it is not a global limit on every API endpoint. The default middleware store is process-local.
+
+Login also checks persisted audit history: ten account failures in 30 minutes or five IP failures in 15 minutes block further attempts. OTP login sends are limited to five per account in 15 minutes. These checks can reject a request before the middleware allowance is exhausted.
+
+Security events and supported admin work actions are audited; generic successful mutations have best-effort audit recording. Logs may contain identifiers and operational context and must be handled as restricted operational data. Do not commit passwords, tokens, cookies, OTPs, private logs or database dumps.
+
+## Email and troubleshooting
+
+Resend is selected when `RESEND_API_KEY` is configured and requires a valid `RESEND_FROM_EMAIL`. Gmail OAuth2 is used only when Resend is not selected, not automatically after a failed Resend request. Unavailable email delivery does not bypass OTP.
+
+| Symptom | Check |
+| --- | --- |
+| Login returns 202 | Complete the OTP challenge |
+| Repeated OTP prompts | Account-specific cookie, user-agent changes, expiry, revocation and proxy cookie handling |
+| Refresh returns 401 | Cookie presence, expiry, token family and revocation |
+| Refresh returns 409 `REFRESH_RACE` | Concurrent refresh coordination; the client has a retry path |
+| Refresh/logout returns 403 | Exact Origin allowlist and frontend origin |
+| Login returns 429 | Both middleware limits and persisted audit thresholds |
+| Employee action returns 403 | Role inheritance, assignment ownership and selected-worker rules |
+
+See [Setup](SETUP.md), [Deployment](DEPLOYMENT.md) and [Operations](OPERATIONS.md).

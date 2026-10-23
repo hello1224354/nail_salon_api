@@ -1,125 +1,95 @@
-# Serpente Nail Room — Full-stack Appointment Booking System
+# Serpente Nail Room
 
-<p align="center"><img src="frontend/public/brand/serpente-logo.svg" alt="Serpente Nail Room logo" width="120" /></p>
+A full-stack nail salon application for appointment booking, staff coordination, and day-to-day salon operations.
 
-**A deployed nail salon booking platform with concurrency-safe staff allocation, account security, and an administrative dashboard.**
+[Live website](https://serpentenailroom.site/) · [Product tour](docs/DEMO.md) · [Technical documentation](docs/README.md) · [Engineering case study](docs/PORTFOLIO.md)
 
-[**Live website**](https://serpentenailroom.site/) · [**Service catalog**](https://serpentenailroom.site/services) · [**API health**](https://api-production-e911.up.railway.app/health) · [**Technical documentation**](docs/README.md) · [**Engineering case study**](docs/PORTFOLIO.md) · [**Product tour**](docs/DEMO.md)
+## What the application does
 
-## Problem and approach
+Customers browse services, select a branch, party size and available time, and submit a booking without choosing an employee. The API allocates staff, reserves their time, and creates one appointment for the entire party. Staff and administrators manage the work through role-restricted interfaces.
 
-A salon with multiple employees must let customers find bookable times without selecting an employee. Two customers may attempt the same time simultaneously, so simply displaying an available slot and checking again with a SQL `SELECT` is not sufficient to prevent double booking. The system must also support multi-person reservations and give administrators an operational workflow.
+| Area | Capabilities |
+| --- | --- |
+| Customer experience | Service catalog, available-time lookup, individual/group booking, appointment history, email-verified accounts |
+| Staff workspace | Assigned bookings, per-worker start/completion, actual charges and additional services, reception lookup, transfer requests, optional service assistance, walk-in records |
+| Administration | Appointment search and editing, staff and branch management, service categories, promotions, media library, daily/monthly/lifetime summaries and visit statistics |
+| Account security | Email OTP for all roles on unrecognized browsers, account-scoped browser trust, JWT access tokens, rotating refresh sessions and server-side authorization |
 
-**The solution:** A Next.js frontend backed by an Express + MySQL API. The backend calculates available times, chooses eligible free staff, and atomically reserves each required 15-minute interval before committing an appointment or group booking.
+## Technology
 
-## Features
+| Layer | Stack |
+| --- | --- |
+| Frontend | Next.js 16 App Router, React 19, TypeScript, Tailwind CSS 4 |
+| Backend | Node.js, Express 5, TypeScript |
+| Database | MySQL 8, TypeORM |
+| Email | Resend; Gmail OAuth2 when Resend is not configured |
+| Hosting | Vercel frontend and Railway API/MySQL |
 
-| Customer experience | Staff / admin operations |
-|---|---|
-| Browse salon information, promotions, branches, service prices | Maintain services, branches, employees, promotions and database-hosted website photos |
-| Register/login with email OTP and trusted-browser recognition | View a dashboard and manage appointment states |
-| Select services, party size, date and **available time** | Search all appointments by date range, branch, status or customer-facing booking code |
-| Book without choosing staff; receive confirmation code | Receive queued email notifications for new bookings |
-| Review personal appointment status | View assigned appointments according to server-side role rules |
-
-**Application:** [Homepage](https://serpentenailroom.site/) · [Services](https://serpentenailroom.site/services) · [Booking](https://serpentenailroom.site/book) · [Admin](https://serpentenailroom.site/admin/login). Booking and management features are accessible to authenticated users with the appropriate role.
-
-## Architecture
-
-```mermaid
-flowchart LR
-  Browser[Customer / Admin browser] --> Next[Next.js / React]
-  Next -->|Same-origin /api rewrite| API[Express / TypeScript]
-  API --> Auth[JWT, OTP, RBAC]
-  API --> Booking[Booking engine]
-  Booking --> DB[(MySQL / TypeORM)]
-  API --> Outbox[MySQL notification outbox]
-  Outbox --> Email[Resend or Gmail email provider]
-```
-
-| Layer | Technology |
-|---|---|
-| Web | Next.js 16 App Router, React 19, TypeScript, Tailwind CSS 4 |
-| API | Node.js, Express 5, TypeScript |
-| Persistence | MySQL 8, TypeORM; historical migrations archived in Git history |
-| Security | JWT access tokens, refresh-token rotation/reuse detection, email OTP, account-scoped trusted-browser cookies, RBAC |
-| Integration | Resend transactional email (Gmail OAuth2 fallback) |
-| Delivery | Vercel (web), Railway (API and MySQL) |
+Browser requests use the frontend's same-origin `/api` rewrite. The API owns validation, authorization, scheduling and persistence. Images uploaded through the admin interface are stored in MySQL.
 
 ## Engineering highlights
 
-### Preventing double booking
+- **Transactional group bookings.** One appointment holds the party, service snapshots and primary employee assignments. The appointment, reservations and notification outbox entries are committed together.
+- **Concurrent staff allocation.** A per-branch allocation cursor serializes workload ranking. A composite primary key `(staff_id, slot_start)` independently prevents duplicate ordinary reservations at 15-minute boundaries.
+- **Workload-aware assignment.** Candidate employees must belong to the branch and cover the full service interval. A weighted daily/14-day workload score and rotating tie-break select staff; there is no skill-specialization model.
+- **Per-worker operations.** Each assignment tracks its own work progress. Additional service helpers and accepted transfers have explicit ownership and reservation rules.
+- **Durable notifications.** A database outbox separates booking commit from email delivery and retries failed messages. Delivery is at least once; duplicates remain possible after an ambiguous provider outcome.
 
-Availability is a read-only estimate: two clients can see the same slot. During booking, the API starts a **database transaction**, locks the requesting customer's row, checks eligible staff, then inserts all required records in `staff_booking_slots`. Its **composite primary key `(staff_id, slot_start)`** prevents concurrent transactions from reserving the same staff interval. If the staff allocation fails, the booking transaction rolls back.
+See [booking rules](docs/BOOKING.md), [database design](docs/DATABASE.md) and [authentication](docs/AUTH-SECURITY.md) for the implementation boundaries.
 
-For multi-person bookings, a single `booking_group_id` links one appointment per assigned staff; the group is saved atomically. The client never chooses staff.
+## Run locally
 
-**Source:** [booking service](src/modules/appointments/appointments.service.ts) · [slot entity](src/modules/appointments/staff-booking-slots.entity.ts) · [booking specification](docs/BOOKING.md).
-
-### Authentication across multiple accounts
-
-Admin/customer login uses email OTP on unrecognized browsers. The application issues short-lived JWTs and rotates refresh tokens, with reuse detection. Trusted-browser proof cookies are **scoped per account** so logging into account B does not overwrite account A's remembered-browser proof.
-
-**Source:** [user authentication](src/modules/users/users.controller.ts) · [trusted-device logic](src/modules/users/trusted-login-device.logic.ts) · [security documentation](docs/AUTH-SECURITY.md).
-
-### Operational booking visibility
-
-The admin appointments table supports date-range filters and customer-visible 8-character booking-code search on the **database side**, combined with status/branch and server-side pagination. Admin status transitions are validated on the server; e.g., a confirmed appointment cannot start before its scheduled time.
-
-**Source:** [admin dashboard](frontend/src/components/admin/AdminDashboard.tsx) · [API contract](docs/API.md).
-
-## Design decisions
-
-| Decision | Rationale | Trade-off |
-|---|---|---|
-| Unique staff/15-minute slot key | Atomic conflict detection independent of frontend timing | Extra reservation rows; updates must release/reacquire slots |
-| Automatic staff assignment | Simple customer UX and central scheduling rules | Availability depends on staff working hours and active bookings |
-| One appointment per person in group booking | Staff-specific assignments with shared group ID | Group views must aggregate by `booking_group_id` |
-| Snapshot service price/name at booking | Historical bookings remain meaningful after catalog edits | Intentional duplication |
-| Transactional email outbox | Notification rows are committed alongside bookings, with worker retries | At-least-once delivery: duplicate email is possible after ambiguous provider success |
-| JWT + rotating refresh sessions | Short-lived access credentials and revocable sessions | Additional state and cookie/origin management |
-
-The current implementation focuses on appointment scheduling rather than online payments or per-date employee shift rosters; daily staff working hours are configurable. Technical analysis and design constraints are covered in the [engineering case study](docs/PORTFOLIO.md).
-
-## Live application
-
-| Area | URL | What it provides |
-|---|---|---|
-| Salon homepage | [Open](https://serpentenailroom.site/) | Branch information, promotions, gallery and customer reviews |
-| Service catalog | [Open](https://serpentenailroom.site/services) | Services grouped by category with pricing |
-| Appointment booking | [Open](https://serpentenailroom.site/book) | Service selection, available time slots and booking confirmation (login required) |
-| Admin dashboard | [Login](https://serpentenailroom.site/admin/login) | Booking management, search, filters and business data (admin access required) |
-
-See the [product tour](docs/DEMO.md) for the principal user journeys.
-
-## Getting started
-
-Requirements: **Node.js 22+**, npm, Docker Compose v2. See [detailed setup](docs/SETUP.md).
+Use Node.js 22 or newer, npm, and Docker Compose v2. The repository does not pin a Node engine version; Node.js 22+ is the recommended development baseline.
 
 ```bash
 git clone https://github.com/hello1224354/nail_salon_api.git
 cd nail_salon_api
 cp .env.example .env
-# Set DB_PASSWORD and a strong JWT_SECRET in .env
+```
+
+Set `DB_PASSWORD` and a strong `JWT_SECRET` in `.env`, then run:
+
+```bash
 docker compose up -d
 npm ci
 npm run dev
 ```
 
-In a second terminal:
+In another terminal:
 
 ```bash
-cd frontend
+cd nail_salon_api/frontend
 cp .env.example .env.local
 npm ci
 npm run dev
 ```
 
-Frontend: http://localhost:3001 · Backend: http://localhost:3000 · Health: http://localhost:3000/health. Email OTP requires Resend or fallback Gmail credentials; never commit secrets.
+Frontend: `http://localhost:3001`. API: `http://localhost:3000`. Health: `http://localhost:3000/health`.
 
-## Build
+Local entity synchronization can create tables, but it does not seed accounts, branches, services or website content. Email delivery must be configured for OTP flows. The two incremental migrations in the repository do not create a complete database from scratch. Follow [setup](docs/SETUP.md) for data prerequisites and configuration before trying the booking flow.
 
-Backend: `npm run build`. Frontend: `cd frontend && npm run build`.
-The repository does not contain a unit-test suite or GitHub Actions CI workflow. Backend and frontend builds can be checked manually with the commands above. Production is deployed on Railway (API/DB) and Vercel (web).
+## Development checks
 
-**Deep dives:** [API](docs/API.md) · [DB schema](docs/DATABASE.md) · [Booking rules](docs/BOOKING.md) · [Security](docs/AUTH-SECURITY.md) · [Deployment](docs/DEPLOYMENT.md) · [Operations](docs/OPERATIONS.md).
+Backend, from the repository root:
+
+```bash
+npm run typecheck
+npm run build
+node --import tsx --test tests/*.test.ts
+```
+
+Frontend, from `frontend/`:
+
+```bash
+npx tsc --noEmit
+npm run lint
+npm run build
+```
+
+The four test files cover charge calculation, work-time policy, service ownership and UUID validation. They are not an end-to-end or concurrency test suite. No GitHub Actions workflow is included. See [contributing](docs/CONTRIBUTING.md) for review and validation guidance.
+
+## Project scope
+
+The system records service charges but does not integrate an online payment gateway. Staff hours repeat daily rather than using date-specific shift rosters. Database provisioning requires attention because a complete baseline migration and seed command are not included.
+
+[API reference](docs/API.md) · [Frontend](docs/FRONTEND.md) · [Deployment](docs/DEPLOYMENT.md) · [Operations](docs/OPERATIONS.md)

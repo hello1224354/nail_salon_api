@@ -1,97 +1,65 @@
-# Engineering case study — Serpente Nail Room
+# Engineering case study
 
-[Live application](https://serpentenailroom.site/) · [Product tour](DEMO.md) · [Architecture](ARCHITECTURE.md) · [Repository README](../README.md)
+## Scheduling problem
 
-## Product context and technical goal
+A salon booking request combines service duration, branch hours, party size and a finite employee roster. Availability can change between displaying a time and submitting a booking. Group bookings must also avoid partial allocation and preserve each employee's work ownership.
 
-The application supports a nail salon where customers book services at a branch without selecting an employee. The backend must account for multi-service duration, party size, a limited staff pool, concurrent requests and administrative state transitions. A customer should see available slots before selecting a booking.
+Serpente Nail Room uses a Next.js/React frontend and an Express/TypeScript API with MySQL and TypeORM. The following decisions describe the implementation rather than benchmark results or claims about production scale.
 
-The scope also covers a public service catalog, authenticated customer history and a role-protected administrative dashboard.
+## Transactional allocation
 
-**Stack:** Next.js 16 + React 19 + TypeScript frontend; Node/Express 5 API; MySQL 8 + TypeORM; JWT/refresh sessions; Resend/Gmail sender; transactional notification outbox; Vercel/Railway deployment.
+A read-then-insert sequence cannot safely reserve capacity when two requests observe the same free interval. The booking service opens a `READ COMMITTED` transaction, locks the customer row for the pending-booking limit, then locks a per-branch allocation cursor. It checks working hours and reserves each employee's required 15-minute intervals.
 
-## Concurrency-safe slot reservation
+The primary key `(staff_id, slot_start)` rejects duplicate physical reservations. A conflict can cause allocation to try another employee; failure to allocate the whole party rolls back the booking. The cursor lock coordinates workload ranking, while the database key independently enforces reservation uniqueness.
 
-**Failure mode:** The sequence `SELECT open slots → INSERT appointment` is vulnerable to a race when two requests read the same free interval before either has written.
+**Trade-off:** discrete slots add rows and reservation-release logic. The branch cursor also serializes allocation within a branch; this design is not a claim of unlimited write throughput.
 
-**Implemented approach:**
+Sources: [booking service](../src/modules/appointments/appointments.service.ts), [slot entity](../src/modules/appointments/staff-booking-slots.entity.ts).
 
-1. GET availability reads active appointments and calculates slots where enough staff are free.
-2. On POST, backend opens a TypeORM transaction and locks the customer's database row to enforce the pending-booking-group limit consistently for that customer.
-3. Server independently computes candidate staff, each required 15-minute slot in `[start, end)`, and attempts to reserve them.
-4. Table `staff_booking_slots` uses composite primary key `(staff_id, slot_start)`. MySQL rejects a conflicting insert.
-5. If a candidate staff conflicts, allocation can try another eligible staff. If the party cannot be fully assigned, the transaction rolls back without creating a partial group.
-6. Upon success, the service stores appointments and service snapshots before commit.
+## Workload-aware selection
 
-```mermaid
-sequenceDiagram
-    participant A as Customer A
-    participant B as Customer B
-    participant API as Booking API
-    participant DB as MySQL
-    A->>API: POST booking at T
-    B->>API: POST booking at T
-    API->>DB: Transaction A: insert staff slot T
-    API->>DB: Transaction B: insert same staff slot T
-    DB-->>API: One insert commits; competing insert conflicts
-    API-->>A: Success if staff reserved
-    API-->>B: Retry another staff or return SLOT_UNAVAILABLE
-```
+Automatic assignment ranks same-branch employees by a weighted score: 60% daily assigned minutes relative to shift length and 40% assigned minutes in the trailing 14-day window relative to 14 shift lengths. Scores within 0.05 of the minimum use a rotating roster tie-break.
 
-**Trade-off:** Reserving fine-grained slots adds rows and requires releasing/rebuilding reservations when appointments change. This is more deliberate than simply maintaining a boolean `available` flag. The database uniqueness guarantee matters more than stale availability shown to users.
+This balances recorded workload; it does not model employee specializations, preferences or measured service quality. The chosen employee must still cover the entire interval and have capacity.
 
-**Source:** [booking service](../src/modules/appointments/appointments.service.ts), [slot entity](../src/modules/appointments/staff-booking-slots.entity.ts), [booking docs](BOOKING.md).
+Source: [staff allocation](../src/modules/appointments/staff-allocation.ts).
 
-## Atomic group bookings
+## One booking, multiple workers
 
-For a party of N, all assigned employees must be free at the *same start time* for the *full duration* of selected services. A single UUID `booking_group_id` links N appointment rows with per-staff assignment, and service prices/durations are snapshotted per appointment.
+A customer submission creates one appointment with `party_size`, one primary assignment per guest and shared service snapshots. Per-worker timestamps allow employees to start and complete separately; the booking is completed only when every assignment is complete.
 
-**Server-side staff assignment:** The booking contract allows customers to select available start times rather than employees. The server determines eligible staff, preventing the client from bypassing staff eligibility and availability checks.
+Service assistance can add one helper for one booked service at a guest position without increasing party size. Price ownership moves with delegated work. Transfers replace an unstarted primary assignment only after the recipient personally accepts.
 
-**Constraint:** Appointments can overlap across **different** employees; the forbidden case is overlapping reservations for the **same** employee.
+**Trade-off:** a single booking simplifies customer history and booking counts, but work completion and charging must account for assignments rather than multiplying every joined database row. Helpers must not be counted as extra guests.
 
-**Trade-off:** The group ID must be used to count pending *bookings*, while single appointment IDs remain useful for staff-specific lifecycle management.
+Sources: [assignment model](../src/modules/appointments/appointment-staff-assignment.entity.ts), [assistance](../src/modules/appointments/booking-service-assistance.service.ts), [transfers](../src/modules/appointments/appointment-transfers.service.ts).
 
-## Authentication and account isolation
+## Physical reservations and logical holds
 
-**Threat model:** Short-lived access JWTs protect against unlimited lifetime of a leaked credential, but compromise during that lifetime remains possible; therefore access token lifetime alone is insufficient. Refresh tokens require rotation and server-side session state.
+Normal bookings and service helpers use physical reservation slots. Transfer requests use logical intervals, expire after three minutes, and allow at most ten minutes of overlap with each checked competing booking or hold. Accepted transfers retain logical protection rather than inserting conflicting physical slots.
 
-- `refresh_sessions` stores hashed refresh proofs; a successful refresh invalidates the old token and issues a new one.
-- Reuse detection can revoke a refresh-token family (with a narrow race-handling policy for near-simultaneous legitimate requests).
-- Admin/customer OTP challenge is emailed when an account logs in on an untrusted browser.
-- A trusted-browser token is bound to user identity, user-agent fingerprint, role, token version and expiration.
-- Separate per-account cookie keys avoid logging into B overwriting A's remembered-browser state.
-- Server-side RBAC and resource ownership checks protect appointment records. A foreign key alone is **not** authorization.
+Availability and allocation therefore consider both physical slots and active transfer holds. Treating either representation alone as all occupied capacity would misdescribe the system.
 
-**Source:** [users controller](../src/modules/users/users.controller.ts), [session service](../src/modules/users/auth-session.service.ts), [trusted-device service](../src/modules/users/trusted-login-device.service.ts), [security docs](AUTH-SECURITY.md).
+See [Booking](BOOKING.md) for the exact transfer scope and lifecycle.
 
-## Booking references and administrative search
+## Account isolation
 
-Customers receive an easy-to-read code: the first 8 hexadecimal characters of the booking group UUID (uppercase). Admins can search by this code, date range, branch and status using database-side filters; results are paginated rather than loading all appointments into the browser.
+The browser receives short-lived access JWTs and a refresh cookie. Refresh proofs are hashed in the database, rotated on use and grouped into revocable families. Reuse detection revokes a family, with a narrow same-fingerprint race response for near-simultaneous legitimate refreshes.
 
-**Trade-off:** An eight-character UUID prefix provides a compact lookup key but is not guaranteed globally unique and is not an authentication credential. The search results include the corresponding booking details.
+All roles use OTP when the browser is not trusted. Per-account trusted-cookie names prevent one account's proof from overwriting another's. Role gates and resource ownership are separate checks; knowing an appointment identifier does not grant access.
 
-**Source:** [booking UI](../frontend/src/components/booking/BookingForm.tsx), [admin UI](../frontend/src/components/admin/AdminDashboard.tsx), [API](API.md).
+Sources: [session service](../src/modules/users/auth-session.service.ts), [trusted-device logic](../src/modules/users/trusted-login-device.logic.ts), [authorization](AUTH-SECURITY.md).
 
-## Email delivery and transaction boundaries
+## Commit first, deliver email separately
 
-One message per unique ADMIN email is enqueued in `notification_outbox` **within the booking transaction**. The API commits appointments and outbox messages atomically; after commit, an independent worker delivers messages using Resend (when configured) or Gmail OAuth fallback. Delivery failures are retried with exponential backoff, so email outages do not invalidate reservations.
+The booking transaction inserts notification messages alongside the appointment. After commit, a worker claims messages and sends them through Resend or the configured Gmail path. Failed sends receive exponential-backoff retries; stale claims can be reclaimed.
 
-**Reliability boundary:** This provides persistent **at-least-once** delivery, not exactly-once email delivery: a worker crash after provider acceptance but before status persistence can lead to a duplicate. The worker also reclaims stale processing messages.
+This is at-least-once delivery. A provider may accept a message before the worker persists success, so a later retry can duplicate delivery. Email failure cannot roll back a booking that has already committed.
 
-**Source:** [notification outbox service](../src/modules/appointments/notification-outbox.service.ts), [notification entity](../src/modules/appointments/notification-outbox.entity.ts).
+Source: [notification outbox](../src/modules/appointments/notification-outbox.service.ts).
 
-## Deployment
+## Validation and scope
 
-- Live frontend: [Vercel](https://serpentenailroom.site/).
-- API: [Railway health endpoint](https://api-production-e911.up.railway.app/health).
-- Deployments are managed through Vercel and Railway. The repository no longer includes GitHub Actions CI or a unit-test suite; builds and behavior require explicit verification before deployment.
-- References: [deployment guide](DEPLOYMENT.md), [operations guide](OPERATIONS.md).
+Four focused unit-test files cover charge calculation, work-time rules, service ownership and UUID validation. They do not establish integration, concurrency or end-to-end correctness. Development commands are documented in [Contributing](CONTRIBUTING.md).
 
-## Current scope and limitations
-
-The booking engine uses fixed branch-wide bookable hours and configurable **recurring daily staff working hours**, but not date-specific shift rosters. A payment gateway is not part of the application. Booking notifications are persisted in an outbox and retried, with at-least-once rather than exactly-once delivery semantics.
-
-The repository contains no automated unit tests or GitHub Actions CI; validation currently relies on manual build and behavior checks. Centralized production alerting is not implemented. Historical database migrations are absent from the current source; provisioning a fresh production-equivalent database requires a verified backup until a new baseline is established.
-
-Further implementation details are available in the [booking specification](BOOKING.md), [authentication and security](AUTH-SECURITY.md) and [API reference](API.md).
+The repository includes incremental migrations but no complete baseline or seed command. Other boundaries include recurring daily staff hours, database-backed image storage and no online payment integration. These constraints should guide environment setup and evaluation of the project.

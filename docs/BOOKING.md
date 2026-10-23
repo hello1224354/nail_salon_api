@@ -1,100 +1,130 @@
-# BOOKING — Luồng nghiệp vụ, concurrency và trạng thái
+# Booking and staff operations
 
-Đặc tả này rút trực tiếp từ `src/modules/appointments/appointments.service.ts`, DTO/entity và `frontend/src/components/booking/BookingForm.tsx`.
+This page describes scheduling and work ownership. Request schemas and routes are listed in the [API reference](API.md); the persistence model is covered in [Database](DATABASE.md).
 
-## 1. Customer booking
+## Customer booking
 
-1. Xác thực user role `customer` hoặc `admin` (admin cũng có thể tự đặt qua luồng public).
-2. Chọn branch, một hoặc nhiều services thuộc **cùng branch** và `booking_enabled=true` có `duration_minutes`.
-3. Chọn số khách (`party_size`) và ngày; frontend gọi availability trước khi cho chọn giờ.
-4. Backend trả các start slots mà **ít nhất `party_size` nhân viên của branch cùng rảnh**.
-5. Khách chọn 1 giờ 15-phút-aligned, nhập số điện thoại, gửi POST booking.
-6. Backend **tự phân nhân viên**, customer không được gửi `staff_id`, `user_id`, `customer_email`.
-7. Booking được commit với `status=pending`; frontend hiển thị mã và tổng tiền dự kiến.
+A signed-in CUSTOMER, STAFF or ADMIN can make a personal booking. The API derives the customer from the authenticated account and rejects `user_id`, `customer_email` or `staff_id` overrides on the public create endpoint.
 
-Thời lượng ca = tổng `duration_minutes` của các service (một chuỗi dịch vụ mỗi khách). Giá dự kiến = tổng giá snapshot các dịch vụ **nhân `party_size`**.
+The client selects services from one branch, party size, date and a returned start time. Services must be enabled for booking and have a configured duration. Every guest receives the selected service sequence; duration is the sum of service durations, and the reference charge is the sum of snapshot prices multiplied by party size.
 
-## 2. Giới hạn thời gian & availability
+A successful request creates **one appointment for the entire party**, with one primary employee assignment per guest. The response is that appointment, including assignments and service snapshots. `booking_group_id` supplies the customer-facing reference; it does not split new bookings into separate appointment records.
 
-| Rule | Code hiện hành |
-|---|---|
-| Timezone | `Asia/Ho_Chi_Minh`, UTC+07:00 |
-| Giờ mở cửa dùng tính booking | **09:00–20:30** |
-| Bước giờ bắt đầu | **15 phút** |
-| Booking tối thiểu trước giờ hẹn | **3 giờ** |
-| Booking xa nhất | **14 ngày** |
-| Pending của mỗi user | Tối đa **3 booking groups** |
-| Điều kiện trùng thời gian | `existing.start < proposed.end && existing.end > proposed.start` |
-| Buffer | **Không có**; chỉ xét `[start_time, end_time)` |
-| Active statuses chiếm slot | `pending`, `confirmed`, `in_progress` |
+## Time and availability
 
-Giờ làm nhân viên được quản lý tại Admin → **Nhân viên** với `work_start_time` và `work_end_time` (mặc định 09:00–20:30 cho các tài khoản cũ). Part-time có thể được đặt 13:00–20:00. Availability, backend tự gán nhân viên và việc Admin đổi giờ lịch đều kiểm tra **toàn bộ thời lượng dịch vụ** nằm trong ca làm. Đổi ca sẽ bị từ chối nếu làm lịch hẹn tương lai hiện có nằm ngoài ca mới.
+| Rule | Behavior |
+| --- | --- |
+| Business timezone | `Asia/Ho_Chi_Minh`; timestamps stored as UTC |
+| Branch hours | Parsed from `branches.opening_hours`, not a global fixed schedule |
+| Opening-hours format | Same-day increasing `HH:mm-HH:mm` interval on 15-minute boundaries; a missing schedule makes the branch unbookable |
+| Employee hours | Recurring daily `work_start_time` and `work_end_time` |
+| Start-time grid | 15 minutes; seconds and milliseconds must be zero |
+| Customer booking window | At least 3 hours ahead, at most 14 days ahead |
+| Pending limit | At most 3 distinct pending booking references per customer |
+| Ordinary reservation interval | `[start_time, end_time)` with no before/after buffer |
 
-`branches.opening_hours` là trường phục vụ hiển thị. Việc xác định giờ được đặt hiện sử dụng quy tắc cố định trong booking service, không dùng giá trị của trường này. Kết quả availability là trạng thái tại thời điểm GET, **không phải một reservation đã được giữ**.
+Availability is calculated from staff working hours, physical `staff_booking_slots` and active transfer holds. It returns starts with enough employees free for the full requested duration. The `date` query must represent midnight in Vietnam time.
 
-## 3. Atomic reservation & group booking
+Availability is an estimate at read time, not a hold. The server allocates capacity again when the booking is submitted. Staff-hour changes are checked against existing future work by the staff service.
 
-- Transaction `AppDataSource.transaction` khóa record owner (`pessimistic_write`) để đếm booking pending và hạn chế race của cùng user.
-- Vòng lặp candidate staff: loại nhân viên ngoài giờ làm hoặc có lịch overlap; thử insert các `StaffBookingSlot` ứng với mọi mốc 15 phút từ start đến trước end.
-- DB `staff_booking_slots` có primary key `(staff_id, slot_start)`; insert trùng nhận `ER_DUP_ENTRY` và thử staff khác.
-- Thiếu số nhân viên cần thiết → rollback transaction và trả `409 SLOT_UNAVAILABLE`.
-- Khi đủ nhân viên: tạo một `bookingGroupId` UUID, insert **một appointment cho mỗi staff** với group ID chung và snapshots.
-- Một booking nhóm trả **appointment đầu tiên** trong HTTP 201; cả nhóm chia sẻ mã booking nhưng từng appointment có ID riêng.
-- Không dùng khóa frontend hay đơn thuần kiểm tra trống rồi save mà không reserve slot.
+Sources: [opening-hours parser](../src/modules/branches/branch-opening-hours.ts), [booking service](../src/modules/appointments/appointments.service.ts), [staff service](../src/modules/staffs/staffs.service.ts).
 
-**Ví dụ:** Nhóm 2 người, mỗi người 60 phút, từ 10:00 → 11:00. Hai staff được giữ các slot 10:00, 10:15, 10:30, 10:45; không được double-book cùng staff/slot.
+## Allocation and transaction boundaries
 
-## 4. Mã lịch hẹn
+Ordinary creation uses a `READ COMMITTED` TypeORM transaction:
 
-UI hiển thị:
+1. Lock the customer row and enforce the pending-booking limit.
+2. Lock the branch's `staff_assignment_rotation` cursor row.
+3. Check current staff records and full-interval working hours.
+4. Rank available employees and reserve every required 15-minute slot.
+5. Save one appointment, its primary assignments, service snapshots and notification outbox entries.
+6. Commit only when the entire party is allocated.
+
+The staff-slot composite primary key `(staff_id, slot_start)` prevents two ordinary reservations from occupying the same employee interval. A duplicate insert can cause another candidate to be tried. Insufficient capacity raises `409 SLOT_UNAVAILABLE` and rolls back the transaction.
+
+The automatic ranking uses:
 
 ```text
-(createdAppointment.booking_group_id ?? createdAppointment.id).slice(0, 8).toUpperCase()
+score = 0.6 * daily_assigned_minutes / shift_minutes
+      + 0.4 * trailing_14_day_assigned_minutes / (14 * shift_minutes)
 ```
 
-Admin tìm bằng `booking_code` (1–8 ký tự hex), case-insensitive, so theo **tiền tố `booking_group_id`**, hoặc `appointment.id` nếu legacy row có `booking_group_id IS NULL`. Tìm kiếm thực hiện trên DB trước phân trang. Vì chỉ là **mã ngắn** chứ không phải UUID duy nhất tuyệt đối, admin phải xác nhận thêm tên khách, ngày/chi nhánh nếu trùng tiền tố hiếm gặp.
+Candidates within 0.05 of the lowest score use a rotating roster tie-break. The window includes the booking day and preceding 13 days. Selection considers recorded assignment workload, not skill specialization. See [staff-allocation.ts](../src/modules/appointments/staff-allocation.ts).
 
-Bảng admin hỗ trợ `from` và `to` query ISO timestamps: `from` inclusive, `to` exclusive. UI chọn ngày Việt Nam và dùng 00:00 ngày sau cho giới hạn trên (bao trọn ngày kết thúc).
+## Booking identity and lookup
 
-## 5. Vòng đời trạng thái
+The display reference is `(booking_group_id ?? id).slice(0, 8).toUpperCase()`. It is a short lookup key, not a globally unique credential.
+
+Admin list search accepts a 1-8 hexadecimal character prefix. Reception lookup requires a complete eight-character reference or valid phone number, returns at most ten matches, and limits STAFF to their branch. Lookup does not grant ownership or permission to start someone else's work.
+
+## Appointment and assignment lifecycle
 
 ```mermaid
 stateDiagram-v2
     [*] --> pending
     pending --> confirmed
     pending --> cancelled
+    pending --> no_show
     confirmed --> in_progress
     confirmed --> cancelled
+    confirmed --> no_show
+    no_show --> in_progress
+    no_show --> cancelled
     in_progress --> completed
     in_progress --> cancelled
     completed --> [*]
     cancelled --> [*]
 ```
 
-- `pending → confirmed`: kiểm tra staff/branch còn hợp lệ.
-- `confirmed → in_progress`: chỉ khi `now >= appointment.start_time`; lưu `actual_started_at`. Nếu quá sớm → **409 `APPOINTMENT_NOT_STARTED_YET`**.
-- `in_progress → completed`: tương tự không trước start; lưu `actual_completed_at`.
-- `cancelled`/`completed`: terminal; không cho chuyển trạng thái tiếp.
-- Khi terminal: release các reserved slots. Khi thay đổi lịch hợp lệ (thời gian/staff/services) phải release/reserve lại trong transaction.
-- STAFF chỉ được start/complete lịch của mình, không được đổi staff/services/start; ADMIN có quyền sửa với các guard của service.
-- Customer không có quyền PUT appointment (UI hướng dẫn liên hệ tiệm để hủy/đổi).
+- Confirmation checks that the branch exists and assignment count matches party size.
+- Starting an employee's work sets that assignment's `started_at`. The first start also records appointment-level `actual_started_at`.
+- Starting before the scheduled time requires `early_start_confirmed=true`, an explicit attestation that customer and employee are ready. It is not an independently observed presence check.
+- Another employee may start their assignment while the shared booking is already `in_progress`.
+- Completion records the employee's `completed_at` and fills unentered owned service prices from their snapshots. Early completion requires that employee's work to have started.
+- The appointment becomes `completed` only after all assignments, including helpers, complete.
+- A background worker marks pending/confirmed appointments `no_show` once the start is at least 15 minutes overdue, releasing applicable original physical reservations. Its 30-second polling interval means the change is not guaranteed at the exact deadline.
+- `completed` and `cancelled` are terminal. STAFF can start/complete their assigned work; ADMIN can manage permitted states and must select `acting_staff_id` for start/completion.
 
-## 6. Thông báo email sau booking
+The operations worker also expires transfer requests. Release logic distinguishes physical slots from logical transfer holds and avoids releasing original no-show slots twice.
 
-`createAppointment` gọi `enqueueBookingEmails` **trong cùng database transaction** với việc tạo lịch. Hệ thống tạo bản ghi `notification_outbox` cho từng địa chỉ email ADMIN duy nhất; nếu transaction rollback thì cả lịch lẫn thông báo chưa gửi đều rollback.
+Sources: [work-time policy](../src/modules/appointments/appointment-work-time-policy.ts), [operations worker](../src/modules/appointments/booking-operations.worker.ts).
 
-Sau khi commit, backend có thể gọi `drainBookingNotificationOutbox`; worker cũng chạy định kỳ khoảng **60 giây** từ `src/server.ts`. Worker claim các bản ghi `pending` (hoặc `processing` quá hạn), gửi mail bằng `sendPlainTextEmail` (Resend nếu cấu hình, nếu không thì Gmail OAuth), rồi đánh dấu `sent` hoặc đặt lịch thử lại với exponential backoff.
+## Administrative editing
 
-Subject hiện tại:
+ADMIN can change schedule, branch, services and employee allocation only while an appointment is pending or confirmed. Changing branch requires services from the target branch. `staff_ids` may specify one distinct employee or `null` automatic position per guest; the allocator rechecks shifts and capacity.
 
-```text
-Serpente Nail Room - Có khách hàng vừa đặt lịch
-```
+Rescheduling releases/reacquires reservations transactionally, rebuilds assignments and clears stale per-worker actual prices and extra-service lines. Updating selected services replaces their booking snapshots. Status and detail changes must be submitted separately. Customers do not have an appointment update/cancel endpoint.
 
-Nội dung có UUID nhóm, trạng thái, khách, chi nhánh, thời gian, nhân viên, dịch vụ và tổng dự kiến.
+Deletion removes the appointment rather than merely cancelling it. Cancellation retains the record for history; both paths release applicable reservations.
 
-Gửi email **không được làm rollback booking đã commit**. Outbox bền vững giúp thử lại khi dịch vụ gửi thư bị lỗi, nhưng là cơ chế **at-least-once**, không bảo đảm email không bao giờ bị gửi trùng. Cần theo dõi `notification_outbox` và log worker; OTP là luồng gửi thư đồng bộ riêng.
+## Transfers
 
-## 7. Tài liệu liên quan
+An employee can request transfer of their unstarted primary assignment on a confirmed, in-progress or no-show booking. The target must be another STAFF account in the same branch, not already assigned to that booking. Work already started/completed or shared with a helper is not transferable.
 
-Chi tiết request/response được mô tả tại [API](API.md); cấu trúc reservation tại [DATABASE](DATABASE.md).
+Requests expire after **3 minutes**. At creation, the reserved interval begins at the later of scheduled start and request time and spans the booked service duration. It must fit the target's shift. Each checked competing booking or transfer hold may overlap by at most **10 minutes**. This exception applies to transfers, not ordinary customer allocation.
+
+Pending requests create logical holds; acceptance replaces the sender's assignment and retains logical protection without relaxing the physical slot primary key. The recipient must personally accept/decline. ADMIN may request or cancel on behalf of a selected sender but cannot accept/decline for the recipient. Changes to the booking or assignment can invalidate acceptance. Overlap is checked at request creation; acceptance relies on that hold and revalidates identity and assignment state.
+
+See [transfer service](../src/modules/appointments/appointment-transfers.service.ts) for eligibility and cleanup details.
+
+## Service assistance
+
+An active primary worker may delegate one booked service when the guest has at least two booked services. At most one helper is allowed for that guest position. The backend automatically chooses an eligible additional employee from the branch; the helper does not count toward `party_size`.
+
+The helper receives a separate reservation from the current time rounded down to a 15-minute boundary through service completion rounded up. The primary worker retains the original full reservation. The helper owns the delegated service's charge and completion; a previously saved override is moved to that owner. Assistance can be cancelled before the helper starts, restoring price ownership and releasing its reservation.
+
+Source: [assistance service](../src/modules/appointments/booking-service-assistance.service.ts).
+
+## Charges, additional work and walk-ins
+
+Actual charges are per appointment, employee and service. Unentered booked-service prices default to the snapshot; explicit zero remains zero. Custom additional work is stored as a zero-duration snapshot with a generated identifier and an owning actual-price row. Helpers cannot add unrelated extra services. Work-price saving replaces that employee's extra lines without altering another employee's work.
+
+Walk-ins use separate visit and visit-service tables. Recording a walk-in captures the employee/branch, customer details and actual service prices; it does not create online reservation slots. STAFF record their own visits. ADMIN can choose an employee, correct customer details/prices or delete a visit, but cannot change an existing visit's service membership, employee, branch or date.
+
+Daily/monthly booking counts use scheduled start dates; online revenue uses completion dates and walk-in revenue uses `served_at`, in Vietnam business time. Recorded revenue is not payment-gateway settlement.
+
+## Booking email
+
+One message per distinct ADMIN email is inserted in `notification_outbox` within the booking transaction. After commit, the delivery worker claims pending messages, reclaims stale processing claims and retries failures with exponential backoff. The worker runs immediately and about every 60 seconds.
+
+Delivery is at least once. Failure to send cannot undo a committed appointment, but retry after an ambiguous successful send can duplicate email. OTP is a separate synchronous email flow. See [Operations](OPERATIONS.md).

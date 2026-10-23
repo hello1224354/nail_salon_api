@@ -1,40 +1,43 @@
-# Tài liệu kỹ thuật Serpente Nail Room
+# Technical documentation
 
-Tài liệu về kiến trúc, API, dữ liệu, bảo mật, vận hành và các quyết định thiết kế của hệ thống đặt lịch Serpente Nail Room.
+This documentation describes Serpente Nail Room for developers, maintainers and reviewers. Start with the [project overview](../README.md) for the product and stack.
 
-| Tài liệu | Nội dung |
-|---|---|
-| [PORTFOLIO.md](PORTFOLIO.md) | Phân tích thiết kế kỹ thuật, concurrency và trade-offs |
-| [DEMO.md](DEMO.md) | Tổng quan sản phẩm, các trang demo và luồng người dùng |
-| [ARCHITECTURE.md](ARCHITECTURE.md) | Kiến trúc, sơ đồ luồng, ranh giới trách nhiệm |
-| [SETUP.md](SETUP.md) | Chạy local, môi trường, Resend/Gmail, schema |
-| [MEDIA-STORAGE.md](MEDIA-STORAGE.md) | MySQL image BLOB storage, admin image upload/management and rollout |
-| [API.md](API.md) | Danh sách endpoint, phân quyền, request/response, lỗi |
-| [DATABASE.md](DATABASE.md) | Entities, quan hệ, index, lịch sử schema, dữ liệu snapshot |
-| [BOOKING.md](BOOKING.md) | Availability, slot 15 phút, nhóm, trạng thái, notification |
-| [AUTH-SECURITY.md](AUTH-SECURITY.md) | OTP, JWT/refresh, trusted browser, audit, bảo mật |
-| [FRONTEND.md](FRONTEND.md) | Pages, components, admin/booking UX và proxy |
-| [DEPLOYMENT.md](DEPLOYMENT.md) | Railway + Vercel, kiểm tra triển khai và rollback |
-| [OPERATIONS.md](OPERATIONS.md) | Theo dõi production, xử lý sự cố, backup và phục hồi |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | Quy trình thay đổi source/docs/PR |
+## Reading guide
 
-## Điều hướng theo vai trò
+| Document | Purpose |
+| --- | --- |
+| [Product tour](DEMO.md) | Public pages and customer, staff and admin workflows |
+| [Setup](SETUP.md) | Local services, configuration and initial data prerequisites |
+| [Architecture](ARCHITECTURE.md) | Components, request flow and transaction boundaries |
+| [API reference](API.md) | Routes, access rules, request examples and errors |
+| [Booking](BOOKING.md) | Availability, allocation, group work, transfers and assistance |
+| [Database](DATABASE.md) | Entity model, snapshots, indexes and migrations |
+| [Authentication and security](AUTH-SECURITY.md) | Roles, OTP, sessions, trusted browsers and request protection |
+| [Frontend](FRONTEND.md) | Pages, client state, API access and operational interfaces |
+| [Media storage](MEDIA-STORAGE.md) | Image uploads, binary storage and content references |
+| [Deployment](DEPLOYMENT.md) | Frontend/API deployment requirements and rollback |
+| [Operations](OPERATIONS.md) | Workers, diagnostics, backups and retention |
+| [Contributing](CONTRIBUTING.md) | Change workflow and verification commands |
+| [Engineering case study](PORTFOLIO.md) | Design rationale and trade-offs |
 
-- **Developer mới:** SETUP → ARCHITECTURE → API.
-- **Backend booking:** BOOKING → DATABASE → API.
-- **Frontend:** FRONTEND → API → AUTH-SECURITY.
-- **Maintainer/DevOps:** DEPLOYMENT → OPERATIONS → CONTRIBUTING.
+For local development, read Setup, Architecture and API. For scheduling changes, read Booking and Database together. For hosting or maintenance, read Deployment and Operations.
 
-## Thuật ngữ
+## Shared terminology
 
-- `appointment`: một lịch gắn với **một nhân viên**.
-- `booking_group_id`: UUID của cả lần đặt; đặt nhóm tạo nhiều `appointment` cùng `booking_group_id`.
-- **Mã lịch hẹn:** 8 ký tự đầu (uppercase) của `booking_group_id`, hoặc `appointment.id` khi không có group.
-- **Slot:** mốc 15 phút được giữ cho một staff; khóa `(staff_id, slot_start)`.
-- **Business timezone:** `Asia/Ho_Chi_Minh`, UTC+07:00.
-- **Snapshot:** lưu tên/giá/duration, khách, nhân viên, chi nhánh trên lịch để dữ liệu lịch sử không đổi khi danh mục đổi.
-- **Active booking statuses:** `pending`, `confirmed`, `in_progress`.
+| Term | Meaning |
+| --- | --- |
+| Appointment | One customer submission, including a party of one or more guests |
+| Assignment | An employee's work on an appointment; primary assignments correspond to guest positions |
+| Service helper | An additional assignment handling one booked service for an existing guest position |
+| Booking reference | The first eight hexadecimal characters of `booking_group_id`, falling back to `id`, displayed uppercase |
+| Reservation slot | A 15-minute staff interval identified by `(staff_id, slot_start)` |
+| Transfer hold | A logical reserved interval associated with a pending or accepted work transfer |
+| Snapshot | Booking-time names, prices, durations and contact/branch details retained with a transaction |
+| Walk-in | A separately recorded service visit, not an online reservation |
+| Business time | `Asia/Ho_Chi_Minh` (UTC+07:00); persisted appointment times use UTC |
 
-## Versioning
+`booking_group_id` remains the reference identifier; it does not mean that new group bookings create one appointment per employee. `merged_into_id` supports filtering legacy merged appointment rows.
 
-Tài liệu được duy trì cùng source code. Hợp đồng API, TypeORM entities, schema production đã được kiểm tra và logic nghiệp vụ là căn cứ khi triển khai hoặc thay đổi hệ thống. File migration cũ không còn trong nhánh hiện tại; lịch sử đã thực thi vẫn lưu trong database. Các thay đổi chức năng cần cập nhật tài liệu liên quan trong cùng pull request.
+## Keeping documentation current
+
+Update API contracts, diagrams, examples and related pages with the code change that affects them. Source links identify implementation entry points; runtime settings, database contents and deployment status must be checked in the target environment. Repository documentation does not certify a production deployment or database snapshot.
