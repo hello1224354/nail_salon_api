@@ -1,5 +1,7 @@
 # Frontend
 
+> **Current deployment:** This document describes the original full-stack frontend available at [nail-salon-web-v2.vercel.app](https://nail-salon-web-v2.vercel.app/). The primary salon domain [serpentenailroom.site](https://serpentenailroom.site/) uses the separate [serpente-web](https://github.com/hello1224354/serpente-web) frontend with KiotViet booking. These applications are not synchronized.
+
 The `frontend/` application uses Next.js 16 App Router, React 19, TypeScript and Tailwind CSS 4. Public, account, staff and administrator pages share one application and API client.
 
 ## Pages
