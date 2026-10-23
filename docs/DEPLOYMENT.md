@@ -10,7 +10,7 @@ The project uses separate frontend, API and database services. The documented ho
 | Express API | From root: `npm ci`, `npm run build`, `npm run start` | Backend variables in [Setup](SETUP.md) |
 | MySQL | Existing compatible schema and migration history | Credentials available only to backend/maintenance processes |
 
-The canonical website origin in [site-url.ts](../frontend/src/lib/site-url.ts) is `https://serpentenailroom.site`. [next.config.ts](../frontend/next.config.ts) permanently redirects requests with host `nail-salon-web-v2.vercel.app` to that origin. Domain aliases, DNS and deployment assignments must be configured in the hosting environment.
+**Current hosting split (October 2026):** This repository is the **legacy full-stack system**. Its public Vercel project URL and frontend canonical origin in [site-url.ts](../frontend/src/lib/site-url.ts) are `https://nail-salon-web-v2.vercel.app`. The old redirect from that Vercel URL to `serpentenailroom.site` has been removed from [next.config.ts](../frontend/next.config.ts). The salon's primary domain `https://serpentenailroom.site` (and `www` redirect) now belongs to the separate [frontend-only repository](https://github.com/hello1224354/serpente-web), which sends bookings to KiotViet. The legacy full-stack and KiotViet appointment stores are **not synchronized**; do not use this legacy project for live booking operations without separate authorization.
 
 Next.js proxies `/api/:path*` to the origin of `NEXT_PUBLIC_API_BASE_URL`. Set the real backend URL before building; an absent/invalid rewrite value falls back to localhost. `/health` is a direct API endpoint, outside that rewrite.
 
@@ -38,7 +38,7 @@ The two supplied migrations alter existing tables; they do not create a complete
 ## Production configuration
 
 - Set `NODE_ENV=production`, all five `DB_*` connection values, `JWT_SECRET` and `CORS_ORIGIN`.
-- Set `CORS_ORIGIN` to the exact frontend origin. Add other authorized origins explicitly with `CORS_EXTRA_ORIGINS`; this also affects refresh/logout origin checks.
+- For **this legacy system**, set Railway `CORS_ORIGIN` to the current legacy frontend origin `https://nail-salon-web-v2.vercel.app` (or explicitly include it in `CORS_EXTRA_ORIGINS`). This also affects refresh/logout origin checks. **Changing the repository does not change Railway environment variables**; review them separately before testing login and booking. Do not rely on `https://serpentenailroom.site` as this project's frontend origin.
 - Match `TRUST_PROXY_HOPS` to the actual proxy chain. It affects client IP interpretation and therefore rate-limit behavior.
 - Use HTTPS for frontend and API access. Production authentication cookies carry `Secure`.
 - Configure Resend with a valid sender, or the complete Gmail OAuth2 configuration when no Resend key is present. Resend errors do not trigger automatic provider failover.
@@ -49,7 +49,7 @@ Both background workers run inside the API process. An always-running API servic
 
 ## Verify the release
 
-Check the deployed SHA and runtime logs for each service, then verify the canonical frontend domain and direct API `/health`. Health confirms a responding process; it does not issue a live database query or verify email delivery.
+Check the deployed SHA and runtime logs for each service, then verify this project's `nail-salon-web-v2.vercel.app` frontend and direct API `/health`. Health confirms a responding process; it does not issue a live database query or verify email delivery.
 
 Use authorized test accounts and synthetic data for a focused smoke test: load the catalog, finish login/refresh/logout, query availability, create an appointment, perform the relevant staff/admin workflow and inspect notification delivery. For media changes, also upload/read/reference an image and confirm referenced-image deletion is rejected. Select checks that exercise the release's affected behavior.
 
