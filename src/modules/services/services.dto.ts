@@ -13,7 +13,10 @@ export interface CreateServiceDto {
 
 export interface UpdateServiceDto {
     name?: string;
+    display_name?: string | null;
     price?: number;
+    price_min?: number | null;
+    price_max?: number | null;
     duration_minutes?: number | null;
     booking_enabled?: boolean;
     category?: ServiceCategory;
@@ -116,6 +119,15 @@ export function parseUpdateServiceDto(body: unknown): UpdateServiceDto {
         throw new AppError("Subgroups are not supported; select a service group", 400, "VALIDATION_ERROR");
     }
     const result: UpdateServiceDto = {};
+    if (data.display_name !== undefined) result.display_name = optionalText(data.display_name, "Display_name");
+    for (const key of ["price_min", "price_max"] as const) {
+        if (data[key] === undefined) continue;
+        const value = data[key];
+        if (value !== null && (!Number.isInteger(value) || (value as number) < 0 || (value as number) > MAX_INT)) {
+            throw new AppError(`Invalid ${key}`, 400, "VALIDATION_ERROR");
+        }
+        result[key] = value as number | null;
+    }
     if (data.name !== undefined) {
         if (typeof data.name !== "string" || !data.name.trim() || data.name.trim().length > 255) throw new AppError("Invalid name", 400, "VALIDATION_ERROR");
         result.name = data.name.trim();
