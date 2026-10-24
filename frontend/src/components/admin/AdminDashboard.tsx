@@ -27,6 +27,7 @@ import { AdminAppointmentDetails } from "./AdminAppointmentDetails";
 import { AdminMonthlyOverview } from "./AdminMonthlyOverview";
 import { AdminLifetimeOverview } from "./AdminLifetimeOverview";
 import { ServiceCategoryPicker } from "./ServiceCategoryPicker";
+import { buildServiceEditPayload } from "@/lib/service-edit";
 import { vietnamMonthBounds, vietnamMonthNow } from "@/lib/admin-month";
 import { formatAppointmentStatus, formatServicePrice, formatVnd, localizeBranchName, shortBranchName } from "@/lib/studio-data";
 
@@ -493,8 +494,13 @@ export function AdminDashboard() {
             description: String(form.get("description") || "").trim() || null,
         };
         const payload = editingService
-            ? base
+            ? buildServiceEditPayload(form, editingService)
             : { ...base, branch_id: Number(form.get("branch_id")) };
+
+        if (editingService && Object.keys(payload).length === 0) {
+            setToast("Không có thay đổi để lưu.");
+            return;
+        }
 
         setSubmitting(true);
         try {
@@ -946,6 +952,19 @@ export function AdminDashboard() {
                         <Field label="Giá (VND)">
                             <input name="price" type="number" min="0" step="1" defaultValue={editingService?.price ?? ""} className={inputClass} required />
                         </Field>
+                        {editingService && (
+                            <>
+                                <Field label="Tên hiển thị" span>
+                                    <input name="display_name" defaultValue={editingService.display_name ?? ""} className={inputClass} maxLength={255} placeholder="Để trống để dùng tên dịch vụ" />
+                                </Field>
+                                <Field label="Giá thấp nhất (VND)">
+                                    <input name="price_min" type="number" min="0" step="1" defaultValue={editingService.price_min ?? ""} className={inputClass} placeholder="Để trống để dùng giá dịch vụ" />
+                                </Field>
+                                <Field label="Giá cao nhất (VND)">
+                                    <input name="price_max" type="number" min="0" step="1" defaultValue={editingService.price_max ?? ""} className={inputClass} placeholder="Để trống để dùng giá dịch vụ" />
+                                </Field>
+                            </>
+                        )}
                         <Field label="Thời lượng (phút)">
                             <input name="duration_minutes" type="number" min="1" step="1" defaultValue={editingService?.duration_minutes ?? ""} className={inputClass} placeholder="Để trống nếu chưa nhận đặt lịch" />
                         </Field>
