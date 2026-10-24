@@ -6,6 +6,7 @@ import { In } from "typeorm";
 import { CreateServiceDto, GetServicesQueryDto, UpdateServiceDto } from "./services.dto";
 import { AppError } from "../../common/errors";
 import * as branchService from "../branches/branches.service";
+import { buildServiceUpdate } from "./service-update";
 
 const serviceRepo = AppDataSource.getRepository(Service);
 const groupRepo = AppDataSource.getRepository(ServiceCategory);
@@ -84,20 +85,7 @@ export const updateService = async (id: string, data: UpdateServiceDto) => {
     if (!service) return null;
 
     if (data.category !== undefined) await requireCategoryExists(data.category);
-    serviceRepo.merge(service, data);
-
-    if (data.name !== undefined) {
-        service.display_name = data.name;
-    }
-
-    if (data.price !== undefined) {
-        service.price_min = data.price;
-        service.price_max = data.price;
-    }
-
-    if (service.booking_enabled && service.duration_minutes === null) {
-        throw new AppError("Bookable service requires a duration", 400, "VALIDATION_ERROR");
-    }
+    serviceRepo.merge(service, buildServiceUpdate(service, data));
 
     return await serviceRepo.save(service);
 };
